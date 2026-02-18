@@ -1,0 +1,30 @@
+excel_sheet,excel_row,id_articulo_excel,etiqueta_nuevo,tipo,marca,nombre,cantidad_count,unidad_medida,precio_inicial,costo_total,precio_por_unidad,precio_venta_sugerido
+Hoja 4,6,NUEVO,True,Lapiz,Faber Castell,Lapiz 2B Titan,1.0,Docena,9.0,9.0,0.75,1.5
+Hoja 4,7,NUEVO,True,Lapiz,Layconsa,Lapiz Grazo Negro,7.0,Unidad,2.0,14.0,2.0,3.5
+Hoja 4,8,NUEVO,True,Lapiz,Layconsa,Lapiz Semi Negro,9.0,Unidad,2.5,22.5,2.5,4.5
+Hoja 4,9,NUEVO,True,Lapiz,Layconsa,Lapiz tecnico 6B,1.0,Docena,12.0,12.0,1.0,1.5
+Hoja 4,10,NUEVO,True,Lapiz,,Lapiz Punsonez,9.0,Unidad,0.28,2.52,0.28,0.0
+Hoja 4,32,NUEVO,True,Toallas,,Toalla sin diseño,9.0,Unidad,1.5,13.5,1.5,3.0
+Hoja 4,33,NUEVO,True,Toallas,,Toalla con diseño,4.0,Unidad,3.5,14.0,3.5,5.5
+Hoja 4,34,NUEVO,True,,Artesco,Micas A4,1.0,Sobre,3.8,3.8,0.38,1.0
+Hoja 4,50,NUEVO,True,,,Baja Lengua  de color grande,6.0,Unidad,0.5833333333,3.5,0.5833333333,2.0
+Hoja 4,53,NUEVO,True,Tempera,Layconsa,"Botellas de Temperas (Amarillo, rojo, Azul) -  (Rojo, azul,  verde, amarillo, negro, blanco)",18.0,Unidad,4.5,81.0,4.5,7.0
+Hoja 4,54,NUEVO,True,Tempera,Layconsa,Temperas x7,9.0,Cajas,5.0,45.0,5.0,7.0
+Hoja 4,61,NUEVO,True,Lapicero,Faber Castell,Lapicero Trilux - 035,17.0,Unidad,0.7,11.9,0.7,1.5
+Hoja 4,63,NUEVO,True,,,Hizopo,3.0,Unidad,1.0,3.0,1.0,1.5
+Hoja 4,64,NUEVO,True,,,Pozzis limpiatipo,8.0,Unidad,1.825,14.6,1.825,3.5
+Hoja 4,65,NUEVO,True,,,Stikers Have Love,50.0,Unidad,0.48,24.0,0.48,1.0
+Hoja 4,75,NUEVO,True,,,Microporoso Glitter self Adhesivo letras escarchados,14.0,Unidad,0.8,11.2,0.8,1.5
+Hoja 4,117,NUEVO,True,Cinta,,Cinta Maskin shurtaple 1*15,27.0,Unidad,1.666666667,45.0,1.666666667,2.5
+Hoja 4,127,NUEVO,True,Papel,,Papel Lustre,144.0,Unidad,0.2,28.8,0.2,0.5
+Hoja 4,137,NUEVO,True,Papel,,Papel microporoso escarchado,10.0,Unidad,3.0,30.0,3.0,5.0
+Hoja 4,138,NUEVO,True,Papel,,Papel Crepe,52.0,Unidad,0.6,31.2,0.6,1.0
+Hoja 4,143,NUEVO,True,Papel,,Papel Punzones A4,10.0,Unidad,1.5,15.0,1.5,3.0
+Hoja 4,147,NUEVO,True,Regla,Layconsa,Juego de reglas 20 cm,15.0,Unidad,2.0,30.0,2.0,3.5
+Hoja 4,148,NUEVO,True,Regla,Layconsa,Juego de reglas 30 cm,21.0,Unidad,3.0,63.0,3.0,5.0
+Hoja 4,149,NUEVO,True,Portafolio,,Portafolio Papel,8.0,Unidad,5.0,40.0,5.0,6.0
+Hoja 4,151,NUEVO,True,Paleta,,Paletas de pinturas,12.0,Unidad,1.166666667,14.0,1.166666667,3.0
+Hoja 4,172,NUEVO,True,,,Libro de Cuentos,4.0,Unidad,1.5,6.0,1.5,3.5
+Hoja 4,185,NUEVO,True,,,Pincel Sobre,2.0,Sobre,7.0,14.0,1.166666667,2.0
+Hoja 4,188,NUEVO,True,Plumon,Layconsa,Plumon marcador Jumbo L-47 x12,6.0,Unidad,11.0,66.0,11.0,15.0
+Hoja 4,224,NUEVO,True,,,Lana de colores,8.0,Unidad,0.5,4.0,0.5,1.0

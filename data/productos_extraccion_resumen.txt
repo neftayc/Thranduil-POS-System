@@ -1,0 +1,7 @@
+Hoja usada: Hoja 4 (xl/worksheets/sheet4.xml)
+Registros detalle extraidos: 253
+Registros con etiqueta NUEVO: 29
+Registros unicos para import (products): 253
+Detalle CSV: /Users/rusbel/Develop/papeleria/data/productos_excel_detallado.csv
+Solo NUEVO CSV: /Users/rusbel/Develop/papeleria/data/productos_etiqueta_nuevo.csv
+Import Supabase CSV: /Users/rusbel/Develop/papeleria/data/productos_supabase_products.csv

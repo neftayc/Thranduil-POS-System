@@ -1,0 +1,374 @@
+excel_sheet,excel_row,id_articulo_excel,etiqueta_nuevo,tipo,marca,nombre,count_presentacion,unidad_medida,precio_inicial,costo_total,precio_por_unidad,precio_venta_sugerido,cantidad_unidades,unidad_venta,precio_unidad_venta,total_venta,stock,c_venta,estado,notas,count_2,unidad_medida_2,precio_inicial_2,costo_total_2,precio_por_unidad_2,precio_venta_sugerido_2,cantidad_unidades_2,unidad_venta_2,precio_unidad_venta_2,total_venta_2
+Hoja 1,3,,False,Lapiz,Artesco,Lapiz Chequeo Rojo,6.0,Docena,6.0,36.0,0.5,1.0,72.0,Unidad,1.0,72.0,0.0,0.0,En stock,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,4,,False,Lapiz,Artesco,Lapiz Bicolor,9.0,Docena,10.0,90.0,0.8333333333,1.5,108.0,Unidad,1.5,162.0,0.0,0.0,No disponible temporalmente,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,5,,False,Lapiz,Layconsa,Lapiz Chequeo Rojo,9.0,Docena,7.0,63.0,0.5833333333,1.5,108.0,Unidad,1.0,108.0,0.0,0.0,Es necesario volver a comprar,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,6,,False,Lapiz,Vikingo,Lapiz 2B,4.0,Docena,6.0,24.0,0.5,1.0,48.0,Unidad,1.0,48.0,0.0,0.0,Agotado,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,7,NUEVO,True,Lapiz,Faber Castell,Lapiz 2B Titan,1.0,Docena,9.0,9.0,0.75,1.5,12.0,Unidad,1.5,18.0,0.0,0.0,,,2.0,Cajitas,7.5,15.0,0.625,1.0,24.0,Unidad,1.0,24.0
+Hoja 1,8,NUEVO,True,Lapiz,Layconsa,Lapiz Grazo Negro,7.0,Unidad,2.0,14.0,2.0,3.5,7.0,Unidad,3.5,24.5,0.0,0.0,,,2.0,Docena,26.0,52.0,2.166666667,3.0,24.0,Unidad,3.5,84.0
+Hoja 1,9,NUEVO,True,Lapiz,Layconsa,Lapiz Semi Negro,9.0,Unidad,2.5,22.5,2.5,4.5,9.0,Unidad,3.5,31.5,0.0,0.0,,,2.0,Docena,26.0,52.0,2.166666667,3.0,24.0,Unidad,3.5,84.0
+Hoja 1,10,NUEVO,True,Lapiz,Layconsa,Lapiz tecnico 6B,1.0,Docena,12.0,12.0,1.0,1.5,12.0,Unidad,2.0,24.0,0.0,0.0,,,2.0,Docena,8.5,17.0,0.7083333333,2.0,24.0,Unidad,2.0,48.0
+Hoja 1,11,NUEVO,True,Lapiz,,Lapiz Punsonez,9.0,Unidad,0.28,2.52,0.28,0.0,9.0,Unidad,0.7,6.3,0.0,0.0,,,1.0,Ciento,28.0,28.0,0.28,0.7,100.0,Unidad,0.7,70.0
+Hoja 1,12,,False,Lapiz,Layconsa,Lapiz Bicolor,32.0,Unidad,0.58125,18.6,0.58125,1.0,32.0,Unidad,1.0,32.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,13,,False,Plumon,Layconsa,Plumon Acrilico L-123,9.0,Docena,15.0,135.0,1.25,2.5,108.0,Unidad,2.5,270.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,14,,False,Plumon,Faber Castell,Plumon Jumbo 123,2.0,Docena,37.5,75.0,3.125,5.0,24.0,Unidad,5.0,120.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,15,,False,Plumon,Arteza,Plumon Pizzarra,2.0,Docena,24.0,48.0,2.0,0.0,24.0,Unidad,3.5,84.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,16,,False,Plumon,Faber Castell,Plumon 2.3mm,1.0,Docena,15.0,15.0,1.25,2.5,12.0,Unidad,3.0,36.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,17,,False,Plumon,Faber Castell,Plumones Marcador Fibre Tips - 12 uni,6.0,Unidad,3.166666667,19.0,3.166666667,5.0,6.0,Unidad,8.0,48.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,18,,False,Plumon,Faber Castell,Plumones Marcador 6 uni -,2.0,Unidad,4.0,8.0,4.0,5.0,2.0,Unidad,5.0,10.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,19,,False,Cartuchera,,Cartuchera Mike Crack,3.0,Unidad,7.0,21.0,7.0,10.0,3.0,Unidad,10.0,30.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,20,,False,Cartuchera,,Cartuchera Forta,6.0,Unidad,7.0,42.0,7.0,12.0,6.0,Unidad,10.0,60.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,21,,False,Cartuchera,,Cartucheta Simple,11.0,Unidad,0.0,0.0,0.0,0.0,11.0,Unidad,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,22,,False,Cartuchera,,Estuches de Plastico,5.0,Unidad,6.0,30.0,6.0,7.0,5.0,Unidad,7.0,35.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,23,,False,Saca Punta,Artesco,Saca Punta con Deposito,3.0,Unidad,2.0,6.0,2.0,3.5,3.0,Unidad,3.5,10.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,24,,False,Saca Punta,,Saca Punta con M-207,118.0,Unidad,0.2542372881,30.0,0.2542372881,0.5,118.0,Unidad,0.5,59.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,25,,False,Saca Punta,Artesco,Saca Punta Metal,15.0,Unidad,0.7466666667,11.2,0.7466666667,1.5,15.0,Unidad,1.5,22.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,26,,False,Saca Punta,Artesco,Saca Punta Metal Doble,19.0,Unidad,1.8,34.2,1.8,2.5,19.0,Unidad,2.5,47.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,27,,False,Saca Punta,Relampago,Saca Punta con Deposito 8917,1.0,Docena,12.0,12.0,1.0,1.5,12.0,Unidad,2.0,24.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,28,,False,Saca Punta,Picaso,Saca Punta con Deposito,1.0,Docena,12.0,12.0,1.0,1.5,12.0,Unidad,2.0,24.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,29,,False,Saca Punta,Oval,Saca Punta con Deposito,1.0,Docena,12.0,12.0,1.0,2.0,12.0,Unidad,2.0,24.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,30,,False,Saca Punta,Vinifan,Saca Punta,1.0,Cajitas,16.0,16.0,0.6666666667,0.0,24.0,Unidad,2.0,48.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,31,,False,Saca Punta,Artesco,Saca Punta M-557,2.0,Cajitas,16.0,32.0,0.6666666667,2.0,48.0,Unidad,2.0,96.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,32,,False,Saca Punta,,Tarjadores,18.0,Unidad,0.5,9.0,0.5,0.0,18.0,Unidad,1.0,18.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,33,NUEVO,True,Toallas,,Toalla sin diseño,9.0,Unidad,1.5,13.5,1.5,3.0,9.0,Unidad,4.0,36.0,0.0,0.0,,,1.0,Paquete,24.0,24.0,2.4,4.0,12.0,Unidad,4.0,48.0
+Hoja 1,34,NUEVO,True,Toallas,,Toalla con diseño,4.0,Unidad,3.5,14.0,3.5,5.5,4.0,Unidad,5.0,20.0,0.0,0.0,,,1.0,Paquete,36.0,36.0,3.6,5.0,12.0,Unidad,5.0,60.0
+Hoja 1,35,NUEVO,True,,Artesco,Micas A4,1.0,Sobre,3.8,3.8,0.38,1.0,10.0,Unidad,1.0,10.0,0.0,0.0,,,50.0,1/2 Ciento,0.52,26.0,0.52,1.0,50.0,Unidad,1.0,50.0
+Hoja 1,36,,False,,,Meseros Personales - Niños,7.0,Unidad,1.5,10.5,1.5,2.5,7.0,Unidad,2.5,17.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,37,,False,,,Sobre Manila A4 premium,9.0,Paquete,11.11111111,100.0,0.4444444444,1.0,225.0,Unidad,1.0,225.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,38,,False,Forro Vinifan,Vinifan,Forro Vinifan A4,4.0,Unidad,4.0,16.0,4.0,7.0,4.0,Unidad,7.0,28.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,39,,False,Forro Vinifan,Perufan,Forro Vinifan Grande OM,2.0,Unidad,7.0,14.0,7.0,9.0,2.0,Unidad,7.0,14.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,40,,False,Forro Vinifan,Perufan,Forro vinifan A4,14.0,Unidad,3.5,49.0,3.5,4.5,14.0,Unidad,4.5,63.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,41,,False,Forro Vinifan,Forrofan,Forro vinifan A4,9.0,Unidad,2.0,18.0,2.0,3.5,9.0,Unidad,3.5,31.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,42,,False,Corector,Oval,Corrector Oval de 2 pares,29.0,Unidad,0.6206896552,18.0,0.6206896552,2.0,29.0,Unidad,2.0,58.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,43,,False,Corector,Faber Castell,Corrector 9ML,1.0,Docena,22.0,22.0,1.833333333,2.5,12.0,Unidad,3.0,36.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,44,,False,,,Resaltador,18.0,Unidad,1.333333333,24.0,1.333333333,2.5,18.0,Unidad,2.5,45.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,45,,False,Goma,,Goma Liquida Mar David 60gr,9.0,Unidad,0.9111111111,8.2,0.9111111111,1.5,9.0,Unidad,1.5,13.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,46,,False,Goma,Layconsa,Goma en barra 21Gr,15.0,Unidad,1.8,27.0,1.8,3.5,15.0,Unidad,3.5,52.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,47,,False,Goma,Faber Castell,Goma en barra 40Gr,3.0,Unidad,4.0,12.0,4.0,5.0,3.0,Unidad,5.0,15.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,48,,False,Borrador,Layconsa,Borrador LA-2O,16.0,Unidad,0.55,8.8,0.55,1.0,16.0,Unidad,1.0,16.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,49,,False,Borrador,Layconsa,Borrador LA-40 bicolor,15.0,Unidad,0.5,7.5,0.5,1.0,15.0,Unidad,1.0,15.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,50,NUEVO,True,,,Baja Lengua - Blanco,12.0,Sobre,0.4166666667,5.0,0.4166666667,1.0,12.0,Unidad,1.0,12.0,0.0,0.0,,,2.0,Paquete,5.0,10.0,0.5,1.0,20.0,Unidad,1.0,20.0
+Hoja 1,51,NUEVO,True,,,Baja Lengua  de color grande,6.0,Unidad,0.5833333333,3.5,0.5833333333,2.0,6.0,Unidad,2.0,12.0,0.0,0.0,,,1.0,Paquete,8.0,8.0,0.6666666667,2.0,12.0,Unidad,2.0,24.0
+Hoja 1,52,,False,,,Baja Lengua de color pequeño,35.0,Unidad,0.6,21.0,0.6,1.5,35.0,Unidad,1.5,52.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,53,,False,Tempera,,Pintura Brillo Escarchado,36.0,Unidad,0.0,0.0,0.0,0.0,36.0,,3.0,108.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,54,NUEVO,True,Tempera,Layconsa,"Botellas de Temperas (Amarillo, rojo, Azul) -  (Rojo, azul,  verde, amarillo, negro, blanco)",18.0,Unidad,4.5,81.0,4.5,7.0,18.0,Unidad,7.0,126.0,0.0,0.0,,,2.0,Docena,54.0,108.0,4.5,7.0,24.0,Unidad,7.0,168.0
+Hoja 1,55,NUEVO,True,Tempera,Layconsa,Temperas x7,9.0,Cajas,5.0,45.0,5.0,7.0,9.0,Cajitas,7.0,63.0,0.0,0.0,,,1.0,Docena,68.0,68.0,5.666666667,7.0,12.0,Unidad,7.0,84.0
+Hoja 1,56,,False,Tempera,,Acuarelas Grandes,4.0,Unidad,4.0,16.0,4.0,8.0,4.0,Unidad,7.0,28.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,57,,False,Tempera,Arteza,Acuarelas pequeñas,3.0,Unidad,3.5,10.5,3.5,6.0,3.0,Unidad,6.0,18.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,58,,False,Lapicero,Faber Castell,Lapicero Trilux Negro-032,1.0,Cajitas,22.0,22.0,0.44,1.0,50.0,Unidad,1.0,50.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,59,,False,Lapicero,Faber Castell,Lapicero Trilux Rojo-032,1.0,Cajitas,22.0,22.0,0.44,1.0,50.0,Unidad,1.0,50.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,60,,False,Lapicero,Faber Castell,Lapicero Trilux-031,46.0,Unidad,0.4782608696,22.0,0.4782608696,1.0,46.0,Unidad,1.0,46.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,61,,False,Lapicero,Faber Castell,Lapicero Trilux Azul-032,30.0,Unidad,0.44,13.2,0.44,1.0,30.0,Unidad,1.0,30.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,62,NUEVO,True,Lapicero,Faber Castell,Lapicero Trilux - 035,17.0,Unidad,0.7,11.9,0.7,1.5,17.0,Unidad,1.0,17.0,0.0,0.0,,,1.0,Cajas,22.5,22.5,0.45,1.0,50.0,Unidad,1.0,50.0
+Hoja 1,63,,False,Pincel,,Pincel Escolar 1-6 Besco,125.0,Unidad,0.6664,83.3,0.6664,1.0,125.0,Unidad,1.0,125.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,64,NUEVO,True,,,Hizopo,3.0,Unidad,1.0,3.0,1.0,1.5,3.0,Unidad,1.5,4.5,0.0,0.0,,,12.0,,0.6666666667,8.0,0.6666666667,1.5,12.0,Unidad,1.5,18.0
+Hoja 1,65,NUEVO,True,,,Pozzis limpiatipo,8.0,Unidad,1.825,14.6,1.825,3.5,8.0,Unidad,4.0,32.0,0.0,0.0,,,12.0,Unidad,1.833333333,22.0,1.833333333,4.0,12.0,Unidad,4.0,48.0
+Hoja 1,66,NUEVO,True,,,Stikers Have Love,50.0,Unidad,0.48,24.0,0.48,1.0,50.0,Unidad,1.0,50.0,0.0,0.0,,,50.0,,0.48,24.0,0.48,1.0,50.0,Unidad,1.0,50.0
+Hoja 1,67,,False,,,Nombre de cuaderno,100.0,Unidad,0.1,10.0,0.1,0.3,100.0,Unidad,0.2,20.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,68,,False,,,Stikers de Portada - Plancha,4.0,Unidad,3.0,12.0,0.125,0.2,96.0,Unidad,0.2,19.2,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,69,,False,,,Tableros Acrilicos,3.0,Unidad,7.0,21.0,7.0,10.0,3.0,Unidad,11.0,33.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,70,,False,SketchBook,,Sketch book 15h,24.0,Unidad,2.166666667,52.0,2.166666667,4.0,24.0,Unidad,3.5,84.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,71,,False,Sketch Book,,Sketch book 25h,14.0,Unidad,2.664285714,37.3,2.664285714,6.0,14.0,Unidad,4.5,63.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,72,,False,Sketch Book,,Sketch book 50h,15.0,Unidad,8.0,120.0,8.0,12.0,15.0,Unidad,8.0,120.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,73,,False,,,Tabla periodica,15.0,Unidad,0.6666666667,10.0,0.6666666667,1.5,15.0,Unidad,1.5,22.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,74,,False,,,Cometas,15.0,Unidad,0.0,0.0,0.0,0.0,15.0,Unidad,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,75,,False,,,Banderas,6.0,Unidad,0.0,0.0,0.0,0.0,6.0,Unidad,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,76,NUEVO,True,,,Microporoso Glitter self Adhesivo letras escarchados,14.0,Unidad,0.8,11.2,0.8,1.5,14.0,Unidad,2.5,35.0,0.0,0.0,,,3.0,Paquete,8.0,24.0,0.8,2.5,30.0,Unidad,2.5,75.0
+Hoja 1,77,,False,Folder,,Folder Manila A4,16.0,Paquete,6.75,108.0,0.27,1.0,400.0,Unidad,1.0,400.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,78,,False,Folder,,Folder Top,45.0,Unidad,2.666666667,120.0,2.666666667,5.0,45.0,Unidad,4.0,180.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,79,,False,Folder,,Folder Genius,2.0,Unidad,2.67,5.34,2.67,0.0,2.0,Unidad,4.5,9.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,80,,False,Folder,,Folder Vinifan,6.0,Unidad,2.67,16.02,2.67,0.0,6.0,Unidad,5.0,30.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,81,,False,Folder,,Folder a color de cartulina,73.0,Unidad,0.36,26.28,0.36,0.8,73.0,Unidad,1.0,73.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,82,,False,Tijera,,Tijeras R-Relampago con formas,1.0,Sobre,20.0,20.0,1.666666667,3.0,12.0,Unidad,3.5,42.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,83,,False,Tijera,,Tijeras Acolores,17.0,Unidad,0.6235294118,10.6,0.6235294118,1.0,17.0,Unidad,1.5,25.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,84,,False,Tijera,,Tijeras amarillas,10.0,Unidad,0.625,6.25,0.625,1.0,10.0,Unidad,1.5,15.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,85,,False,,,Cuadernillo de anotes pequeño,4.0,Unidad,1.0,4.0,1.0,1.5,4.0,Unidad,2.0,8.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,86,,False,,,Cuadernillo de anotes grande,6.0,Unidad,2.0,12.0,2.0,3.0,6.0,Unidad,3.0,18.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,87,,False,,,Libro de actas 200f,2.0,Unidad,7.2,14.4,7.2,0.0,2.0,Unidad,14.0,28.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,88,,False,,,Libro de actas 100f,1.0,Unidad,3.7,3.7,3.7,0.0,1.0,Unidad,7.0,7.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,89,,False,Obras Literarias,,Obras Literarias,5.0,Unidad,3.5,17.5,3.5,4.0,5.0,Unidad,5.0,25.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,90,,False,,,Diccionario Bruno Ingles,4.0,Unidad,7.5,30.0,7.5,20.0,4.0,Unidad,15.0,60.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,91,,False,,,Diccionario Bruno Sinonimos Antonimos,16.0,Unidad,7.5,120.0,7.5,20.0,16.0,Unidad,15.0,240.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,92,,False,,,Diccionario Bruno,8.0,Unidad,7.0,56.0,7.0,20.0,8.0,Unidad,15.0,120.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,93,,False,,,Jabon liquido grande,27.0,Unidad,4.0,108.0,4.0,6.0,27.0,Unidad,6.0,162.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,94,,False,,,Jabon liquido pequeño,19.0,Unidad,3.331578947,63.3,3.331578947,6.0,19.0,Unidad,5.0,95.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,95,,False,,,Jaboneras,4.0,Unidad,1.0,4.0,1.0,1.0,4.0,Unidad,2.0,8.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,96,,False,,,Escobilla Grande de Zapato,2.0,Unidad,1.3,2.6,1.3,3.0,2.0,Unidad,3.5,7.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,97,,False,,,Escobilla Pequeña de Zapato,14.0,Unidad,1.0,14.0,1.0,2.5,14.0,Unidad,2.5,35.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,98,,False,,,Betun Marron Grande,2.0,Unidad,2.0,4.0,2.0,3.5,2.0,Unidad,4.0,8.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,99,,False,,,Betun Marron Pequeño,23.0,Unidad,1.5,34.5,1.5,3.5,23.0,Unidad,3.5,80.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,100,,False,,,Esponja Merlin,6.0,Paquete,8.0,48.0,0.6666666667,1.5,72.0,Unidad,1.0,72.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,101,,False,,,Pompones,14.0,Unidad,0.0,0.0,0.0,0.0,14.0,Unidad,3.5,49.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,102,,False,,,Batisoga pequeño,10.0,Unidad,1.5,15.0,1.5,2.5,10.0,Unidad,2.5,25.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,103,,False,,,Batisoga grande,11.0,Unidad,2.163636364,23.8,2.163636364,3.5,11.0,Unidad,3.5,38.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,104,,False,,,Super esponja,8.0,Paquete,5.5,44.0,0.4583333333,1.0,96.0,Unidad,1.0,96.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,105,,False,,,Trish,11.0,Paquete,3.6,39.6,0.3,0.5,132.0,Unidad,0.5,66.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,106,,False,Cinta,,Cinta de color maskin taps,7.0,Unidad,2.328571429,16.3,2.328571429,3.5,7.0,Unidad,4.0,28.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,107,,False,Cinta,,Cinta electrica,9.0,Unidad,0.8,7.2,0.8,1.5,9.0,Unidad,1.5,13.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,108,NUEVO,True,Cinta,,Cinta Leon scosh pq grueso 18*45,8.0,Unidad,1.0,8.0,1.0,2.0,8.0,Unidad,2.0,16.0,0.0,0.0,,,12.0,,1.083333333,13.0,1.083333333,2.0,12.0,Unidad,2.0,24.0
+Hoja 1,109,,False,Cinta,,Cinta Durafan scosh  pequeño12*14,31.0,Unidad,0.2,6.2,0.2,0.5,31.0,Unidad,0.5,15.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,110,NUEVO,True,Cinta,,Cinta Grande Durango embalaje,2.0,Paquete,15.0,30.0,2.5,3.5,12.0,Unidad,5.0,60.0,0.0,0.0,,,6.0,Unidad,2.333333333,14.0,2.333333333,5.0,6.0,Unidad,5.0,30.0
+Hoja 1,111,,False,Cinta,,Cinta Grande Brudan Peru embalaje,11.0,Paquete,4.5,49.5,0.75,1.5,66.0,Unidad,2.0,132.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,112,,False,Cinta,,Cinta Maskin Pegafan 24mm,16.0,Unidad,2.0,32.0,2.0,3.0,16.0,Unidad,3.0,48.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,113,,False,Cinta,,Cinta Maskin Pegafan 36mm,3.0,Unidad,3.0,9.0,3.0,4.0,3.0,Unidad,4.0,12.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,114,,False,Cinta,,Cinta Maskin Pegafan 48mm,12.0,Unidad,3.166666667,38.0,3.166666667,5.0,12.0,Unidad,5.0,60.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,115,,False,Cinta,,Cinta Maskin Shurtape 3/4*15,2.0,Unidad,1.0,2.0,1.0,1.5,2.0,Unidad,2.0,4.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,116,,False,Cinta,,Cinta Maskin shurtape 1/2*15,3.0,Unidad,0.8333333333,2.5,0.8333333333,1.5,3.0,Unidad,1.5,4.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,117,,False,Cinta,,Cinta Maskin shurtape 1 1/2*15,20.0,Unidad,3.0,60.0,3.0,4.0,20.0,Unidad,4.0,80.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,118,NUEVO,True,Cinta,,Cinta Maskin shurtaple 1*15,27.0,Unidad,1.666666667,45.0,1.666666667,2.5,27.0,Unidad,2.5,67.5,0.0,0.0,,,12.0,Unidad,1.5,18.0,1.5,2.5,12.0,Unidad,2.5,30.0
+Hoja 1,119,,False,Cinta,,Cinta de colores grande,6.0,Paquete,0.0,0.0,0.0,0.0,60.0,Unidad,1.0,60.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,120,,False,Cinta,,Cinta de colores pequeño,1.0,Paquete,0.0,0.0,0.0,0.0,10.0,Unidad,0.5,5.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,121,,False,Colores,Layconsa,Lapices de Color largos x 12,10.0,Unidad,4.66,46.6,4.66,6.0,10.0,Unidad,6.0,60.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,122,,False,Colores,Layconsa,lapiz de color pequeño x 12,11.0,Unidad,2.832727273,31.16,2.832727273,5.0,11.0,,4.0,44.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,123,,False,,Artesco,Fastener de metal,8.0,Cajitas,4.0,32.0,0.08,0.5,96.0,Unidad,0.5,48.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,124,,False,,Artesco,Fastener de Gusano,32.0,Unidad,0.959375,30.7,0.959375,2.0,32.0,Unidad,2.0,64.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,125,,False,,Artesco,Tomatodo Grande,4.0,Unidad,12.0,48.0,12.0,15.0,4.0,Unidad,15.0,60.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,126,,False,,,Tomatodo pequeño,7.0,Unidad,7.0,49.0,7.0,10.0,7.0,Unidad,10.0,70.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,127,,False,,,Tomatodo Mediano tricolor,15.0,Unidad,12.0,180.0,12.0,15.0,15.0,Unidad,15.0,225.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,128,NUEVO,True,Papel,,Papel Lustre,144.0,Unidad,0.2,28.8,0.2,0.5,144.0,Unidad,0.5,72.0,0.0,0.0,,,100.0,Ciento,0.3,30.0,0.3,0.5,100.0,Unidad,0.5,50.0
+Hoja 1,129,,False,Papel,,Papel de regalo,122.0,Unidad,0.2795081967,34.1,0.2795081967,0.7,122.0,Unidad,0.7,85.4,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,130,,False,Papel,,Papel corrugado,26.0,Unidad,2.4,62.4,2.4,3.5,26.0,Unidad,4.0,104.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,131,NUEVO,True,Papel,,Papel Corrospum,33.0,Unidad,3.5,115.5,3.5,5.0,33.0,Unidad,5.0,165.0,0.0,0.0,,,2.0,,12.0,24.0,3.0,5.0,8.0,Unidad,5.0,40.0
+Hoja 1,132,,False,Papel,,Papel Craft,72.0,Unidad,0.3194444444,23.0,0.3194444444,1.0,72.0,Unidad,1.0,72.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,133,NUEVO,True,Papel,,Papel Sedita,59.0,Unidad,0.1355932203,8.0,0.1355932203,0.5,59.0,Unidad,0.5,29.5,0.0,0.0,,,100.0,Ciento,0.18,18.0,0.18,0.5,100.0,Unidad,0.5,50.0
+Hoja 1,134,NUEVO,True,Papel,,Papel Cometa,66.0,Unidad,0.2,13.2,0.2,0.5,66.0,Unidad,0.5,33.0,0.0,0.0,,,100.0,Ciento,0.36,36.0,0.36,0.5,100.0,Unidad,0.5,50.0
+Hoja 1,135,,False,Papel,,Papel celofan,5.0,Unidad,0.44,2.2,0.44,1.0,5.0,Unidad,1.0,5.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,136,,False,Papel,,Papel Cuadriculado 1x1,137.0,Unidad,0.2189781022,30.0,0.2189781022,0.5,137.0,Unidad,0.7,95.9,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,137,,False,Papel,,Papel Cuadrimax 2x2,200.0,Unidad,0.205,41.0,0.205,0.5,200.0,Unidad,0.7,140.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,138,NUEVO,True,Papel,,Papel microporoso escarchado,10.0,Unidad,3.0,30.0,3.0,5.0,10.0,Unidad,5.0,50.0,0.0,0.0,,,3.0,Paquete,24.0,72.0,2.4,5.0,36.0,Unidad,5.0,180.0
+Hoja 1,139,NUEVO,True,Papel,,Papel Crepe,52.0,Unidad,0.6,31.2,0.6,1.0,52.0,Unidad,1.0,52.0,0.0,0.0,,,11.0,Paquete,4.272727273,47.0,0.4272727273,1.0,110.0,Unidad,1.0,110.0
+Hoja 1,140,,False,Papel,,Papelote blanco,45.0,Unidad,0.2,9.0,0.2,0.5,45.0,Unidad,0.7,31.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,141,,False,Papel,,Cartulina a colores,47.0,Unidad,0.4191489362,19.7,0.4191489362,1.0,47.0,Unidad,1.0,47.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,142,,False,Papel,,Cartulina Fosforesente,45.0,Unidad,2.5,112.5,2.5,0.0,45.0,Unidad,4.5,202.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,143,,False,Papel,,Papel Arcoiris,7.0,Paquete,19.0,133.0,19.0,28.0,7.0,1/2 millar,30.0,210.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,144,NUEVO,True,Papel,,Papel Punzones A4,10.0,Unidad,1.5,15.0,1.5,3.0,10.0,Unidad,3.0,30.0,0.0,0.0,,,2.0,Paquete,18.0,36.0,3.0,5.0,12.0,Unidad,5.0,60.0
+Hoja 1,145,,False,Papel,,Papel Cuadernillo,45.0,Sobre,0.0,0.0,0.0,0.0,45.0,Unidad,0.2,9.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,146,,False,Regla,Layconsa,Reglas de 20 cm,38.0,Unidad,0.5578947368,21.2,0.5578947368,1.0,38.0,Unidad,1.0,38.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,147,,False,Regla,Artesco,Reglas de 30 cm,49.0,Unidad,0.6408163265,31.4,0.6408163265,1.5,49.0,Unidad,1.5,73.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,148,NUEVO,True,Regla,Layconsa,Juego de reglas 20 cm,15.0,Unidad,2.0,30.0,2.0,3.5,15.0,Unidad,3.5,52.5,0.0,0.0,,,12.0,Unidad,2.333333333,28.0,2.333333333,3.5,12.0,Unidad,3.5,42.0
+Hoja 1,149,NUEVO,True,Regla,Layconsa,Juego de reglas 30 cm,21.0,Unidad,3.0,63.0,3.0,5.0,21.0,Unidad,5.0,105.0,0.0,0.0,,,12.0,Unidad,3.5,42.0,3.5,5.0,12.0,Unidad,5.0,60.0
+Hoja 1,150,NUEVO,True,Portafolio,,Portafolio Papel,8.0,Unidad,5.0,40.0,5.0,6.0,8.0,Unidad,8.0,64.0,0.0,0.0,,,6.0,Unidad,6.0,36.0,6.0,9.0,6.0,Unidad,9.0,54.0
+Hoja 1,151,,False,Portafolio,,Ray Perú y Artesco,21.0,Unidad,5.333333333,112.0,5.333333333,10.0,21.0,Unidad,10.0,210.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,152,NUEVO,True,Paleta,,Paletas de pinturas,12.0,Unidad,1.166666667,14.0,1.166666667,3.0,12.0,Unidad,3.0,36.0,0.0,0.0,,,12.0,Unidad,1.833333333,22.0,1.833333333,3.0,12.0,Unidad,3.0,36.0
+Hoja 1,153,,False,Rompecabezas,,Rompecabezas de 20 piesas,23.0,Unidad,5.826086957,134.0,5.826086957,11.0,23.0,Unidad,10.0,230.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,154,,False,Rompecabezas,,Rompecabezas de 50 piesas,1.0,Unidad,15.0,15.0,15.0,15.0,1.0,Unidad,15.0,15.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,155,,False,crayones,Layconsa,Crayones Jumbo,54.0,Unidad,3.083333333,166.5,3.083333333,5.5,54.0,Unidad,5.0,270.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,156,,False,plastilina,Layconsa,Plastilina,3.0,Docena,35.0,105.0,2.916666667,5.5,36.0,Unidad,5.5,198.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,157,,False,Perforador,Artesco,Perforador,13.0,Unidad,5.5,71.5,5.5,10.0,13.0,Unidad,12.0,156.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,158,,False,Perforador,Arteza,Perforador,8.0,Unidad,4.5,36.0,4.5,9.0,8.0,Unidad,9.0,72.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,159,,False,Perforador,,Perforador stapler,2.0,Unidad,4.5,9.0,4.5,9.0,2.0,Unidad,9.0,18.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,160,,False,Engrampador,,Engrampador stapler,5.0,Unidad,5.0,25.0,5.0,10.0,5.0,Unidad,10.0,50.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,161,,False,Engrampador,,Engrampador artesa,2.0,Unidad,5.0,10.0,5.0,10.0,2.0,Unidad,10.0,20.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,162,,False,Engrampador,Artesco,Engrapador artesco,1.0,Unidad,8.5,8.5,8.5,10.0,1.0,Unidad,8.5,8.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,163,,False,Engrampador,,Cajitas de Grampa,12.0,Unidad,0.8,9.6,0.8,1.5,12.0,Unidad,1.5,18.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,164,,False,Tampon,Layconsa,Tampon Rojo L-T3,5.0,Unidad,2.4,12.0,2.4,4.0,5.0,Unidad,4.0,20.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,165,,False,Tampon,Artesco,Tampon Negro,3.0,Unidad,3.0,9.0,3.0,5.0,3.0,Unidad,5.0,15.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,166,,False,Compas,Layconsa,Compas,18.0,Unidad,1.166666667,21.0,1.166666667,3.5,18.0,Unidad,3.5,63.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,167,,False,,,Percheros,42.0,Unidad,0.6261904762,26.3,0.6261904762,1.5,42.0,Unidad,1.5,63.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,168,,False,,,Corazon de regalos,3.0,Unidad,12.0,36.0,12.0,18.0,3.0,Unidad,18.0,54.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,169,,False,,,Cordones,6.0,Unidad,0.0,0.0,0.0,0.0,6.0,Unidad,3.5,21.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,170,,False,,,Imperdible Blanco,130.0,Unidad,0.0,0.0,0.0,0.0,130.0,Unidad,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,171,,False,,,Imperdible Amarillo Pequeño,1.0,Paquete,0.0,0.0,0.0,0.0,12.0,Unidad,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,172,,False,,,Gancho Merly,38.0,Unidad,0.2105263158,8.0,0.2105263158,0.5,38.0,Unidad,0.5,19.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,173,NUEVO,True,,,Libro de Cuentos,4.0,Unidad,1.5,6.0,1.5,3.5,4.0,Unidad,4.0,16.0,0.0,0.0,,,6.0,Unidad,3.0,18.0,3.0,4.0,6.0,Unidad,4.0,24.0
+Hoja 1,174,,False,,,cartulinas de pliego a color A4,6.0,Unidad,4.0,24.0,4.0,6.0,6.0,Unidad,6.0,36.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,175,,False,,,Globos,2.0,Ciento,8.0,16.0,0.08,0.5,200.0,Unidad,0.5,100.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,176,,False,,,Botones,57.0,Unidad,0.6666666667,38.0,0.6666666667,1.0,57.0,Unidad,1.0,57.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,177,,False,,,Escarcha,34.0,Unidad,0.4,13.6,0.4,1.0,34.0,Unidad,1.0,34.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,178,,False,,,Lentejuelas JhinPequeñas,1.0,Paquete,8.0,8.0,0.6666666667,1.0,12.0,Unidad,1.0,12.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,179,,False,,,Lentejuelas grandes,12.0,Unidad,0.4,4.8,0.4,1.0,12.0,Unidad,1.0,12.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,180,,False,,,Piñes dedecoración,1.0,Paquete,8.0,8.0,0.6666666667,1.0,12.0,Unidad,1.0,12.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,181,,False,,,Ojitos,1.0,Paquete,8.0,8.0,0.6666666667,1.0,12.0,Unidad,1.0,12.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,182,,False,,,Mistura Amarilla,1.0,,8.0,8.0,8.0,0.0,1.0,,1.0,1.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,183,,False,,,Mistura de Color,1.0,,8.0,8.0,8.0,0.0,1.0,,1.0,1.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,184,,False,,,Dados pequeños,100.0,Unidad,0.25,25.0,0.25,0.5,100.0,Unidad,0.5,50.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,185,,False,,,Luces de colors 200 leds,8.0,Unidad,15.0,120.0,15.0,18.0,8.0,Unidad,18.0,144.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,186,NUEVO,True,,,Pincel Sobre,2.0,Sobre,7.0,14.0,1.166666667,2.0,12.0,Unidad,2.0,24.0,0.0,0.0,,,6.0,Sobre,5.333333333,32.0,0.8888888889,1.0,36.0,Unidad,2.0,72.0
+Hoja 1,187,,False,,,Cinta navideña,1.0,Unidad,8.0,8.0,8.0,12.0,1.0,Unidad,12.0,12.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,188,,False,,,guillet,9.0,Cajitas,1.5,13.5,0.3,0.5,45.0,Cajitas,0.5,22.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,189,NUEVO,True,Plumon,Layconsa,Plumon marcador Jumbo L-47 x12,6.0,Unidad,11.0,66.0,11.0,15.0,6.0,Unidad,15.0,90.0,0.0,0.0,,,3.0,Unidad,11.0,33.0,11.0,15.0,3.0,Unidad,15.0,45.0
+Hoja 1,190,,False,Juguetes,,Cuatrimoto 876/886,10.0,Unidad,8.0,80.0,8.0,12.0,10.0,Unidad,12.0,120.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,191,,False,Juguetes,,Camion con toro CMN12,3.0,Unidad,7.0,21.0,7.0,12.0,3.0,,12.0,36.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,192,,False,Juguetes,,Vehiculo Constructor 677-42A,5.0,Unidad,11.0,55.0,11.0,15.0,5.0,,15.0,75.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,193,,False,Juguetes,,vedhiculo constructor 077-31,2.0,Unidad,7.0,14.0,7.0,10.0,2.0,,10.0,20.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,194,,False,Juguetes,,Vehiculo constructor 5468,6.0,Unidad,6.0,36.0,6.0,12.0,6.0,,12.0,72.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,195,,False,Juguetes,,Pelota,4.0,Unidad,9.0,36.0,9.0,13.0,4.0,,13.0,52.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,196,,False,Juguetes,,Camion Ciguena3983 A,2.0,Unidad,8.0,16.0,8.0,12.0,2.0,,12.0,24.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,197,,False,Juguetes,,muñeca 2610,11.0,Unidad,8.0,88.0,8.0,12.0,11.0,,12.0,132.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,198,,False,Juguetes,,muñeca con accesorios 8280,5.0,Unidad,13.0,65.0,13.0,16.0,5.0,,16.0,80.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,199,,False,Juguetes,,muñeca con accesorios LY 2310,5.0,Unidad,12.0,60.0,12.0,16.0,5.0,,16.0,80.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,200,,False,Juguetes,,muñeca con accesorios 8260,1.0,Unidad,6.5,6.5,6.5,9.0,1.0,,9.0,9.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,201,,False,Juguetes,,control remoto carro CQ0085-2,1.0,Unidad,25.0,25.0,25.0,30.0,1.0,,30.0,30.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,202,,False,,,vincha 104,5.0,Unidad,1.0,5.0,1.0,1.5,5.0,,1.5,7.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,203,,False,,,colet negros,6.0,Paquete,1.0,6.0,1.0,2.0,6.0,,2.0,12.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,204,,False,,,gancho picos de colores,11.0,Unidad,0.6363636364,7.0,0.6363636364,1.0,11.0,,1.0,11.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,205,,False,,,paquete de ganchos de 6 pares,6.0,Paquete,1.5,9.0,0.125,0.5,36.0,,0.5,18.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,206,,False,,,moñeras,28.0,Unidad,0.5357142857,15.0,0.5357142857,1.0,28.0,,1.0,28.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,207,,False,,,liga para cabello,3.0,Paquete,1.0,3.0,1.0,2.0,3.0,,2.0,6.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,208,,False,,,liga de lana,1.0,Paquete,1.5,1.5,1.5,2.5,1.0,,2.5,2.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,209,,False,,,pirañas grandes,9.0,Unidad,1.5,13.5,1.5,1.5,9.0,,1.5,13.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,210,,False,,,pares de pilis,5.0,pares,0.3,1.5,0.3,0.5,5.0,,1.0,5.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,211,,False,,,pinza de 12 und,2.0,Paquete,8.0,16.0,0.6666666667,1.0,24.0,,1.0,24.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,212,,False,,,Espejo Pequeño,6.0,Unidad,0.5,3.0,0.5,1.0,6.0,,1.0,6.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,213,,False,,,Espejo Mediano,2.0,Unidad,0.7,1.4,0.7,1.0,2.0,,1.0,2.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,214,,False,,,Guantes,8.0,pares,2.2,17.6,2.2,3.0,8.0,,3.0,24.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,215,,False,,,Tapa boca negro,25.0,Unidad,0.1,2.5,0.1,0.5,25.0,,0.5,12.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,216,,False,,,Tapa boca pequeño,50.0,Unidad,0.08,4.0,0.08,0.5,50.0,,0.5,25.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,217,,False,,,Tapa boca pequeño rosado,30.0,Unidad,0.08333333333,2.5,0.08333333333,0.5,30.0,,0.5,15.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,218,,False,,,Peine Pequeño,25.0,Unidad,0.24,6.0,0.24,0.8,25.0,,0.8,20.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,219,,False,,,Peine grande,11.0,Unidad,0.5,5.5,0.5,1.0,11.0,,1.0,11.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,220,,False,,,Peine con cola,10.0,Unidad,0.5,5.0,0.5,1.0,10.0,,1.0,10.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,221,,False,,,Pulsera ojito,11.0,Unidad,0.6363636364,7.0,0.6363636364,1.5,11.0,,1.5,16.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,222,,False,,,crema lechuga pequeño,10.0,Unidad,0.5,5.0,0.5,1.0,10.0,,1.0,10.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,223,,False,,,Crema Baselina,5.0,Unidad,0.5,2.5,0.5,1.0,5.0,,1.0,5.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,224,,False,,,Crema Lechuga grande,4.0,Unidad,1.0,4.0,1.0,2.0,4.0,,2.0,8.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,225,NUEVO,True,,,Lana de colores,8.0,Unidad,0.5,4.0,0.5,1.0,8.0,,1.0,8.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,226,,False,,,silvato pequeño,9.0,Unidad,0.2,1.8,0.2,0.5,9.0,,0.5,4.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,227,,False,,,Crema ponst,9.0,Unidad,0.5555555556,5.0,0.5555555556,1.0,9.0,,1.0,9.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,228,,False,,,llajes grande,14.0,Unidad,2.3,32.2,2.3,3.5,14.0,,3.5,49.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,229,,False,,,trompos,16.0,Unidad,0.6625,10.6,0.6625,1.0,16.0,,1.0,16.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,230,,False,,,taps,100.0,,0.0,0.0,0.0,0.0,1200.0,,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,231,,False,,,pelotitas de llajes,41.0,,0.0,0.0,0.0,0.0,41.0,,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,232,,False,,,chapitas,71.0,,0.0,0.0,0.0,0.0,71.0,,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,233,,False,,,llajes pequeños,100.0,,0.0,0.0,0.0,0.0,100.0,,0.0,0.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,234,,False,,,papel silufan,9.0,,0.4333333333,3.9,0.4333333333,1.0,9.0,,1.0,9.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,235,,False,,,ula ula,2.0,,4.0,8.0,4.0,5.0,2.0,,5.0,10.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,236,,False,cuadernos,loro,cuaderno loro con  diseño A4 100h,47.0,Unidad,3.978723404,187.0,3.978723404,6.0,47.0,,5.5,258.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,237,,False,cuadernos,surco,cuaderno surco con diseño A4 100h,20.0,Unidad,2.34,46.8,2.34,5.0,20.0,,4.5,90.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,238,,False,cuadernos,Surco,cuaderno surco pequeño 50  h,103.0,Unidad,1.0,103.0,1.0,1.5,103.0,,1.5,154.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,239,,False,cuadernos,Surco,cuaderno surco pqueño 100 h,61.0,Unidad,1.4,85.4,1.4,2.5,61.0,,2.5,152.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,240,,False,cuadernos,loro,cuaderno loro kinder 70 g,45.0,Unidad,3.9,175.5,3.9,6.0,45.0,,5.5,247.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,241,,False,cuadernos,Surco,Cuaderno surco triple reglon 100 h,80.0,Unidad,2.3025,184.2,2.3025,4.0,80.0,,3.5,280.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,242,,False,cuadernos,Surco,cuaderno surco # 100 h,25.0,Unidad,2.34,58.5,2.34,4.0,25.0,,3.5,87.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,243,,False,cuadernos,Layconsa,cuaderno layconsa teens # 100 h,62.0,Unidad,3.6,223.2,3.6,4.5,62.0,,5.0,310.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,244,,False,cuadernos,Surco,cuaderno surco grnade # 50 h,27.0,Unidad,1.4,37.8,1.4,2.5,27.0,,2.5,67.5,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,245,,False,cuadernos,Surco,cuaderno surco 1x1,18.0,Unidad,2.34,42.12,2.34,4.0,18.0,,3.5,63.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,246,,False,cuadernos,Layconsa,cuaderno layconsa teens triple reglon,23.0,Unidad,3.6,82.8,3.6,4.5,23.0,,5.0,115.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,247,,False,cuadernos,Surco,cuaderno surco 2x2,26.0,Unidad,2.338461538,60.8,2.338461538,4.0,26.0,,3.5,91.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,248,,False,cuadernos,Layconsa,cuaderno layconsa estudiante # 100 h,27.0,Unidad,4.0,108.0,4.0,6.0,27.0,,5.0,135.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,249,,False,cuadernos,Surco,cuaderno surco rayado 100 h,22.0,Unidad,2.34,51.48,2.34,4.0,22.0,,3.5,77.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,250,,False,cuadernos,Layconsa,cuaderno layconsa puppy # 100 h,18.0,Unidad,4.3,77.4,4.3,6.0,18.0,,5.0,90.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,251,,False,cuadernos,"stanford,","cuaderno stanford,universal, collaje #",11.0,Unidad,5.0,55.0,5.0,8.0,11.0,,7.0,77.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,252,,False,cuadernos,"stanford,",cuaderno stanford kist triple max,6.0,Unidad,5.0,30.0,5.0,8.0,6.0,,8.0,48.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,253,,False,cuadernos,Layconsa,cuaderno layconsa estudiante rayado 100 h,11.0,Unidad,2.145454545,23.6,2.145454545,4.5,11.0,,5.0,55.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,254,,False,cuadernos,universal,cuadernouniversal 1x1,5.0,Unidad,5.0,25.0,5.0,8.0,5.0,,7.0,35.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,255,,False,cuadernos,arcoiris,cuaderno arcoiris triple reglon,6.0,Unidad,2.3,13.8,2.3,4.0,6.0,,4.0,24.0,0.0,0.0,,,0.0,,0.0,0.0,0.0,0.0,0.0,Unidad,0.0,0.0
+Hoja 1,256,NUEVO,True,Juegos didacticos,,Base 10,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,8.0,96.0,8.0,16.0,12.0,Unidad,27.0,324.0
+Hoja 1,257,NUEVO,True,Juegos didacticos,,Abaco,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Unidad,8.5,51.0,8.5,17.0,6.0,Unidad,17.0,102.0
+Hoja 1,258,NUEVO,True,Juegos didacticos,,Dados Grandes,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Sobre,30.0,30.0,0.25,1.0,120.0,Unidad,1.0,120.0
+Hoja 1,259,NUEVO,True,Juegos didacticos,,Tamgram,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Sobre,6.5,39.0,6.5,12.0,6.0,Unidad,12.0,72.0
+Hoja 1,260,NUEVO,True,Juegos didacticos,,tapitas de botella,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,100.0,Ciento,0.09,9.0,0.09,0.2,100.0,Unidad,0.2,20.0
+Hoja 1,261,NUEVO,True,Juegos didacticos,,bloques,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Unidad,6.5,39.0,6.5,12.0,6.0,Unidad,12.0,72.0
+Hoja 1,262,NUEVO,True,,,Papel microporoso liso,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Paquete,15.66666667,47.0,1.566666667,5.0,30.0,Unidad,4.0,120.0
+Hoja 1,263,NUEVO,True,cuadernos,"stanford,",Cuadernos stanford 2x2,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,25.0,Unidad,5.4,135.0,5.4,8.0,25.0,Unidad,8.0,200.0
+Hoja 1,264,NUEVO,True,cuadernos,"stanford,",cuadernos stanford 1x1,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,25.0,Unidad,5.4,135.0,5.4,8.0,25.0,Unidad,8.0,200.0
+Hoja 1,265,NUEVO,True,Papel,,papel lustre blanco y surtido a color,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,125.0,Unidad,0.3,37.5,0.3,0.5,125.0,Unidad,0.5,62.5
+Hoja 1,266,NUEVO,True,,,"bolson de l,ona",0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,6.5,78.0,6.5,8.0,12.0,Unidad,8.0,96.0
+Hoja 1,267,NUEVO,True,,,serpentina,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Paquete,12.0,12.0,1.0,1.5,12.0,Unidad,1.5,18.0
+Hoja 1,268,NUEVO,True,,,Folder doble tapa,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Unidad,5.5,33.0,5.5,7.0,6.0,Unidad,7.0,42.0
+Hoja 1,269,NUEVO,True,,,Cartuchera surtido cuero,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,5.5,66.0,5.5,10.0,12.0,Unidad,10.0,120.0
+Hoja 1,270,NUEVO,True,Plumon,Layconsa,Plumon L-47 papel,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Cajitas,18.0,54.0,1.5,2.0,36.0,Unidad,2.0,72.0
+Hoja 1,271,NUEVO,True,Plumon,Layconsa,Plumon school L-45 x 12,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Docena,58.0,58.0,4.833333333,7.0,12.0,Unidad,7.0,84.0
+Hoja 1,272,NUEVO,True,Colores,Faber Castell,Colores Largos x 12,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Docena,70.0,140.0,5.833333333,8.0,24.0,Unidad,8.0,192.0
+Hoja 1,273,NUEVO,True,Colores,Faber Castell,Colores cortos x 12,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Docena,48.0,96.0,4.0,6.0,24.0,Unidad,6.0,144.0
+Hoja 1,274,NUEVO,True,Goma,Artesco,Goma en barra 40g,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Docena,36.0,36.0,3.0,5.0,12.0,Unidad,5.0,60.0
+Hoja 1,275,NUEVO,True,Goma,Layconsa,Goma liquida 250g,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Docena,34.0,68.0,2.833333333,4.0,24.0,Unidad,4.0,96.0
+Hoja 1,276,NUEVO,True,Goma,Layconsa,Goma en barra 8 gr,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajitas,33.0,33.0,1.1,2.5,30.0,Unidad,2.5,75.0
+Hoja 1,277,NUEVO,True,Goma,Layconsa,Goma liquida 125g,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Docena,24.0,48.0,2.0,3.0,24.0,Unidad,3.0,72.0
+Hoja 1,278,NUEVO,True,silicona,Layconsa,Silicona liquida 250g,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Docena,60.0,120.0,5.0,7.0,24.0,Unidad,7.0,168.0
+Hoja 1,279,NUEVO,True,silicona,Layconsa,Silicona liquida 100g,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Docena,36.0,72.0,3.0,4.5,24.0,Unidad,4.5,108.0
+Hoja 1,280,NUEVO,True,Lapicero,PILOT,Lapicero pilot azul,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajitas,29.0,29.0,2.416666667,3.5,12.0,Unidad,3.5,42.0
+Hoja 1,281,NUEVO,True,Lapicero,Faber Castell,lapicero 060 azul rojo,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Cajitas,13.0,26.0,1.083333333,2.0,24.0,Unidad,2.0,48.0
+Hoja 1,282,NUEVO,True,Lapicero,Youmei,"lapicero azul, rojo, negro y verde",0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,4.0,Cajitas,12.5,50.0,1.041666667,2.0,44.0,Unidad,2.0,88.0
+Hoja 1,283,NUEVO,True,Borrador,Oval,Borrador Aval x 20,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajitas,10.0,10.0,0.5,1.0,20.0,Unidad,1.0,20.0
+Hoja 1,284,NUEVO,True,Borrador,Oval,Borrador Aval x 30,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajitas,10.0,10.0,0.3333333333,0.8,30.0,Unidad,0.8,24.0
+Hoja 1,285,NUEVO,True,Borrador,Layconsa,Borrador layconsa bicolo x50,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajitas,24.0,24.0,0.3,0.5,80.0,Unidad,0.5,40.0
+Hoja 1,286,NUEVO,True,Tijera,Eco,Tijera Eco,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajitas,16.0,16.0,0.6666666667,1.5,24.0,Unidad,1.5,36.0
+Hoja 1,287,NUEVO,True,Tijera,Layconsa,Tijera escolar,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Docena,20.0,20.0,1.666666667,3.0,12.0,Unidad,3.0,36.0
+Hoja 1,288,NUEVO,True,Pincel,,Pincel surtido 0/00/000,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Docena,4.0,48.0,0.6666666667,1.0,72.0,Unidad,1.0,72.0
+Hoja 1,289,NUEVO,True,Cuter,,Cuter por tiras d 12,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Paquete,8.0,16.0,0.6666666667,1.5,24.0,Unidad,1.5,36.0
+Hoja 1,290,NUEVO,True,Forro Vinifan,Artesco,forro artesco,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Docena,2.333333333,28.0,2.333333333,3.5,12.0,Unidad,3.5,42.0
+Hoja 1,291,NUEVO,True,,,STIKER DE PRECIOS,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,1.0,12.0,1.0,2.0,12.0,Unidad,2.0,24.0
+Hoja 1,292,NUEVO,True,Cinta,,Cinta scoth delgado,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Paquete,2.833333333,17.0,0.2361111111,1.0,72.0,Unidad,1.0,72.0
+Hoja 1,293,NUEVO,True,cuadernos,Layconsa,Cuaderno Markin # 100 h,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,50.0,1/2 Ciento,3.0,150.0,3.0,4.5,50.0,Unidad,4.5,225.0
+Hoja 1,294,NUEVO,True,cuadernos,,cuaderno markin triple reglon 100 h,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,25.0,1/4 ciento,3.0,75.0,3.0,4.5,25.0,Unidad,4.5,112.5
+Hoja 1,295,NUEVO,True,,,Cartulina blanca,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Ciento,32.0,32.0,0.32,0.5,100.0,Unidad,0.5,50.0
+Hoja 1,296,NUEVO,True,,,Crepe con diseño,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Paquete,12.0,36.0,1.2,2.0,30.0,Unidad,2.0,60.0
+Hoja 1,297,NUEVO,True,Cinta,,Cinta Maskin shurtaple 2*15,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajas,52.0,52.0,2.166666667,5.0,24.0,Unidad,4.5,108.0
+Hoja 1,298,NUEVO,True,silicona,,Silicona delgada en barra,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Ciento,17.0,34.0,0.2328767123,0.5,146.0,Unidad,0.5,73.0
+Hoja 1,299,NUEVO,True,Plumon,Eco,Plumon indeleble azul y negro,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Cajitas,10.0,20.0,0.8333333333,2.5,24.0,Unidad,2.5,60.0
+Hoja 1,300,NUEVO,True,Colores,Layconsa,Colores Jumbo,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,10.33333333,124.0,10.33333333,15.0,12.0,Unidad,15.0,180.0
+Hoja 1,301,NUEVO,True,plastilina,Artesco,Platilina ultra suave x6,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Cajitas,15.5,93.0,2.583333333,18.0,6.0,Unidad,18.0,108.0
+Hoja 1,302,NUEVO,True,Lapiz,Layconsa,Lapiz Jumbo,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Cajitas,10.0,20.0,0.8333333333,1.5,24.0,Unidad,1.5,36.0
+Hoja 1,303,NUEVO,True,Tijera,Artesco,Tijera Artesco mango goma,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Unidad,6.5,39.0,6.5,8.0,6.0,Unidad,8.0,48.0
+Hoja 1,304,NUEVO,True,Papel,,Cartulina Negra,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Ciento,50.0,50.0,0.5,1.0,100.0,Unidad,1.5,150.0
+Hoja 1,305,NUEVO,True,,,Stiker cuaderno,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,1.5,18.0,0.075,0.2,240.0,Unidad,0.2,48.0
+Hoja 1,306,NUEVO,True,Papel,,Papel boom,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajas,124.0,124.0,12.4,18.0,10.0,Unidad,18.0,180.0
+Hoja 1,307,NUEVO,True,Papel,,Papel boom 70 gr,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajas,140.0,140.0,14.0,20.0,10.0,Unidad,18.0,180.0
+Hoja 1,308,NUEVO,True,,,Papel suave higienico,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Paquete,34.0,34.0,3.4,1.0,60.0,Unidad,1.0,60.0
+Hoja 1,309,NUEVO,True,,,papel toalla,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Paquete,25.0,25.0,2.5,4.0,10.0,Unidad,4.0,40.0
+Hoja 1,310,NUEVO,True,,,cepillo colgate,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Paquete,28.0,28.0,2.333333333,4.0,12.0,Unidad,4.0,48.0
+Hoja 1,311,NUEVO,True,Plumon,Faber Castell,Plumon fabercito de 10 und,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Unidad,4.0,24.0,4.0,6.0,6.0,Unidad,6.0,36.0
+Hoja 1,312,NUEVO,True,Lapicero,,Lapicero brillante x12 und,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,3.333333333,40.0,3.333333333,10.0,12.0,Unidad,10.0,120.0
+Hoja 1,313,NUEVO,True,Lapicero,Oval,Lapicero a color x 12 und,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Unidad,4.0,24.0,4.0,8.0,6.0,Unidad,8.0,48.0
+Hoja 1,314,NUEVO,True,Resaltador,,Resaltador pastel x 6 und,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Unidad,5.0,30.0,0.8333333333,2.0,36.0,Unidad,2.0,72.0
+Hoja 1,315,NUEVO,True,,,Pelotas de trapo,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,0.75,9.0,0.75,1.5,12.0,Unidad,1.5,18.0
+Hoja 1,316,NUEVO,True,,,Pasta dental,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,2.833333333,34.0,2.833333333,3.5,12.0,Unidad,3.5,42.0
+Hoja 1,317,NUEVO,True,,,jaboncillo camai,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,2.5,30.0,2.5,3.5,12.0,Unidad,3.5,42.0
+Hoja 1,318,NUEVO,True,,,Lapicero kawai x 10,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,4.0,12.0,4.0,6.0,3.0,Unidad,6.0,18.0
+Hoja 1,319,NUEVO,True,,,Set de escuadras kuromi,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,4.0,Unidad,3.0,12.0,3.0,6.0,4.0,Unidad,6.0,24.0
+Hoja 1,320,NUEVO,True,,,Regla expandible,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,4.2,12.6,4.2,6.0,3.0,Unidad,6.0,18.0
+Hoja 1,321,NUEVO,True,,,Tarjador animalitos,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,3.4,10.2,3.4,5.0,3.0,Unidad,5.0,15.0
+Hoja 1,322,NUEVO,True,,,Set borradores rabbit y comida rapida x3,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,2.7,8.1,2.7,4.0,3.0,Unidad,4.0,12.0
+Hoja 1,323,NUEVO,True,,,Set de borradores modelo oso queso x 3,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Unidad,2.8,2.8,2.8,4.0,1.0,Unidad,4.0,4.0
+Hoja 1,324,NUEVO,True,,,Llavero capibara televisor,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,5.8,17.4,5.8,8.0,3.0,Unidad,8.0,24.0
+Hoja 1,325,NUEVO,True,,,Llavero capibara monedero,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,5.0,Unidad,6.6,33.0,6.6,8.0,5.0,Unidad,8.0,40.0
+Hoja 1,326,NUEVO,True,,,lapicero escarchado x 6,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,6.4,19.2,6.4,12.0,3.0,Unidad,12.0,36.0
+Hoja 1,327,NUEVO,True,,,cinta capibara,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Paquete,6.1,12.2,0.61,1.0,20.0,Unidad,1.0,20.0
+Hoja 1,328,NUEVO,True,,,Set de resaltador pastel x 6,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,5.4,16.2,5.4,10.0,3.0,Unidad,10.0,30.0
+Hoja 1,329,NUEVO,True,,,Lapicero tinta gel con orejitas,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,2.7,8.1,2.7,5.0,3.0,Unidad,5.0,15.0
+Hoja 1,330,NUEVO,True,,,Lapicero borrable conejo,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,1.8,5.4,1.8,3.5,3.0,Unidad,3.5,10.5
+Hoja 1,331,NUEVO,True,,,Lapicero borrrable chocolate osito,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,2.2,6.6,2.2,3.5,3.0,Unidad,3.5,10.5
+Hoja 1,332,NUEVO,True,,,Corrector,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,4.0,Unidad,1.4,5.6,1.4,2.0,4.0,Unidad,2.0,8.0
+Hoja 1,333,NUEVO,True,,,Hojas de color 100 und,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Paquete,4.2,8.4,0.042,0.2,200.0,Unidad,0.1,20.0
+Hoja 1,334,NUEVO,True,,,Plumon de pizarra vikingo x12,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Cajitas,11.0,33.0,0.9166666667,2.0,36.0,Unidad,2.0,72.0
+Hoja 1,335,NUEVO,True,,,Microporoso escarchado A4,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Paquete,3.5,3.5,0.35,1.5,10.0,Unidad,1.5,15.0
+Hoja 1,336,NUEVO,True,,,Silicona en barrra,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Sobre,13.5,13.5,0.09642857143,0.5,140.0,Unidad,0.5,70.0
+Hoja 1,337,NUEVO,True,,,Vaso de plastico,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Docena,10.0,20.0,0.8333333333,1.5,24.0,Unidad,1.5,36.0
+Hoja 1,338,NUEVO,True,,,micas con diseño,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,3.0,9.0,3.0,4.0,3.0,Unidad,4.0,12.0
+Hoja 1,339,NUEVO,True,,,loncheras,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Unidad,3.0,6.0,3.0,6.0,2.0,Unidad,6.0,12.0
+Hoja 1,340,NUEVO,True,,,posit cuadriculado,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,4.0,Unidad,3.0,12.0,3.0,3.0,4.0,Unidad,3.0,12.0
+Hoja 1,341,NUEVO,True,,,borradores transparentes,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,2.5,7.5,2.5,2.5,3.0,Unidad,2.5,7.5
+Hoja 1,342,NUEVO,True,,,goma en barra ranparente,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,2.5,7.5,2.5,2.5,3.0,Unidad,2.5,7.5
+Hoja 1,343,NUEVO,True,,,lapiceros kuromi,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,5.0,15.0,5.0,5.0,3.0,Unidad,5.0,15.0
+Hoja 1,344,NUEVO,True,,,lapiceros capibara,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,2.5,7.5,2.5,2.5,3.0,Unidad,2.5,7.5
+Hoja 1,345,NUEVO,True,,,borradores patita,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,3.0,9.0,3.0,3.0,3.0,Unidad,3.0,9.0
+Hoja 1,346,NUEVO,True,,,cuadernos anillados capibara,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,4.0,Unidad,2.625,10.5,2.625,5.0,4.0,Unidad,5.0,20.0
+Hoja 1,347,NUEVO,True,,,lapiceros happy,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,1.0,3.0,1.0,1.0,3.0,Unidad,1.0,3.0
+Hoja 1,348,NUEVO,True,,,lapiceros osito,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Unidad,2.0,4.0,2.0,2.0,2.0,Unidad,2.0,4.0
+Hoja 1,349,NUEVO,True,,,lapiz con diseño,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajitas,4.0,4.0,0.3333333333,1.0,12.0,Unidad,1.0,12.0
+Hoja 1,350,NUEVO,True,,,cartucheras,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Unidad,9.0,18.0,9.0,9.0,2.0,Unidad,9.0,18.0
+Hoja 1,351,NUEVO,True,,,Puntero,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Docena,34.0,34.0,2.833333333,3.5,12.0,,3.5,42.0
+Hoja 1,352,NUEVO,True,,,Microporoso escarchado A4,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Paquete,6.5,13.0,0.65,1.5,20.0,,1.5,30.0
+Hoja 1,353,NUEVO,True,,,chinches,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajas,12.0,12.0,1.2,2.0,10.0,,2.0,20.0
+Hoja 1,354,NUEVO,True,,,tiros,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Sobre,5.0,10.0,0.05,0.1,200.0,,0.1,20.0
+Hoja 1,355,NUEVO,True,,,papel sedita,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,100.0,Unidad,0.18,18.0,0.18,0.5,100.0,,0.5,50.0
+Hoja 1,356,NUEVO,True,,,escarcha bliquida grande,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Paquete,28.0,28.0,2.333333333,5.0,12.0,,5.0,60.0
+Hoja 1,357,NUEVO,True,,,glitter de escarcha liquida x 6,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Unidad,4.0,24.0,4.0,6.0,6.0,,6.0,36.0
+Hoja 1,358,NUEVO,True,,,rosas con osito,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,Unidad,2.5,30.0,2.5,4.0,12.0,,4.0,48.0
+Hoja 1,359,NUEVO,True,,,rositas x 3,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Paquete,8.0,8.0,0.6666666667,1.5,12.0,,1.5,18.0
+Hoja 1,360,NUEVO,True,,,rosas,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Paquete,4.5,9.0,0.375,1.0,24.0,,1.0,24.0
+Hoja 1,361,NUEVO,True,,,tasa con rosas,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,3.0,Unidad,13.0,39.0,13.0,20.0,3.0,,20.0,60.0
+Hoja 1,362,NUEVO,True,,,brocheta intermedia,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,6.0,Sobre,1.333333333,8.0,1.333333333,2.0,6.0,,2.0,12.0
+Hoja 1,363,NUEVO,True,,,cortauña pequeña,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,24.0,Unidad,0.6666666667,16.0,0.6666666667,1.5,24.0,,1.5,36.0
+Hoja 1,364,NUEVO,True,,,betun negro mediano,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,,2.166666667,26.0,2.166666667,3.5,12.0,,3.5,42.0
+Hoja 1,365,NUEVO,True,,,adornos para el dia del padre,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,,0.5833333333,7.0,0.5833333333,1.5,12.0,,1.5,18.0
+Hoja 1,366,NUEVO,True,,,papel boom acolor pastel,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Paquete,20.0,20.0,0.04,0.1,500.0,,0.1,50.0
+Hoja 1,367,NUEVO,True,,,escarapela,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,72.0,Paquete,0.1944444444,14.0,0.1944444444,0.5,72.0,,0.5,36.0
+Hoja 1,368,NUEVO,True,,,adorno niño selvatico,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,,2.0,24.0,2.0,3.5,12.0,,3.5,42.0
+Hoja 1,369,NUEVO,True,,,cholito,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,,2.0,24.0,2.0,3.5,12.0,,3.5,42.0
+Hoja 1,370,NUEVO,True,,,perlas adornos,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,,1.166666667,14.0,1.166666667,2.5,12.0,,2.5,30.0
+Hoja 1,371,NUEVO,True,,,cinta de agua,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,,1.833333333,22.0,1.833333333,3.5,12.0,,3.5,42.0
+Hoja 1,372,NUEVO,True,,,carton cartulina,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,50.0,1/2 Ciento,0.9,45.0,0.9,2.0,50.0,,2.0,100.0
+Hoja 1,373,NUEVO,True,,,lapicero azul rojo layconsa,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,2.0,Cajitas,8.5,17.0,0.7083333333,1.5,24.0,,1.5,36.0
+Hoja 1,374,NUEVO,True,,,silicona liquida pequeña,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,1.0,Cajas,26.0,26.0,1.083333333,1.5,24.0,,1.5,36.0
+Hoja 1,375,NUEVO,True,,,cinta de cabello verde y kaky,0.0,,0.0,0.0,0.0,0.0,0.0,,0.0,0.0,0.0,0.0,,,12.0,,3.0,36.0,0.3,0.5,120.0,,0.5,60.0

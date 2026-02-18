@@ -1,0 +1,21 @@
+RESUMEN HOJA 2 - VENTAS E INVENTARIO
+===================================
+Productos con stock analizado: 371
+Registros de venta importables (producto + precio): 274
+Registros con cantidad y precio 0 (archivo de ajuste): 2
+Items de compra considerados (hoja 1): 407
+
+1) STOCK ACTUAL
+Unidades totales en inventario actual: 10897.0000
+
+2) INVERSION EN COMPRAS
+Inversion total de compras (hoja 1): S/ 13169.0700
+
+3) VENTAS REALIZADAS
+Ventas totales (hoja 2): S/ 5681.7000
+Costo de lo vendido (hoja 2): S/ 3535.2759
+
+4) GANANCIA
+Ganancia realizada (ventas - costo vendido): S/ 2146.4241
+Ganancia vs inversion total (ventas - inversion compras): S/ -7487.3700
+Capital en stock a costo aprox. (inversion - costo vendido): S/ 9633.7941

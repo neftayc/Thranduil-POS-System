@@ -1,0 +1,254 @@
+sku,name,unit,sale_price,stock_on_hand,avg_cost,min_stock,active
+SKU-B35E15000C,Lapiz Chequeo Rojo,Docena,1.0,6.0,0.5,0,True
+SKU-CFF923A7CB,Lapiz Bicolor,Docena,1.5,9.0,0.8333,0,True
+SKU-2C39477511,Lapiz Chequeo Rojo,Docena,1.5,9.0,0.5833,0,True
+SKU-A0036CB3EE,Lapiz 2B,Docena,1.0,4.0,0.5,0,True
+SKU-71C2AA1AC2,Lapiz 2B Titan,Docena,1.5,1.0,0.75,0,True
+SKU-8FC03EDBA8,Lapiz Grazo Negro,Unidad,3.5,7.0,2.0,0,True
+SKU-ACD539DCF8,Lapiz Semi Negro,Unidad,4.5,9.0,2.5,0,True
+SKU-B5C11289ED,Lapiz tecnico 6B,Docena,1.5,1.0,1.0,0,True
+SKU-4985AB403E,Lapiz Punsonez,Unidad,0.0,9.0,0.28,0,True
+SKU-47649F38F3,Lapiz Bicolor,Unidad,1.0,32.0,0.5813,0,True
+SKU-3D6E311713,Plumon Acrilico L-123,Docena,2.5,9.0,1.25,0,True
+SKU-8C8A44A28A,Plumon Jumbo 123,Docena,5.0,2.0,3.125,0,True
+SKU-A4C64A7065,Plumon Pizzarra,Docena,0.0,2.0,2.0,0,True
+SKU-F12064BA1D,Plumon 2.3mm,Docena,2.5,1.0,1.25,0,True
+SKU-54BDA3B77E,Plumones Marcador Fibre Tips - 12 uni,Unidad,5.0,6.0,3.1667,0,True
+SKU-7AA60686F3,Plumones Marcador 6 uni -,Unidad,5.0,2.0,4.0,0,True
+SKU-7FE37C8EBE,Cartuchera Mike Crack,Unidad,10.0,3.0,7.0,0,True
+SKU-088F490747,Cartuchera Forta,Unidad,12.0,6.0,7.0,0,True
+SKU-9F843A3ED5,Cartucheta Simple,Unidad,0.0,11.0,0.0,0,True
+SKU-EE9347CD6F,Estuches de Plastico,Unidad,7.0,5.0,6.0,0,True
+SKU-403887F2ED,Saca Punta con Deposito,Unidad,3.5,3.0,2.0,0,True
+SKU-3F04396584,Saca Punta con M-207,Unidad,0.5,118.0,0.2542,0,True
+SKU-21586425F2,Saca Punta Metal,Unidad,1.5,15.0,0.7467,0,True
+SKU-D8FF390C71,Saca Punta Metal Doble,Unidad,2.5,19.0,1.8,0,True
+SKU-F767C4A84B,Saca Punta con Deposito 8917,Docena,1.5,1.0,1.0,0,True
+SKU-548D01F865,Saca Punta con Deposito,Docena,1.5,1.0,1.0,0,True
+SKU-EFF72223DB,Saca Punta con Deposito,Docena,2.0,1.0,1.0,0,True
+SKU-A6FC3FFFAE,Saca Punta,Cajitas,0.0,1.0,0.6667,0,True
+SKU-0A7E74A79A,Saca Punta M-557,Cajitas,2.0,2.0,0.6667,0,True
+SKU-596614038E,Tarjadores,Unidad,0.0,18.0,0.5,0,True
+SKU-A292B4DE9C,Toalla sin diseño,Unidad,3.0,9.0,1.5,0,True
+SKU-FA80AA5B55,Toalla con diseño,Unidad,5.5,4.0,3.5,0,True
+SKU-1B040F84C1,Micas A4,Sobre,1.0,1.0,0.38,0,True
+SKU-1A61EF5307,Meseros Personales - Niños,Unidad,2.5,7.0,1.5,0,True
+SKU-F88C6410A3,Sobre Manila A4 premium,Paquete,1.0,9.0,0.4444,0,True
+SKU-86FCEA2F11,Forro Vinifan A4,Unidad,7.0,4.0,4.0,0,True
+SKU-610A957481,Forro Vinifan Grande OM,Unidad,9.0,2.0,7.0,0,True
+SKU-CC0A8E99BA,Forro vinifan A4,Unidad,4.5,14.0,3.5,0,True
+SKU-5CC706071A,Forro vinifan A4,Unidad,3.5,9.0,2.0,0,True
+SKU-826C40E118,Corrector Oval de 2 pares,Unidad,2.0,29.0,0.6207,0,True
+SKU-CB560BEEE8,Corrector 9ML,Docena,2.5,1.0,1.8333,0,True
+SKU-657537C0BB,Resaltador,Unidad,2.5,18.0,1.3333,0,True
+SKU-E6ECA4BB2D,Goma Liquida Mar David 60gr,Unidad,1.5,9.0,0.9111,0,True
+SKU-F901C51CE7,Goma en barra 21Gr,Unidad,3.5,15.0,1.8,0,True
+SKU-D740B5A41D,Goma en barra 40Gr,Unidad,5.0,3.0,4.0,0,True
+SKU-20D4B162C0,Borrador LA-2O,Unidad,1.0,16.0,0.55,0,True
+SKU-47D72EF215,Borrador LA-40 bicolor,Unidad,1.0,15.0,0.5,0,True
+SKU-E1915FD596,Baja Lengua - Blanco,Sobre,1.0,10.0,0.5,0,True
+SKU-FB6932B48B,Baja Lengua  de color grande,Unidad,2.0,6.0,0.5833,0,True
+SKU-C756F39052,Baja Lengua de color pequeño,Unidad,1.5,35.0,0.6,0,True
+SKU-4C5B02D17F,Pintura Brillo Escarchado,Unidad,0.0,36.0,0.0,0,True
+SKU-71703659EC,"Botellas de Temperas (Amarillo, rojo, Azul) -  (Rojo, azul,  verde, amarillo, negro, blanco)",Unidad,7.0,18.0,4.5,0,True
+SKU-BE332825F0,Temperas x7,Cajas,7.0,9.0,5.0,0,True
+SKU-174A32F486,Acuarelas Grandes,Unidad,8.0,4.0,4.0,0,True
+SKU-286FE9445F,Acuarelas pequeñas,Unidad,6.0,3.0,3.5,0,True
+SKU-D10E312991,Lapicero Trilux Negro-032,Cajitas,1.0,1.0,0.44,0,True
+SKU-869F2341BF,Lapicero Trilux Rojo-032,Cajitas,1.0,1.0,0.44,0,True
+SKU-E29E5C3C39,Lapicero Trilux-031,Unidad,1.0,46.0,0.4783,0,True
+SKU-F5EC060813,Lapicero Trilux Azul-032,Unidad,1.0,30.0,0.44,0,True
+SKU-6A944058B9,Lapicero Trilux - 035,Unidad,1.5,17.0,0.7,0,True
+SKU-752D174473,Pincel Escolar 1-6 Besco,Unidad,1.0,125.0,0.6664,0,True
+SKU-F06AE39D3D,Hizopo,Unidad,1.5,3.0,1.0,0,True
+SKU-D9A535C356,Pozzis limpiatipo,Unidad,3.5,8.0,1.825,0,True
+SKU-448A8AC612,Stikers Have Love,Unidad,1.0,50.0,0.48,0,True
+SKU-719315C9EF,Nombre de cuaderno,Unidad,0.3,100.0,0.1,0,True
+SKU-5C73B60915,Stikers de Portada - Plancha,Unidad,0.2,4.0,0.125,0,True
+SKU-0D608B9E69,Tableros Acrilicos,Unidad,10.0,3.0,7.0,0,True
+SKU-FCEB95A265,Sketch book 15h,Unidad,4.0,24.0,2.1667,0,True
+SKU-C2CDBEE0B5,Sketch book 25h,Unidad,6.0,14.0,2.6643,0,True
+SKU-D458444EA7,Sketch book 50h,Unidad,12.0,15.0,8.0,0,True
+SKU-F8C11BD284,Tabla periodica,Unidad,1.5,15.0,0.6667,0,True
+SKU-D15BAC6AB0,Cometas,Unidad,0.0,15.0,0.0,0,True
+SKU-CC77E1CB6E,Banderas,Unidad,0.0,6.0,0.0,0,True
+SKU-96A54B592D,Microporoso Glitter self Adhesivo letras escarchados,Unidad,1.5,14.0,0.8,0,True
+SKU-E3DC6271A1,Folder Manila A4,Paquete,1.0,16.0,0.27,0,True
+SKU-92E9FC0267,Folder Top,Unidad,5.0,45.0,2.6667,0,True
+SKU-807FCCA0D5,Folder Genius,Unidad,0.0,2.0,2.67,0,True
+SKU-A95695902B,Folder Vinifan,Unidad,0.0,6.0,2.67,0,True
+SKU-80F3629E6F,Folder a color de cartulina,Unidad,0.8,73.0,0.36,0,True
+SKU-46E96BE918,Tijeras R-Relampago con formas,Sobre,3.0,1.0,1.6667,0,True
+SKU-B763AB4CA4,Tijeras Acolores,Unidad,1.0,17.0,0.6235,0,True
+SKU-55A37B661F,Tijeras amarillas,Unidad,1.0,10.0,0.625,0,True
+SKU-980649732C,Cuadernillo de anotes pequeño,Unidad,1.5,4.0,1.0,0,True
+SKU-BFF6AAF2E2,Cuadernillo de anotes grande,Unidad,3.0,6.0,2.0,0,True
+SKU-6883152A26,Libro de actas 200f,Unidad,0.0,2.0,7.2,0,True
+SKU-894F4DE5BD,Libro de actas 100f,Unidad,0.0,1.0,3.7,0,True
+SKU-B2BE8E20C5,Obras Literarias,Unidad,4.0,5.0,3.5,0,True
+SKU-3B45C1A452,Diccionario Bruno Ingles,Unidad,20.0,4.0,7.5,0,True
+SKU-8B83AAD0BD,Diccionario Bruno Sinonimos Antonimos,Unidad,20.0,16.0,7.5,0,True
+SKU-163DD0A3EC,Diccionario Bruno,Unidad,20.0,8.0,7.0,0,True
+SKU-26FF8F2A26,Jabon liquido grande,Unidad,6.0,27.0,4.0,0,True
+SKU-C2A71FB517,Jabon liquido pequeño,Unidad,6.0,19.0,3.3316,0,True
+SKU-EEDF6B72FC,Jaboneras,Unidad,1.0,4.0,1.0,0,True
+SKU-B3C78D2293,Escobilla Grande de Zapato,Unidad,3.0,2.0,1.3,0,True
+SKU-E325832F3F,Escobilla Pequeña de Zapato,Unidad,2.5,14.0,1.0,0,True
+SKU-2B3E112B79,Betun Marron Grande,Unidad,3.5,2.0,2.0,0,True
+SKU-7CBD13501A,Betun Marron Pequeño,Unidad,3.5,23.0,1.5,0,True
+SKU-73A71E5263,Esponja Merlin,Paquete,1.5,6.0,0.6667,0,True
+SKU-3AD10ADE3E,Pompones,Unidad,0.0,14.0,0.0,0,True
+SKU-5B727C91A4,Batisoga pequeño,Unidad,2.5,10.0,1.5,0,True
+SKU-B8D34F9520,Batisoga grande,Unidad,3.5,11.0,2.1636,0,True
+SKU-350C7C704C,Super esponja,Paquete,1.0,8.0,0.4583,0,True
+SKU-E8E22F7A03,Trish,Paquete,0.5,11.0,0.3,0,True
+SKU-3BE5E01407,Cinta de color maskin taps,Unidad,3.5,7.0,2.3286,0,True
+SKU-98985FC2E2,Cinta electrica,Unidad,1.5,9.0,0.8,0,True
+SKU-DBFF6390A4,Cinta Leon 18*45,Unidad,2.0,8.0,1.0,0,True
+SKU-0B1DB283DC,Cinta Durafan 12*14,Unidad,0.5,31.0,0.2,0,True
+SKU-AC4FD4402D,Cinta Grande Durango,Paquete,3.5,2.0,2.5,0,True
+SKU-7CC3237D0B,Cinta Grande Brudan Peru,Paquete,1.5,11.0,0.75,0,True
+SKU-80852C9B2C,Cinta Maskin Pegafan 24mm,Unidad,3.0,16.0,2.0,0,True
+SKU-79766A3EC4,Cinta Maskin Pegafan 36mm,Unidad,4.0,3.0,3.0,0,True
+SKU-FE61DF628C,Cinta Maskin Pegafan 48mm,Unidad,5.0,12.0,3.1667,0,True
+SKU-D6FF0730E9,Cinta Maskin Shurtape 3/4*15,Unidad,1.5,2.0,1.0,0,True
+SKU-FEB8C87076,Cinta Maskin shurtape 1/2*15,Unidad,1.5,3.0,0.8333,0,True
+SKU-36871BCFD9,Cinta Maskin shurtape 1 1/2*15,Unidad,4.0,20.0,3.0,0,True
+SKU-A744CA3157,Cinta Maskin shurtaple 1*15,Unidad,2.5,27.0,1.6667,0,True
+SKU-440CE89799,Cinta de colores grande,Paquete,0.0,6.0,0.0,0,True
+SKU-A441F2A34C,Cinta de colores pequeño,Paquete,0.0,1.0,0.0,0,True
+SKU-43639DD892,Lapices de Color largos x 12,Unidad,6.0,10.0,4.66,0,True
+SKU-2AC9B9F61B,lapiz de color pequeño x 12,Unidad,5.0,11.0,2.8327,0,True
+SKU-66BF1790A8,Fastener de metal,Cajitas,0.5,8.0,0.08,0,True
+SKU-E9EF9D1B06,Fastener de Gusano,Unidad,2.0,32.0,0.9594,0,True
+SKU-9F897FBDE0,Tomatodo Grande,Unidad,15.0,4.0,12.0,0,True
+SKU-31ACA0DEE5,Tomatodo pequeño,Unidad,10.0,7.0,7.0,0,True
+SKU-9A43DE1973,Tomatodo Mediano tricolor,Unidad,15.0,15.0,12.0,0,True
+SKU-78A62B9611,Papel Lustre,Unidad,0.5,144.0,0.2,0,True
+SKU-F0BB6DEF54,Papel de regalo,Unidad,0.7,122.0,0.2795,0,True
+SKU-103C7E2AE9,Papel corrugado,Unidad,3.5,26.0,2.4,0,True
+SKU-1EDA4B9225,Papel Corrospum,Unidad,5.0,33.0,3.5,0,True
+SKU-283B2C011D,Papel Craft,Unidad,1.0,72.0,0.3194,0,True
+SKU-9D4E4EE716,Papel Sedita,Unidad,0.5,40.0,0.2,0,True
+SKU-9FCECC1704,Papel Cometa,Unidad,0.5,66.0,0.2,0,True
+SKU-BB482D8842,Papel celofan,Unidad,1.0,5.0,0.44,0,True
+SKU-E51E19D0B3,Papel Cuadriculado 1x1,Unidad,0.5,137.0,0.219,0,True
+SKU-B82DE634A2,Papel Cuadrimax 2x2,Unidad,0.5,200.0,0.205,0,True
+SKU-A47A5E460A,Papel microporoso escarchado,Unidad,5.0,10.0,3.0,0,True
+SKU-7762F9C08A,Papel Crepe,Unidad,1.0,52.0,0.6,0,True
+SKU-6884E99187,Papelote blanco,Unidad,0.5,45.0,0.2,0,True
+SKU-14DDD5EBC1,Cartulina a colores,Unidad,1.0,47.0,0.4191,0,True
+SKU-EC244CF0A7,Cartulina Fosforesente,Unidad,0.0,45.0,2.5,0,True
+SKU-13AE01C3C6,Papel Arcoiris,Paquete,28.0,7.0,19.0,0,True
+SKU-3023CF7487,Papel Punzones A4,Unidad,3.0,10.0,1.5,0,True
+SKU-92AE39BB9B,Papel Cuadernillo,Sobre,0.0,45.0,0.0,0,True
+SKU-FAB7A65F90,Reglas de 20 cm,Unidad,1.0,38.0,0.5579,0,True
+SKU-AB58B8B259,Reglas de 30 cm,Unidad,1.5,49.0,0.6408,0,True
+SKU-9FD0B9F742,Juego de reglas 20 cm,Unidad,3.5,15.0,2.0,0,True
+SKU-53F12AE701,Juego de reglas 30 cm,Unidad,5.0,21.0,3.0,0,True
+SKU-5FE2F611DF,Portafolio Papel,Unidad,6.0,8.0,5.0,0,True
+SKU-00358783C1,Ray Perú y Artesco,Unidad,10.0,21.0,5.3333,0,True
+SKU-0E6AA9F21D,Paletas de pinturas,Unidad,3.0,12.0,1.1667,0,True
+SKU-5253FC1878,Rompecabezas de 20 piesas,Unidad,11.0,23.0,5.8261,0,True
+SKU-114F4CCCFD,Rompecabezas de 50 piesas,Unidad,15.0,1.0,15.0,0,True
+SKU-54906A7627,Crayones Jumbo,Unidad,5.5,54.0,3.0833,0,True
+SKU-820FC464C1,Plastilina,Docena,5.5,3.0,2.9167,0,True
+SKU-CBB8FF3308,Perforador,Unidad,10.0,13.0,5.5,0,True
+SKU-449B9500E7,Perforador,Unidad,9.0,8.0,4.5,0,True
+SKU-6F3AFF7E6F,Perforador stapler,Unidad,9.0,2.0,4.5,0,True
+SKU-32AB3A0D9C,Engrampador stapler,Unidad,10.0,5.0,5.0,0,True
+SKU-04EBD80B61,Engrampador artesa,Unidad,10.0,2.0,5.0,0,True
+SKU-59E1F5048A,Engrapador artesco,Unidad,10.0,1.0,8.5,0,True
+SKU-120B36A5F6,Cajitas de Grampa,Unidad,1.5,12.0,0.8,0,True
+SKU-846F88306F,Tampon Rojo L-T3,Unidad,4.0,5.0,2.4,0,True
+SKU-C6455B5467,Tampon Negro,Unidad,5.0,3.0,3.0,0,True
+SKU-3E4604AF45,Compas,Unidad,3.5,18.0,1.1667,0,True
+SKU-94488B3896,Percheros,Unidad,1.5,42.0,0.6262,0,True
+SKU-08D71F3C55,Corazon de regalos,Unidad,18.0,3.0,12.0,0,True
+SKU-95A43F219B,Cordones,Unidad,0.0,6.0,0.0,0,True
+SKU-D937B9BE42,Imperdible Blanco,Unidad,0.0,130.0,0.0,0,True
+SKU-CC6B98B3D4,Imperdible Amarillo Pequeño,Paquete,0.0,1.0,0.0,0,True
+SKU-AD04CF829D,Gancho Merly,Unidad,0.5,38.0,0.2105,0,True
+SKU-FE809B4294,Libro de Cuentos,Unidad,3.5,4.0,1.5,0,True
+SKU-5972A924E8,cartulinas de pliego a color A4,Unidad,6.0,6.0,4.0,0,True
+SKU-0274235A5B,Globos,Ciento,0.5,2.0,0.08,0,True
+SKU-A39A5CB534,Botones,Unidad,1.0,57.0,0.6667,0,True
+SKU-3E2C39E2F6,Escarcha,Unidad,1.0,34.0,0.4,0,True
+SKU-55E489F82D,Lentejuelas JhinPequeñas,Paquete,1.0,1.0,0.6667,0,True
+SKU-3D1BE72419,Lentejuelas grandes,Unidad,1.0,12.0,0.4,0,True
+SKU-EE4A409DAC,Piñes dedecoración,Paquete,1.0,1.0,0.6667,0,True
+SKU-69DC09B352,Ojitos,Paquete,1.0,1.0,0.6667,0,True
+SKU-82700C887A,Mistura Amarilla,unidad,0.0,1.0,8.0,0,True
+SKU-888D8E1645,Mistura de Color,unidad,0.0,1.0,8.0,0,True
+SKU-818ED060B7,Dados pequeños,Unidad,0.5,100.0,0.25,0,True
+SKU-5B234D9B53,Luces de colors 200 leds,Unidad,18.0,8.0,15.0,0,True
+SKU-755F0397BA,Pincel Sobre,Sobre,2.0,2.0,1.1667,0,True
+SKU-B289F478F3,Cinta navideña,Unidad,12.0,1.0,8.0,0,True
+SKU-CB6A706CAF,guillet,Cajitas,0.5,9.0,0.3,0,True
+SKU-6381846E56,Plumon marcador Jumbo L-47 x12,Unidad,15.0,6.0,11.0,0,True
+SKU-7104AD1984,Cuatrimoto 876/886,Unidad,12.0,10.0,8.0,0,True
+SKU-6F46528248,Camion con toro CMN12,Unidad,12.0,3.0,7.0,0,True
+SKU-A37A3F0DA8,Vehiculo Constructor 677-42A,Unidad,15.0,5.0,11.0,0,True
+SKU-C9F006ABBA,vedhiculo constructor 077-31,Unidad,10.0,2.0,7.0,0,True
+SKU-5228AD825B,Vehiculo constructor 5468,Unidad,12.0,6.0,6.0,0,True
+SKU-F7BC5C0A44,Pelota,Unidad,13.0,4.0,9.0,0,True
+SKU-8F27ACC7C0,Camion Ciguena3983 A,Unidad,12.0,2.0,8.0,0,True
+SKU-092DBFBBB5,muñeca 2610,Unidad,12.0,11.0,8.0,0,True
+SKU-4B01AE4F36,muñeca con accesorios 8280,Unidad,16.0,5.0,13.0,0,True
+SKU-4797BF2879,muñeca con accesorios LY 2310,Unidad,16.0,5.0,12.0,0,True
+SKU-25E6A5907E,muñeca con accesorios 8260,Unidad,9.0,1.0,6.5,0,True
+SKU-3C3E411E3B,control remoto carro CQ0085-2,Unidad,30.0,1.0,25.0,0,True
+SKU-1AE47B4AA5,vincha 104,Unidad,1.5,5.0,1.0,0,True
+SKU-65B593846C,colet negros,Paquete,2.0,6.0,1.0,0,True
+SKU-D2E3DF6E54,gancho picos de colores,Unidad,1.0,11.0,0.6364,0,True
+SKU-105EDC100D,paquete de ganchos de 6 pares,Paquete,0.5,6.0,0.125,0,True
+SKU-12188D3F87,moñeras,Unidad,1.0,28.0,0.5357,0,True
+SKU-3198E087D3,liga para cabello,Paquete,2.0,3.0,1.0,0,True
+SKU-676E05737E,liga de lana,Paquete,2.5,1.0,1.5,0,True
+SKU-0C7D0AC4E6,pirañas grandes,Unidad,1.5,9.0,1.5,0,True
+SKU-B513B72D31,pares de pilis,pares,0.5,5.0,0.3,0,True
+SKU-AF85D08933,pinza de 12 und,Paquete,1.0,2.0,0.6667,0,True
+SKU-E0DA16F501,Espejo Pequeño,Unidad,1.0,6.0,0.5,0,True
+SKU-ECD780DC01,Espejo Mediano,Unidad,1.0,2.0,0.7,0,True
+SKU-FEC4345327,Guantes,pares,3.0,8.0,2.2,0,True
+SKU-570671D729,Tapa boca negro,Unidad,0.5,25.0,0.1,0,True
+SKU-5345D33C2E,Tapa boca pequeño,Unidad,0.5,50.0,0.08,0,True
+SKU-16733DCBFC,Tapa boca pequeño rosado,Unidad,0.5,30.0,0.0833,0,True
+SKU-DFEAA60E9C,Peine Pequeño,Unidad,0.8,25.0,0.24,0,True
+SKU-BEC3F203A0,Peine grande,Unidad,1.0,11.0,0.5,0,True
+SKU-CD3F82FF5C,Peine con cola,Unidad,1.0,10.0,0.5,0,True
+SKU-479171A7EE,Pulsera ojito,Unidad,1.5,11.0,0.6364,0,True
+SKU-EEA6F85811,crema lechuga pequeño,Unidad,1.0,10.0,0.5,0,True
+SKU-59973D5BF3,Crema Baselina,Unidad,1.0,5.0,0.5,0,True
+SKU-63CA56AF32,Crema Lechuga grande,Unidad,2.0,4.0,1.0,0,True
+SKU-8130CA3015,Lana de colores,Unidad,1.0,8.0,0.5,0,True
+SKU-530AAFE75A,silvato pequeño,Unidad,0.5,9.0,0.2,0,True
+SKU-6F8D4A1F96,Crema ponst,Unidad,1.0,9.0,0.5556,0,True
+SKU-371E102C11,llajes grande,Unidad,3.5,14.0,2.3,0,True
+SKU-35F30621F4,trompos,Unidad,1.0,16.0,0.6625,0,True
+SKU-D82AE4230C,taps,unidad,0.0,100.0,0.0,0,True
+SKU-8DC61D469E,pelotitas de llajes,unidad,0.0,41.0,0.0,0,True
+SKU-FFC77745D9,chapitas,unidad,0.0,71.0,0.0,0,True
+SKU-570D2815AC,llajes pequeños,unidad,0.0,100.0,0.0,0,True
+SKU-2F8FC93ACD,papel silufan,unidad,1.0,9.0,0.4333,0,True
+SKU-113F65A452,ula ula,unidad,5.0,2.0,4.0,0,True
+SKU-DD5F83467A,cuaderno loro con  diseño A4 100h,Unidad,6.0,47.0,3.9787,0,True
+SKU-76AF86874F,cuaderno surco con diseño A4 100h,Unidad,5.0,20.0,2.34,0,True
+SKU-2AC8F7DDFD,cuaderno surco pequeño 50  h,Unidad,1.5,103.0,1.0,0,True
+SKU-0082F4B909,cuaderno surco pqueño 100 h,Unidad,2.5,61.0,1.4,0,True
+SKU-490E89040F,cuaderno loro kinder 70 g,Unidad,6.0,45.0,3.9,0,True
+SKU-7346AC1948,Cuaderno surco triple reglon 100 h,Unidad,4.0,80.0,2.3025,0,True
+SKU-95A4EA7077,cuaderno surco # 100 h,Unidad,4.0,25.0,2.34,0,True
+SKU-EF1D25CD8B,cuaderno layconsa teens # 100 h,Unidad,4.5,62.0,3.6,0,True
+SKU-8F4446C65E,cuaderno surco grnade # 50 h,Unidad,2.5,27.0,1.4,0,True
+SKU-4BB9031A88,cuaderno surco 1x1,Unidad,4.0,18.0,2.34,0,True
+SKU-4164FE1098,cuaderno layconsa teens triple reglon,Unidad,4.5,23.0,3.6,0,True
+SKU-4C36B4A224,cuaderno surco 2x2,Unidad,4.0,26.0,2.3385,0,True
+SKU-3393692610,cuaderno layconsa estudiante # 100 h,Unidad,6.0,27.0,4.0,0,True
+SKU-9E525049DE,cuaderno surco rayado 100 h,Unidad,4.0,22.0,2.34,0,True
+SKU-CFD9211956,cuaderno layconsa puppy # 100 h,Unidad,6.0,18.0,4.3,0,True
+SKU-5D1CA38400,"cuaderno stanford,universal, collaje #",Unidad,8.0,11.0,5.0,0,True
+SKU-23FF19E6E5,cuaderno stanford kist triple max,Unidad,8.0,6.0,5.0,0,True
+SKU-AA3D410E31,cuaderno layconsa estudiante rayado 100 h,Unidad,4.5,11.0,2.1455,0,True
+SKU-2101C27711,cuadernouniversal 1x1,Unidad,8.0,5.0,5.0,0,True
+SKU-833F6730BA,cuaderno arcoiris triple reglon,Unidad,4.0,6.0,2.3,0,True

@@ -1,0 +1,10 @@
+Resumen organizado (corregido por columnas Hoja 1):
+Productos únicos catálogo: 372
+Compra Tania Yucra (E,F,H) items: 253
+Compra Tania Yucra cantidad total: 4959.0000
+Compra Tania Yucra monto total: S/ 8085.2700
+Compra Empresa Ayrampo (T,U,W) items: 154
+Compra Empresa Ayrampo cantidad total: 1620.0000
+Compra Empresa Ayrampo monto total: S/ 5083.8000
+Inversion total compras: S/ 13169.0700
+Nota: etiqueta_nuevo no se usa en este cálculo.

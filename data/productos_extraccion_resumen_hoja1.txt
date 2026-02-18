@@ -1,0 +1,7 @@
+Hoja usada: Hoja 1 (xl/worksheets/sheet2.xml)
+Listado completo extraído: 373
+Filas con etiqueta NUEVO: 155
+Filas únicas preparadas para products: 372
+CSV completo: /Users/rusbel/Develop/papeleria/data/productos_excel_listado_completo.csv
+CSV NUEVO: /Users/rusbel/Develop/papeleria/data/productos_excel_etiqueta_nuevo.csv
+CSV Supabase products: /Users/rusbel/Develop/papeleria/data/productos_supabase_products_hoja1.csv

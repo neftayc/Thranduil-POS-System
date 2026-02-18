@@ -1,0 +1,3722 @@
+[
+  {
+    "sku": "SKU-81A994DEC0",
+    "name": "Lapiz Chequeo Rojo",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 72.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-02B3887529",
+    "name": "Lapiz Bicolor",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 108.0,
+    "avg_cost": 0.8333,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-32111CF5F0",
+    "name": "Lapiz Chequeo Rojo",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 108.0,
+    "avg_cost": 0.5833,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9B7EDEA31E",
+    "name": "Lapiz 2B",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 48.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-308DF87D2B",
+    "name": "Lapiz 2B Titan",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 12.0,
+    "avg_cost": 0.75,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8FC03EDBA8",
+    "name": "Lapiz Grazo Negro",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 7.0,
+    "avg_cost": 2.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-ACD539DCF8",
+    "name": "Lapiz Semi Negro",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 9.0,
+    "avg_cost": 2.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-90944B7E8F",
+    "name": "Lapiz tecnico 6B",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4985AB403E",
+    "name": "Lapiz Punsonez",
+    "unit": "Unidad",
+    "sale_price": 0.7,
+    "stock_on_hand": 9.0,
+    "avg_cost": 0.28,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-47649F38F3",
+    "name": "Lapiz Bicolor",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 32.0,
+    "avg_cost": 0.5813,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FEE239E19B",
+    "name": "Plumon Acrilico L-123",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 108.0,
+    "avg_cost": 1.25,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7AA172D62E",
+    "name": "Plumon Jumbo 123",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 24.0,
+    "avg_cost": 3.125,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2606E9183E",
+    "name": "Plumon Pizzarra",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 24.0,
+    "avg_cost": 2.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-68D64EF0A8",
+    "name": "Plumon 2.3mm",
+    "unit": "Unidad",
+    "sale_price": 3.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.25,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-54BDA3B77E",
+    "name": "Plumones Marcador Fibre Tips - 12 uni",
+    "unit": "Unidad",
+    "sale_price": 8.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 3.1667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7AA60686F3",
+    "name": "Plumones Marcador 6 uni -",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 4.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7FE37C8EBE",
+    "name": "Cartuchera Mike Crack",
+    "unit": "Unidad",
+    "sale_price": 10.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 7.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-088F490747",
+    "name": "Cartuchera Forta",
+    "unit": "Unidad",
+    "sale_price": 10.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 7.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9F843A3ED5",
+    "name": "Cartucheta Simple",
+    "unit": "Unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 11.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-EE9347CD6F",
+    "name": "Estuches de Plastico",
+    "unit": "Unidad",
+    "sale_price": 7.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 6.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-403887F2ED",
+    "name": "Saca Punta con Deposito",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 3.0,
+    "avg_cost": 2.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3F04396584",
+    "name": "Saca Punta con M-207",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 118.0,
+    "avg_cost": 0.2542,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-21586425F2",
+    "name": "Saca Punta Metal",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 15.0,
+    "avg_cost": 0.7467,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D8FF390C71",
+    "name": "Saca Punta Metal Doble",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 19.0,
+    "avg_cost": 1.8,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-35AF7B573B",
+    "name": "Saca Punta con Deposito 8917",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D417DACFAA",
+    "name": "Saca Punta con Deposito",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-EAF5D42FCB",
+    "name": "Saca Punta con Deposito",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A0151E5DAD",
+    "name": "Saca Punta",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 24.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-937E9BF695",
+    "name": "Saca Punta M-557",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 48.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-596614038E",
+    "name": "Tarjadores",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 18.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A292B4DE9C",
+    "name": "Toalla sin diseño",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 9.0,
+    "avg_cost": 1.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FA80AA5B55",
+    "name": "Toalla con diseño",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 3.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0F68E2EC13",
+    "name": "Micas A4",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 10.0,
+    "avg_cost": 0.38,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-1A61EF5307",
+    "name": "Meseros Personales - Niños",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 7.0,
+    "avg_cost": 1.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5AF26D5396",
+    "name": "Sobre Manila A4 premium",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 225.0,
+    "avg_cost": 0.4444,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-86FCEA2F11",
+    "name": "Forro Vinifan A4",
+    "unit": "Unidad",
+    "sale_price": 7.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 4.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-610A957481",
+    "name": "Forro Vinifan Grande OM",
+    "unit": "Unidad",
+    "sale_price": 7.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 7.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CC0A8E99BA",
+    "name": "Forro vinifan A4",
+    "unit": "Unidad",
+    "sale_price": 4.5,
+    "stock_on_hand": 14.0,
+    "avg_cost": 3.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5CC706071A",
+    "name": "Forro vinifan A4",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 9.0,
+    "avg_cost": 2.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-826C40E118",
+    "name": "Corrector Oval de 2 pares",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 29.0,
+    "avg_cost": 0.6207,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CE0CB129E5",
+    "name": "Corrector 9ML",
+    "unit": "Unidad",
+    "sale_price": 3.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.8333,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-657537C0BB",
+    "name": "Resaltador",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 18.0,
+    "avg_cost": 1.3333,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E6ECA4BB2D",
+    "name": "Goma Liquida Mar David 60gr",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 9.0,
+    "avg_cost": 0.9111,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F901C51CE7",
+    "name": "Goma en barra 21Gr",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 15.0,
+    "avg_cost": 1.8,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D740B5A41D",
+    "name": "Goma en barra 40Gr",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 4.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-20D4B162C0",
+    "name": "Borrador LA-2O",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 16.0,
+    "avg_cost": 0.55,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-47D72EF215",
+    "name": "Borrador LA-40 bicolor",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 15.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7A82393C55",
+    "name": "Baja Lengua - Blanco",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 0.4167,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FB6932B48B",
+    "name": "Baja Lengua  de color grande",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 0.5833,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C756F39052",
+    "name": "Baja Lengua de color pequeño",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 35.0,
+    "avg_cost": 0.6,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4C5B02D17F",
+    "name": "Pintura Brillo Escarchado",
+    "unit": "Unidad",
+    "sale_price": 3.0,
+    "stock_on_hand": 36.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-71703659EC",
+    "name": "Botellas de Temperas (Amarillo, rojo, Azul) -  (Rojo, azul,  verde, amarillo, negro, blanco)",
+    "unit": "Unidad",
+    "sale_price": 7.0,
+    "stock_on_hand": 18.0,
+    "avg_cost": 4.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-DFB871122D",
+    "name": "Temperas x7",
+    "unit": "Cajitas",
+    "sale_price": 7.0,
+    "stock_on_hand": 9.0,
+    "avg_cost": 5.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-174A32F486",
+    "name": "Acuarelas Grandes",
+    "unit": "Unidad",
+    "sale_price": 7.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 4.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-286FE9445F",
+    "name": "Acuarelas pequeñas",
+    "unit": "Unidad",
+    "sale_price": 6.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 3.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-60D09319A8",
+    "name": "Lapicero Trilux Negro-032",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 50.0,
+    "avg_cost": 0.44,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7B58D3DC43",
+    "name": "Lapicero Trilux Rojo-032",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 50.0,
+    "avg_cost": 0.44,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E29E5C3C39",
+    "name": "Lapicero Trilux-031",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 46.0,
+    "avg_cost": 0.4783,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F5EC060813",
+    "name": "Lapicero Trilux Azul-032",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 30.0,
+    "avg_cost": 0.44,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6A944058B9",
+    "name": "Lapicero Trilux - 035",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 17.0,
+    "avg_cost": 0.7,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-752D174473",
+    "name": "Pincel Escolar 1-6 Besco",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 125.0,
+    "avg_cost": 0.6664,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F06AE39D3D",
+    "name": "Hizopo",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 3.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D9A535C356",
+    "name": "Pozzis limpiatipo",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 8.0,
+    "avg_cost": 1.825,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-448A8AC612",
+    "name": "Stikers Have Love",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 50.0,
+    "avg_cost": 0.48,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-719315C9EF",
+    "name": "Nombre de cuaderno",
+    "unit": "Unidad",
+    "sale_price": 0.2,
+    "stock_on_hand": 100.0,
+    "avg_cost": 0.1,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5C73B60915",
+    "name": "Stikers de Portada - Plancha",
+    "unit": "Unidad",
+    "sale_price": 0.2,
+    "stock_on_hand": 96.0,
+    "avg_cost": 0.125,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0D608B9E69",
+    "name": "Tableros Acrilicos",
+    "unit": "Unidad",
+    "sale_price": 11.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 7.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FCEB95A265",
+    "name": "Sketch book 15h",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 24.0,
+    "avg_cost": 2.1667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C2CDBEE0B5",
+    "name": "Sketch book 25h",
+    "unit": "Unidad",
+    "sale_price": 4.5,
+    "stock_on_hand": 14.0,
+    "avg_cost": 2.6643,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D458444EA7",
+    "name": "Sketch book 50h",
+    "unit": "Unidad",
+    "sale_price": 8.0,
+    "stock_on_hand": 15.0,
+    "avg_cost": 8.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F8C11BD284",
+    "name": "Tabla periodica",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 15.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D15BAC6AB0",
+    "name": "Cometas",
+    "unit": "Unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 15.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CC77E1CB6E",
+    "name": "Banderas",
+    "unit": "Unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-96A54B592D",
+    "name": "Microporoso Glitter self Adhesivo letras escarchados",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 14.0,
+    "avg_cost": 0.8,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5CE02680E1",
+    "name": "Folder Manila A4",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 400.0,
+    "avg_cost": 0.27,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-92E9FC0267",
+    "name": "Folder Top",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 45.0,
+    "avg_cost": 2.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-807FCCA0D5",
+    "name": "Folder Genius",
+    "unit": "Unidad",
+    "sale_price": 4.5,
+    "stock_on_hand": 2.0,
+    "avg_cost": 2.67,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A95695902B",
+    "name": "Folder Vinifan",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 2.67,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-80F3629E6F",
+    "name": "Folder a color de cartulina",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 73.0,
+    "avg_cost": 0.36,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0FC7E58E52",
+    "name": "Tijeras R-Relampago con formas",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B763AB4CA4",
+    "name": "Tijeras Acolores",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 17.0,
+    "avg_cost": 0.6235,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-55A37B661F",
+    "name": "Tijeras amarillas",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 10.0,
+    "avg_cost": 0.625,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-980649732C",
+    "name": "Cuadernillo de anotes pequeño",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-BFF6AAF2E2",
+    "name": "Cuadernillo de anotes grande",
+    "unit": "Unidad",
+    "sale_price": 3.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 2.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6883152A26",
+    "name": "Libro de actas 200f",
+    "unit": "Unidad",
+    "sale_price": 14.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 7.2,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-894F4DE5BD",
+    "name": "Libro de actas 100f",
+    "unit": "Unidad",
+    "sale_price": 7.0,
+    "stock_on_hand": 1.0,
+    "avg_cost": 3.7,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B2BE8E20C5",
+    "name": "Obras Literarias",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 3.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3B45C1A452",
+    "name": "Diccionario Bruno Ingles",
+    "unit": "Unidad",
+    "sale_price": 15.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 7.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8B83AAD0BD",
+    "name": "Diccionario Bruno Sinonimos Antonimos",
+    "unit": "Unidad",
+    "sale_price": 15.0,
+    "stock_on_hand": 16.0,
+    "avg_cost": 7.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-163DD0A3EC",
+    "name": "Diccionario Bruno",
+    "unit": "Unidad",
+    "sale_price": 15.0,
+    "stock_on_hand": 8.0,
+    "avg_cost": 7.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-26FF8F2A26",
+    "name": "Jabon liquido grande",
+    "unit": "Unidad",
+    "sale_price": 6.0,
+    "stock_on_hand": 27.0,
+    "avg_cost": 4.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C2A71FB517",
+    "name": "Jabon liquido pequeño",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 19.0,
+    "avg_cost": 3.3316,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-EEDF6B72FC",
+    "name": "Jaboneras",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B3C78D2293",
+    "name": "Escobilla Grande de Zapato",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 2.0,
+    "avg_cost": 1.3,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E325832F3F",
+    "name": "Escobilla Pequeña de Zapato",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 14.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2B3E112B79",
+    "name": "Betun Marron Grande",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 2.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7CBD13501A",
+    "name": "Betun Marron Pequeño",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 23.0,
+    "avg_cost": 1.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2DF149588E",
+    "name": "Esponja Merlin",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 72.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3AD10ADE3E",
+    "name": "Pompones",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 14.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5B727C91A4",
+    "name": "Batisoga pequeño",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 10.0,
+    "avg_cost": 1.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B8D34F9520",
+    "name": "Batisoga grande",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 11.0,
+    "avg_cost": 2.1636,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-259711D0CD",
+    "name": "Super esponja",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 96.0,
+    "avg_cost": 0.4583,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3F113AD6D9",
+    "name": "Trish",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 132.0,
+    "avg_cost": 0.3,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3BE5E01407",
+    "name": "Cinta de color maskin taps",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 7.0,
+    "avg_cost": 2.3286,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-98985FC2E2",
+    "name": "Cinta electrica",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 9.0,
+    "avg_cost": 0.8,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-51D94161E4",
+    "name": "Cinta Leon scosh pq grueso 18*45",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 8.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-816F692D19",
+    "name": "Cinta Durafan scosh  pequeño12*14",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 31.0,
+    "avg_cost": 0.2,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-EE5659CFF7",
+    "name": "Cinta Grande Durango embalaje",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 2.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0AF223D840",
+    "name": "Cinta Grande Brudan Peru embalaje",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 66.0,
+    "avg_cost": 0.75,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-80852C9B2C",
+    "name": "Cinta Maskin Pegafan 24mm",
+    "unit": "Unidad",
+    "sale_price": 3.0,
+    "stock_on_hand": 16.0,
+    "avg_cost": 2.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-79766A3EC4",
+    "name": "Cinta Maskin Pegafan 36mm",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 3.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FE61DF628C",
+    "name": "Cinta Maskin Pegafan 48mm",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 3.1667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D6FF0730E9",
+    "name": "Cinta Maskin Shurtape 3/4*15",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FEB8C87076",
+    "name": "Cinta Maskin shurtape 1/2*15",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 3.0,
+    "avg_cost": 0.8333,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-36871BCFD9",
+    "name": "Cinta Maskin shurtape 1 1/2*15",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 20.0,
+    "avg_cost": 3.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A744CA3157",
+    "name": "Cinta Maskin shurtaple 1*15",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 27.0,
+    "avg_cost": 1.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-49328EA6BC",
+    "name": "Cinta de colores grande",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 60.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-1D043D31FE",
+    "name": "Cinta de colores pequeño",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 10.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-43639DD892",
+    "name": "Lapices de Color largos x 12",
+    "unit": "Unidad",
+    "sale_price": 6.0,
+    "stock_on_hand": 10.0,
+    "avg_cost": 4.66,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2AC9B9F61B",
+    "name": "lapiz de color pequeño x 12",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 11.0,
+    "avg_cost": 2.8327,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CD28C46730",
+    "name": "Fastener de metal",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 96.0,
+    "avg_cost": 0.08,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E9EF9D1B06",
+    "name": "Fastener de Gusano",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 32.0,
+    "avg_cost": 0.9594,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9F897FBDE0",
+    "name": "Tomatodo Grande",
+    "unit": "Unidad",
+    "sale_price": 15.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 12.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-31ACA0DEE5",
+    "name": "Tomatodo pequeño",
+    "unit": "Unidad",
+    "sale_price": 10.0,
+    "stock_on_hand": 7.0,
+    "avg_cost": 7.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9A43DE1973",
+    "name": "Tomatodo Mediano tricolor",
+    "unit": "Unidad",
+    "sale_price": 15.0,
+    "stock_on_hand": 15.0,
+    "avg_cost": 12.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-78A62B9611",
+    "name": "Papel Lustre",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 144.0,
+    "avg_cost": 0.2,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F0BB6DEF54",
+    "name": "Papel de regalo",
+    "unit": "Unidad",
+    "sale_price": 0.7,
+    "stock_on_hand": 122.0,
+    "avg_cost": 0.2795,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-103C7E2AE9",
+    "name": "Papel corrugado",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 26.0,
+    "avg_cost": 2.4,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-1EDA4B9225",
+    "name": "Papel Corrospum",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 33.0,
+    "avg_cost": 3.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-283B2C011D",
+    "name": "Papel Craft",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 72.0,
+    "avg_cost": 0.3194,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9D4E4EE716",
+    "name": "Papel Sedita",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 59.0,
+    "avg_cost": 0.1356,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9FCECC1704",
+    "name": "Papel Cometa",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 66.0,
+    "avg_cost": 0.2,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-BB482D8842",
+    "name": "Papel celofan",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 0.44,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E51E19D0B3",
+    "name": "Papel Cuadriculado 1x1",
+    "unit": "Unidad",
+    "sale_price": 0.7,
+    "stock_on_hand": 137.0,
+    "avg_cost": 0.219,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B82DE634A2",
+    "name": "Papel Cuadrimax 2x2",
+    "unit": "Unidad",
+    "sale_price": 0.7,
+    "stock_on_hand": 200.0,
+    "avg_cost": 0.205,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A47A5E460A",
+    "name": "Papel microporoso escarchado",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 10.0,
+    "avg_cost": 3.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7762F9C08A",
+    "name": "Papel Crepe",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 52.0,
+    "avg_cost": 0.6,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6884E99187",
+    "name": "Papelote blanco",
+    "unit": "Unidad",
+    "sale_price": 0.7,
+    "stock_on_hand": 45.0,
+    "avg_cost": 0.2,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-14DDD5EBC1",
+    "name": "Cartulina a colores",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 47.0,
+    "avg_cost": 0.4191,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-EC244CF0A7",
+    "name": "Cartulina Fosforesente",
+    "unit": "Unidad",
+    "sale_price": 4.5,
+    "stock_on_hand": 45.0,
+    "avg_cost": 2.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B977212681",
+    "name": "Papel Arcoiris",
+    "unit": "1/2 millar",
+    "sale_price": 30.0,
+    "stock_on_hand": 7.0,
+    "avg_cost": 19.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3023CF7487",
+    "name": "Papel Punzones A4",
+    "unit": "Unidad",
+    "sale_price": 3.0,
+    "stock_on_hand": 10.0,
+    "avg_cost": 1.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E819015A56",
+    "name": "Papel Cuadernillo",
+    "unit": "Unidad",
+    "sale_price": 0.2,
+    "stock_on_hand": 45.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FAB7A65F90",
+    "name": "Reglas de 20 cm",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 38.0,
+    "avg_cost": 0.5579,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-AB58B8B259",
+    "name": "Reglas de 30 cm",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 49.0,
+    "avg_cost": 0.6408,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9FD0B9F742",
+    "name": "Juego de reglas 20 cm",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 15.0,
+    "avg_cost": 2.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-53F12AE701",
+    "name": "Juego de reglas 30 cm",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 21.0,
+    "avg_cost": 3.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5FE2F611DF",
+    "name": "Portafolio Papel",
+    "unit": "Unidad",
+    "sale_price": 8.0,
+    "stock_on_hand": 8.0,
+    "avg_cost": 5.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-00358783C1",
+    "name": "Ray Perú y Artesco",
+    "unit": "Unidad",
+    "sale_price": 10.0,
+    "stock_on_hand": 21.0,
+    "avg_cost": 5.3333,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0E6AA9F21D",
+    "name": "Paletas de pinturas",
+    "unit": "Unidad",
+    "sale_price": 3.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.1667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5253FC1878",
+    "name": "Rompecabezas de 20 piesas",
+    "unit": "Unidad",
+    "sale_price": 10.0,
+    "stock_on_hand": 23.0,
+    "avg_cost": 5.8261,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-114F4CCCFD",
+    "name": "Rompecabezas de 50 piesas",
+    "unit": "Unidad",
+    "sale_price": 15.0,
+    "stock_on_hand": 1.0,
+    "avg_cost": 15.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-54906A7627",
+    "name": "Crayones Jumbo",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 54.0,
+    "avg_cost": 3.0833,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FF0A8D4DCB",
+    "name": "Plastilina",
+    "unit": "Unidad",
+    "sale_price": 5.5,
+    "stock_on_hand": 36.0,
+    "avg_cost": 2.9167,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CBB8FF3308",
+    "name": "Perforador",
+    "unit": "Unidad",
+    "sale_price": 12.0,
+    "stock_on_hand": 13.0,
+    "avg_cost": 5.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-449B9500E7",
+    "name": "Perforador",
+    "unit": "Unidad",
+    "sale_price": 9.0,
+    "stock_on_hand": 8.0,
+    "avg_cost": 4.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6F3AFF7E6F",
+    "name": "Perforador stapler",
+    "unit": "Unidad",
+    "sale_price": 9.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 4.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-32AB3A0D9C",
+    "name": "Engrampador stapler",
+    "unit": "Unidad",
+    "sale_price": 10.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 5.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-04EBD80B61",
+    "name": "Engrampador artesa",
+    "unit": "Unidad",
+    "sale_price": 10.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 5.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-59E1F5048A",
+    "name": "Engrapador artesco",
+    "unit": "Unidad",
+    "sale_price": 8.5,
+    "stock_on_hand": 1.0,
+    "avg_cost": 8.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-120B36A5F6",
+    "name": "Cajitas de Grampa",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 12.0,
+    "avg_cost": 0.8,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-846F88306F",
+    "name": "Tampon Rojo L-T3",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 2.4,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C6455B5467",
+    "name": "Tampon Negro",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 3.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3E4604AF45",
+    "name": "Compas",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 18.0,
+    "avg_cost": 1.1667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-94488B3896",
+    "name": "Percheros",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 42.0,
+    "avg_cost": 0.6262,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-08D71F3C55",
+    "name": "Corazon de regalos",
+    "unit": "Unidad",
+    "sale_price": 18.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 12.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-95A43F219B",
+    "name": "Cordones",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 6.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D937B9BE42",
+    "name": "Imperdible Blanco",
+    "unit": "Unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 130.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3702ECA90D",
+    "name": "Imperdible Amarillo Pequeño",
+    "unit": "Unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-AD04CF829D",
+    "name": "Gancho Merly",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 38.0,
+    "avg_cost": 0.2105,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FE809B4294",
+    "name": "Libro de Cuentos",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 1.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5972A924E8",
+    "name": "cartulinas de pliego a color A4",
+    "unit": "Unidad",
+    "sale_price": 6.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 4.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-AB321F3F5E",
+    "name": "Globos",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 200.0,
+    "avg_cost": 0.08,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A39A5CB534",
+    "name": "Botones",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 57.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3E2C39E2F6",
+    "name": "Escarcha",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 34.0,
+    "avg_cost": 0.4,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4B882EFB24",
+    "name": "Lentejuelas JhinPequeñas",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3D1BE72419",
+    "name": "Lentejuelas grandes",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 0.4,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2B270DE01B",
+    "name": "Piñes dedecoración",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D0B9BAA1A3",
+    "name": "Ojitos",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E541A2F517",
+    "name": "Mistura Amarilla",
+    "unit": "unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 1.0,
+    "avg_cost": 8.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-45575800B4",
+    "name": "Mistura de Color",
+    "unit": "unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 1.0,
+    "avg_cost": 8.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-818ED060B7",
+    "name": "Dados pequeños",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 100.0,
+    "avg_cost": 0.25,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5B234D9B53",
+    "name": "Luces de colors 200 leds",
+    "unit": "Unidad",
+    "sale_price": 18.0,
+    "stock_on_hand": 8.0,
+    "avg_cost": 15.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C34DBFF5C5",
+    "name": "Pincel Sobre",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 12.0,
+    "avg_cost": 1.1667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B289F478F3",
+    "name": "Cinta navideña",
+    "unit": "Unidad",
+    "sale_price": 12.0,
+    "stock_on_hand": 1.0,
+    "avg_cost": 8.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CB6A706CAF",
+    "name": "guillet",
+    "unit": "Cajitas",
+    "sale_price": 0.5,
+    "stock_on_hand": 45.0,
+    "avg_cost": 0.3,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6381846E56",
+    "name": "Plumon marcador Jumbo L-47 x12",
+    "unit": "Unidad",
+    "sale_price": 15.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 11.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7104AD1984",
+    "name": "Cuatrimoto 876/886",
+    "unit": "Unidad",
+    "sale_price": 12.0,
+    "stock_on_hand": 10.0,
+    "avg_cost": 8.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6F46528248",
+    "name": "Camion con toro CMN12",
+    "unit": "Unidad",
+    "sale_price": 12.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 7.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A37A3F0DA8",
+    "name": "Vehiculo Constructor 677-42A",
+    "unit": "Unidad",
+    "sale_price": 15.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 11.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C9F006ABBA",
+    "name": "vedhiculo constructor 077-31",
+    "unit": "Unidad",
+    "sale_price": 10.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 7.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5228AD825B",
+    "name": "Vehiculo constructor 5468",
+    "unit": "Unidad",
+    "sale_price": 12.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 6.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F7BC5C0A44",
+    "name": "Pelota",
+    "unit": "Unidad",
+    "sale_price": 13.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 9.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8F27ACC7C0",
+    "name": "Camion Ciguena3983 A",
+    "unit": "Unidad",
+    "sale_price": 12.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 8.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-092DBFBBB5",
+    "name": "muñeca 2610",
+    "unit": "Unidad",
+    "sale_price": 12.0,
+    "stock_on_hand": 11.0,
+    "avg_cost": 8.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4B01AE4F36",
+    "name": "muñeca con accesorios 8280",
+    "unit": "Unidad",
+    "sale_price": 16.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 13.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4797BF2879",
+    "name": "muñeca con accesorios LY 2310",
+    "unit": "Unidad",
+    "sale_price": 16.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 12.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-25E6A5907E",
+    "name": "muñeca con accesorios 8260",
+    "unit": "Unidad",
+    "sale_price": 9.0,
+    "stock_on_hand": 1.0,
+    "avg_cost": 6.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3C3E411E3B",
+    "name": "control remoto carro CQ0085-2",
+    "unit": "Unidad",
+    "sale_price": 30.0,
+    "stock_on_hand": 1.0,
+    "avg_cost": 25.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-1AE47B4AA5",
+    "name": "vincha 104",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 5.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-65B593846C",
+    "name": "colet negros",
+    "unit": "Paquete",
+    "sale_price": 2.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D2E3DF6E54",
+    "name": "gancho picos de colores",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 11.0,
+    "avg_cost": 0.6364,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-105EDC100D",
+    "name": "paquete de ganchos de 6 pares",
+    "unit": "Paquete",
+    "sale_price": 0.5,
+    "stock_on_hand": 36.0,
+    "avg_cost": 0.125,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-12188D3F87",
+    "name": "moñeras",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 28.0,
+    "avg_cost": 0.5357,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3198E087D3",
+    "name": "liga para cabello",
+    "unit": "Paquete",
+    "sale_price": 2.0,
+    "stock_on_hand": 3.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-676E05737E",
+    "name": "liga de lana",
+    "unit": "Paquete",
+    "sale_price": 2.5,
+    "stock_on_hand": 1.0,
+    "avg_cost": 1.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0C7D0AC4E6",
+    "name": "pirañas grandes",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 9.0,
+    "avg_cost": 1.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B513B72D31",
+    "name": "pares de pilis",
+    "unit": "pares",
+    "sale_price": 1.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 0.3,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-AF85D08933",
+    "name": "pinza de 12 und",
+    "unit": "Paquete",
+    "sale_price": 1.0,
+    "stock_on_hand": 24.0,
+    "avg_cost": 0.6667,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E0DA16F501",
+    "name": "Espejo Pequeño",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-ECD780DC01",
+    "name": "Espejo Mediano",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 0.7,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FEC4345327",
+    "name": "Guantes",
+    "unit": "pares",
+    "sale_price": 3.0,
+    "stock_on_hand": 8.0,
+    "avg_cost": 2.2,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-570671D729",
+    "name": "Tapa boca negro",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 25.0,
+    "avg_cost": 0.1,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5345D33C2E",
+    "name": "Tapa boca pequeño",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 50.0,
+    "avg_cost": 0.08,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-16733DCBFC",
+    "name": "Tapa boca pequeño rosado",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 30.0,
+    "avg_cost": 0.0833,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-DFEAA60E9C",
+    "name": "Peine Pequeño",
+    "unit": "Unidad",
+    "sale_price": 0.8,
+    "stock_on_hand": 25.0,
+    "avg_cost": 0.24,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-BEC3F203A0",
+    "name": "Peine grande",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 11.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CD3F82FF5C",
+    "name": "Peine con cola",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 10.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-479171A7EE",
+    "name": "Pulsera ojito",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 11.0,
+    "avg_cost": 0.6364,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-EEA6F85811",
+    "name": "crema lechuga pequeño",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 10.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-59973D5BF3",
+    "name": "Crema Baselina",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-63CA56AF32",
+    "name": "Crema Lechuga grande",
+    "unit": "Unidad",
+    "sale_price": 2.0,
+    "stock_on_hand": 4.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8130CA3015",
+    "name": "Lana de colores",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 8.0,
+    "avg_cost": 0.5,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-530AAFE75A",
+    "name": "silvato pequeño",
+    "unit": "Unidad",
+    "sale_price": 0.5,
+    "stock_on_hand": 9.0,
+    "avg_cost": 0.2,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6F8D4A1F96",
+    "name": "Crema ponst",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 9.0,
+    "avg_cost": 0.5556,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-371E102C11",
+    "name": "llajes grande",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 14.0,
+    "avg_cost": 2.3,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-35F30621F4",
+    "name": "trompos",
+    "unit": "Unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 16.0,
+    "avg_cost": 0.6625,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4FD29741F2",
+    "name": "taps",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 1200.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D5444E56E1",
+    "name": "pelotitas de llajes",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 41.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7BEEA9F353",
+    "name": "chapitas",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 71.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C61C6AC664",
+    "name": "llajes pequeños",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 100.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FD56706B4D",
+    "name": "papel silufan",
+    "unit": "unidad",
+    "sale_price": 1.0,
+    "stock_on_hand": 9.0,
+    "avg_cost": 0.4333,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E4F5832814",
+    "name": "ula ula",
+    "unit": "unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 2.0,
+    "avg_cost": 4.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-DD5F83467A",
+    "name": "cuaderno loro con  diseño A4 100h",
+    "unit": "Unidad",
+    "sale_price": 5.5,
+    "stock_on_hand": 47.0,
+    "avg_cost": 3.9787,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-76AF86874F",
+    "name": "cuaderno surco con diseño A4 100h",
+    "unit": "Unidad",
+    "sale_price": 4.5,
+    "stock_on_hand": 20.0,
+    "avg_cost": 2.34,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2AC8F7DDFD",
+    "name": "cuaderno surco pequeño 50  h",
+    "unit": "Unidad",
+    "sale_price": 1.5,
+    "stock_on_hand": 103.0,
+    "avg_cost": 1.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0082F4B909",
+    "name": "cuaderno surco pqueño 100 h",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 61.0,
+    "avg_cost": 1.4,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-490E89040F",
+    "name": "cuaderno loro kinder 70 g",
+    "unit": "Unidad",
+    "sale_price": 5.5,
+    "stock_on_hand": 45.0,
+    "avg_cost": 3.9,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7346AC1948",
+    "name": "Cuaderno surco triple reglon 100 h",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 80.0,
+    "avg_cost": 2.3025,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-95A4EA7077",
+    "name": "cuaderno surco # 100 h",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 25.0,
+    "avg_cost": 2.34,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-EF1D25CD8B",
+    "name": "cuaderno layconsa teens # 100 h",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 62.0,
+    "avg_cost": 3.6,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8F4446C65E",
+    "name": "cuaderno surco grnade # 50 h",
+    "unit": "Unidad",
+    "sale_price": 2.5,
+    "stock_on_hand": 27.0,
+    "avg_cost": 1.4,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4BB9031A88",
+    "name": "cuaderno surco 1x1",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 18.0,
+    "avg_cost": 2.34,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4164FE1098",
+    "name": "cuaderno layconsa teens triple reglon",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 23.0,
+    "avg_cost": 3.6,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4C36B4A224",
+    "name": "cuaderno surco 2x2",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 26.0,
+    "avg_cost": 2.3385,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3393692610",
+    "name": "cuaderno layconsa estudiante # 100 h",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 27.0,
+    "avg_cost": 4.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9E525049DE",
+    "name": "cuaderno surco rayado 100 h",
+    "unit": "Unidad",
+    "sale_price": 3.5,
+    "stock_on_hand": 22.0,
+    "avg_cost": 2.34,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CFD9211956",
+    "name": "cuaderno layconsa puppy # 100 h",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 18.0,
+    "avg_cost": 4.3,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-5D1CA38400",
+    "name": "cuaderno stanford,universal, collaje #",
+    "unit": "Unidad",
+    "sale_price": 7.0,
+    "stock_on_hand": 11.0,
+    "avg_cost": 5.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-23FF19E6E5",
+    "name": "cuaderno stanford kist triple max",
+    "unit": "Unidad",
+    "sale_price": 8.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 5.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-AA3D410E31",
+    "name": "cuaderno layconsa estudiante rayado 100 h",
+    "unit": "Unidad",
+    "sale_price": 5.0,
+    "stock_on_hand": 11.0,
+    "avg_cost": 2.1455,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2101C27711",
+    "name": "cuadernouniversal 1x1",
+    "unit": "Unidad",
+    "sale_price": 7.0,
+    "stock_on_hand": 5.0,
+    "avg_cost": 5.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-833F6730BA",
+    "name": "cuaderno arcoiris triple reglon",
+    "unit": "Unidad",
+    "sale_price": 4.0,
+    "stock_on_hand": 6.0,
+    "avg_cost": 2.3,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E082FFFBDB",
+    "name": "Base 10",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8697FBECCC",
+    "name": "Abaco",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-66529C0038",
+    "name": "Dados Grandes",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-398C843E98",
+    "name": "Tamgram",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E4B751776A",
+    "name": "tapitas de botella",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6B0F82BDFF",
+    "name": "bloques",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A4C46F4DA5",
+    "name": "Papel microporoso liso",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F0552067DA",
+    "name": "Cuadernos stanford 2x2",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E8640331AC",
+    "name": "cuadernos stanford 1x1",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9FB3EB5C65",
+    "name": "papel lustre blanco y surtido a color",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CB9437A81C",
+    "name": "bolson de l,ona",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B2904A3F21",
+    "name": "serpentina",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-DAADE270A8",
+    "name": "Folder doble tapa",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6AD4414B14",
+    "name": "Cartuchera surtido cuero",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-78B895FADB",
+    "name": "Plumon L-47 papel",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-1C8518A3F6",
+    "name": "Plumon school L-45 x 12",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-24D54B3207",
+    "name": "Colores Largos x 12",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D35B231535",
+    "name": "Colores cortos x 12",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D8FC9604BF",
+    "name": "Goma en barra 40g",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-BF27740F3E",
+    "name": "Goma liquida 250g",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CF887E5EC4",
+    "name": "Goma en barra 8 gr",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-83F6CC885D",
+    "name": "Goma liquida 125g",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9A059C1BC2",
+    "name": "Silicona liquida 250g",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-FEBDB0D6D3",
+    "name": "Silicona liquida 100g",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-096E7DB466",
+    "name": "Lapicero pilot azul",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CEFF1F2EA0",
+    "name": "lapicero 060 azul rojo",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E7A85984D4",
+    "name": "lapicero azul, rojo, negro y verde",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-83CD5D38B1",
+    "name": "Borrador Aval x 20",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-384706C8BB",
+    "name": "Borrador Aval x 30",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-25611AAAAD",
+    "name": "Borrador layconsa bicolo x50",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-418AE7AD5C",
+    "name": "Tijera Eco",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B0946D98AA",
+    "name": "Tijera escolar",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D8947D85F1",
+    "name": "Pincel surtido 0/00/000",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6F4B1E2A08",
+    "name": "Cuter por tiras d 12",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-67CEA9B1B6",
+    "name": "forro artesco",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-BA9E6F373B",
+    "name": "STIKER DE PRECIOS",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-74D37CB40E",
+    "name": "Cinta scoth delgado",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3AFD2E7935",
+    "name": "Cuaderno Markin # 100 h",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-165935C822",
+    "name": "cuaderno markin triple reglon 100 h",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-87FB5C45C1",
+    "name": "Cartulina blanca",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9E86C13A28",
+    "name": "Crepe con diseño",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F0F3D54703",
+    "name": "Cinta Maskin shurtaple 2*15",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7EEE248D9B",
+    "name": "Silicona delgada en barra",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-BA273CD9CC",
+    "name": "Plumon indeleble azul y negro",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-73ECB72794",
+    "name": "Colores Jumbo",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-039AB24A72",
+    "name": "Platilina ultra suave x6",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CC7C567DF1",
+    "name": "Lapiz Jumbo",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7538FE51BC",
+    "name": "Tijera Artesco mango goma",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D726876DA1",
+    "name": "Cartulina Negra",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-14F63E966D",
+    "name": "Stiker cuaderno",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-DDAC91E10D",
+    "name": "Papel boom",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2544F733EC",
+    "name": "Papel boom 70 gr",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4EE3C50F1D",
+    "name": "Papel suave higienico",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B1B6F52169",
+    "name": "papel toalla",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8EC5F5CD1C",
+    "name": "cepillo colgate",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8D86A147F9",
+    "name": "Plumon fabercito de 10 und",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B298BDA13D",
+    "name": "Lapicero brillante x12 und",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B2F5C02F79",
+    "name": "Lapicero a color x 12 und",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-250A95296D",
+    "name": "Resaltador pastel x 6 und",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8D8B2631DB",
+    "name": "Pelotas de trapo",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-77F19E15CF",
+    "name": "Pasta dental",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-81B56FA010",
+    "name": "jaboncillo camai",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8BE215E80A",
+    "name": "Lapicero kawai x 10",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-64AF411C73",
+    "name": "Set de escuadras kuromi",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-67EC263080",
+    "name": "Regla expandible",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8A83060E82",
+    "name": "Tarjador animalitos",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6549630E71",
+    "name": "Set borradores rabbit y comida rapida x3",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0B24D6F164",
+    "name": "Set de borradores modelo oso queso x 3",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-4D785AB75B",
+    "name": "Llavero capibara televisor",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D7B21404F3",
+    "name": "Llavero capibara monedero",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0202856B37",
+    "name": "lapicero escarchado x 6",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-50A319EDA9",
+    "name": "cinta capibara",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-56432F1B7F",
+    "name": "Set de resaltador pastel x 6",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-145EBEB2A3",
+    "name": "Lapicero tinta gel con orejitas",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-04E6FF7B12",
+    "name": "Lapicero borrable conejo",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-CFBA4FF0E5",
+    "name": "Lapicero borrrable chocolate osito",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F3BED90DF2",
+    "name": "Corrector",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C74ADF4922",
+    "name": "Hojas de color 100 und",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-DCB1B82D14",
+    "name": "Plumon de pizarra vikingo x12",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-93E5BF3071",
+    "name": "Microporoso escarchado A4",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B353E19BF7",
+    "name": "Silicona en barrra",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-232269CDDF",
+    "name": "Vaso de plastico",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-A8C9B88E81",
+    "name": "micas con diseño",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-06298A559F",
+    "name": "loncheras",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-3BE02203E7",
+    "name": "posit cuadriculado",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F7DA7DEB25",
+    "name": "borradores transparentes",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6AFF87246E",
+    "name": "goma en barra ranparente",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-44763E1EDC",
+    "name": "lapiceros kuromi",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0868F564AF",
+    "name": "lapiceros capibara",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B6B52CD788",
+    "name": "borradores patita",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-C031FE8F76",
+    "name": "cuadernos anillados capibara",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-64BDAEE8CD",
+    "name": "lapiceros happy",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B8814F277F",
+    "name": "lapiceros osito",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8C03C7B0A4",
+    "name": "lapiz con diseño",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-488624C093",
+    "name": "cartucheras",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-8601F96067",
+    "name": "Puntero",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-EC04730CBE",
+    "name": "chinches",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-980BA39232",
+    "name": "tiros",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-D80DB7710E",
+    "name": "papel sedita",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2981C63A39",
+    "name": "escarcha bliquida grande",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-1046AB44A5",
+    "name": "glitter de escarcha liquida x 6",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-383B65F71F",
+    "name": "rosas con osito",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-0C2AB09E16",
+    "name": "rositas x 3",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-44D2FC2D50",
+    "name": "rosas",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-58B59695F9",
+    "name": "tasa con rosas",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-B1DE97BF6F",
+    "name": "brocheta intermedia",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-96FF456458",
+    "name": "cortauña pequeña",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9DACA2AC67",
+    "name": "betun negro mediano",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-E784193A9C",
+    "name": "adornos para el dia del padre",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-34FB243C18",
+    "name": "papel boom acolor pastel",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-9D9DA3D551",
+    "name": "escarapela",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-AAD11162D5",
+    "name": "adorno niño selvatico",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-65B092F11F",
+    "name": "cholito",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-2BEED389E4",
+    "name": "perlas adornos",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-F80351F0F5",
+    "name": "cinta de agua",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-1B4019FFD0",
+    "name": "carton cartulina",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-41BFC833EE",
+    "name": "lapicero azul rojo layconsa",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-7CD255990C",
+    "name": "silicona liquida pequeña",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  },
+  {
+    "sku": "SKU-6E4CFB4AB7",
+    "name": "cinta de cabello verde y kaky",
+    "unit": "unidad",
+    "sale_price": 0.0,
+    "stock_on_hand": 0.0,
+    "avg_cost": 0.0,
+    "min_stock": 0,
+    "active": "true"
+  }
+]

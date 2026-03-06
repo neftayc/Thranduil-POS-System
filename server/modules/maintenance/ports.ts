@@ -2,6 +2,7 @@ export type MaintenanceDataResult = {
   units: any[]
   paymentMethods: any[]
   customerGroups: any[]
+  categories: any[]
 }
 
 export type MaintenanceRepository = {
@@ -12,5 +13,6 @@ export type MaintenanceRepository = {
   updatePaymentMethod(code: string, input: { label: string; active: boolean; sort_order: number }): Promise<{ ok: true }>
   createCustomerGroup(input: { code: string; label: string; sort_order: number }): Promise<{ ok: true }>
   updateCustomerGroup(code: string, input: { label: string; active: boolean; sort_order: number }): Promise<{ ok: true }>
+  createCategory(input: { code: string; label: string; sort_order: number }): Promise<{ ok: true }>
+  updateCategory(code: string, input: { label: string; active: boolean; sort_order: number }): Promise<{ ok: true }>
 }
-

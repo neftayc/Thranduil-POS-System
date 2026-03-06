@@ -1,0 +1,99 @@
+{
+  "total_products": 112,
+  "by_action": {
+    "crear_nueva": 81,
+    "asignar_existente": 21,
+    "revisar_manual": 10
+  },
+  "by_confidence": {
+    "media": 63,
+    "alta": 34,
+    "baja": 15
+  },
+  "by_category": [
+    {
+      "category": "Fiestas y Decoracion",
+      "count": 16
+    },
+    {
+      "category": "Manualidades",
+      "count": 15
+    },
+    {
+      "category": "(sin sugerencia)",
+      "count": 10
+    },
+    {
+      "category": "Aseo Personal",
+      "count": 10
+    },
+    {
+      "category": "Sujetadores",
+      "count": 9
+    },
+    {
+      "category": "Papel",
+      "count": 8
+    },
+    {
+      "category": "Accesorios de Cabello",
+      "count": 8
+    },
+    {
+      "category": "Juguetes",
+      "count": 7
+    },
+    {
+      "category": "Limpieza Hogar",
+      "count": 6
+    },
+    {
+      "category": "Material Educativo",
+      "count": 4
+    },
+    {
+      "category": "Merceria",
+      "count": 3
+    },
+    {
+      "category": "Microporoso",
+      "count": 3
+    },
+    {
+      "category": "Textil Escolar",
+      "count": 2
+    },
+    {
+      "category": "Cuaderno",
+      "count": 2
+    },
+    {
+      "category": "Llavero",
+      "count": 2
+    },
+    {
+      "category": "Mica",
+      "count": 2
+    },
+    {
+      "category": "Gancho",
+      "count": 1
+    },
+    {
+      "category": "Lonchera",
+      "count": 1
+    },
+    {
+      "category": "Goma",
+      "count": 1
+    },
+    {
+      "category": "Regla",
+      "count": 1
+    },
+    {
+      "category": "Sacapunta",
+      "count": 1
+    }
+  ]
+}

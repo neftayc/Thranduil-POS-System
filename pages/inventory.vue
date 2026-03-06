@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { matchesTokensAndFuzzy } from '~/utils/productSearch'
+
 const HIGH_DIFF_THRESHOLD = 5
 const CUSTOM_REASON = '__custom__'
 const REASON_PRESETS = [
@@ -169,7 +171,7 @@ const summary = computed(() => {
 })
 
 const filteredProducts = computed(() => {
-  const term = query.value.toLowerCase().trim()
+  const term = query.value
 
   return products.value.filter((product) => {
     const isLow = systemStock(product) <= normalizeUnits(product.min_stock)
@@ -177,7 +179,8 @@ const filteredProducts = computed(() => {
     if (onlyChanges.value && !hasRowChanges(product)) return false
 
     if (!term) return true
-    return `${product.name || ''} ${product.sku || ''}`.toLowerCase().includes(term)
+    const haystack = `${product.name || ''} ${product.sku || ''} ${product.brand || ''}`
+    return matchesTokensAndFuzzy(term, haystack)
   })
 })
 
@@ -467,7 +470,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 pb-28 xl:pb-0">
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <article class="ui-card">
         <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Stock total</p>
@@ -590,7 +593,7 @@ onMounted(async () => {
           v-model="query"
           type="text"
           class="ui-input sm:col-span-2 lg:col-span-1"
-          placeholder="Buscar por código o nombre"
+          placeholder="Buscar por código, nombre o marca"
         />
 
         <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
@@ -602,6 +605,18 @@ onMounted(async () => {
           <input v-model="onlyChanges" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
           Solo cambios
         </label>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center gap-2 text-xs">
+        <span class="inventory-chip">
+          Mostrando {{ filteredProducts.length }} de {{ products.length }}
+        </span>
+        <span class="inventory-chip inventory-chip-pending">
+          Pendientes: {{ summary.changedRows }}
+        </span>
+        <span class="inventory-chip" :class="session ? 'inventory-chip-session-open' : 'inventory-chip-session-closed'">
+          {{ session ? `Sesion: ${session.code}` : 'Sin sesion abierta' }}
+        </span>
       </div>
 
       <div v-if="summary.needsReconfirm > 0" class="ui-alert-error mt-4">
@@ -618,17 +633,26 @@ onMounted(async () => {
         <article
           v-for="product in filteredProducts"
           :key="`card-${product.id}`"
-          class="space-y-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+          class="inventory-mobile-card space-y-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ product.sku || '-' }}</p>
-              <p class="truncate text-sm font-semibold text-slate-800">{{ product.name }}</p>
+              <p class="text-sm font-semibold leading-snug text-slate-800">{{ product.name }}</p>
+              <p class="text-xs text-slate-400">Marca: {{ product.brand || '-' }}</p>
               <p class="text-xs text-slate-400">Unidad: {{ product.unit || 'unidad' }}</p>
             </div>
-            <span class="ui-pill shrink-0" :class="systemStock(product) <= normalizeUnits(product.min_stock) ? 'ui-pill-low' : ''">
-              {{ systemStock(product) }}
-            </span>
+            <div class="flex shrink-0 flex-col items-end gap-2">
+              <span class="ui-pill" :class="systemStock(product) <= normalizeUnits(product.min_stock) ? 'ui-pill-low' : ''">
+                Stock: {{ systemStock(product) }}
+              </span>
+              <span
+                v-if="hasRowChanges(product)"
+                class="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600"
+              >
+                Cambio pendiente
+              </span>
+            </div>
           </div>
 
           <div class="grid gap-2 sm:grid-cols-2">
@@ -664,6 +688,10 @@ onMounted(async () => {
 
           <div class="grid gap-2 sm:grid-cols-3">
             <div class="rounded-xl border border-gray-100 bg-white px-3 py-2">
+              <p class="text-xs uppercase tracking-wide text-slate-500">Stock sistema</p>
+              <p class="mt-1 text-sm font-semibold text-slate-800">{{ systemStock(product) }}</p>
+            </div>
+            <div class="rounded-xl border border-gray-100 bg-white px-3 py-2">
               <p class="text-xs uppercase tracking-wide text-slate-500">Stock final</p>
               <p class="mt-1 text-sm font-semibold text-slate-800">{{ finalSellableStock(product) }}</p>
             </div>
@@ -682,6 +710,13 @@ onMounted(async () => {
               <p class="text-xs uppercase tracking-wide text-slate-500">Stock mínimo</p>
               <p class="mt-1 text-sm font-semibold text-slate-800">{{ normalizeUnits(product.min_stock) }}</p>
             </div>
+          </div>
+
+          <div
+            v-if="requiresReconfirm(product) && !getDraft(product).reconfirm"
+            class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600"
+          >
+            Diferencia alta: marca reconfirmado antes de aplicar.
           </div>
 
           <div class="space-y-2">
@@ -741,11 +776,12 @@ onMounted(async () => {
       </div>
 
       <div class="ui-table-wrap mt-5 hidden xl:block">
-        <table class="ui-table min-w-[1320px]">
+        <table class="ui-table min-w-[1440px]">
           <thead class="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:whitespace-nowrap">
             <tr>
               <th>Código</th>
               <th>Producto</th>
+              <th>Marca</th>
               <th>Stock sistema</th>
               <th>Contado</th>
               <th>No vendible</th>
@@ -764,6 +800,7 @@ onMounted(async () => {
                 <p class="font-semibold text-slate-800">{{ product.name }}</p>
                 <p class="text-xs text-slate-400">Unidad: {{ product.unit || 'unidad' }}</p>
               </td>
+              <td>{{ product.brand || '-' }}</td>
               <td>
                 <span class="ui-pill" :class="systemStock(product) <= normalizeUnits(product.min_stock) ? 'ui-pill-low' : ''">
                   {{ systemStock(product) }}
@@ -869,5 +906,84 @@ onMounted(async () => {
         No hay productos para el filtro aplicado.
       </p>
     </section>
+
+    <div v-if="session" class="inventory-mobile-sticky xl:hidden">
+      <div class="inventory-mobile-sticky-inner">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Ajustes pendientes: {{ summary.changedRows }}
+        </p>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+          <button class="ui-btn-secondary w-full !py-2.5" @click="resetAllDrafts">Reiniciar</button>
+          <button
+            class="ui-btn w-full !py-2.5"
+            :disabled="saving || !summary.changedRows"
+            @click="applySelectedAdjustments"
+          >
+            {{ saving ? 'Aplicando...' : `Aplicar (${summary.changedRows})` }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.inventory-chip {
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  background: #f8fafc;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.45rem 0.7rem;
+}
+
+.inventory-chip-pending {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.inventory-chip-session-open {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.inventory-chip-session-closed {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.inventory-mobile-card {
+  border-color: #e2e8f0;
+}
+
+.inventory-mobile-sticky {
+  bottom: 0;
+  left: 0;
+  padding: 0.75rem;
+  position: fixed;
+  right: 0;
+  z-index: 30;
+}
+
+.inventory-mobile-sticky-inner {
+  backdrop-filter: blur(8px);
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  margin: 0 auto;
+  max-width: 900px;
+  padding: 0.75rem;
+}
+
+@supports (padding: max(0px)) {
+  .inventory-mobile-sticky {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+</style>

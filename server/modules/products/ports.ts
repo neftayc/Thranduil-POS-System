@@ -1,8 +1,10 @@
 export type UnitCatalogItem = { code: string; label: string }
+export type ProductCategoryItem = { id: string; code: string; name: string }
 export type ProductCatalogItem = Record<string, any>
 
 export type ProductsPageResult = {
   units: UnitCatalogItem[]
+  categories: ProductCategoryItem[]
   products: ProductCatalogItem[]
 }
 
@@ -12,7 +14,7 @@ export type UpsertProductCatalogInput = {
   p_name: string
   p_unit?: string | null
   p_brand?: string | null
-  p_product_type?: string | null
+  p_category_name?: string | null
   p_barcode?: string | null
   p_active?: boolean
   p_sale_price?: number
@@ -33,4 +35,3 @@ export type ProductsRepository = {
   replaceConversions(input: ReplaceConversionsInput): Promise<{ ok: true }>
   getConversions(productId: string): Promise<{ items: Array<{ unit_name: string; factor_to_base: number; is_active: boolean }> }>
 }
-

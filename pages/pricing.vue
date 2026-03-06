@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { matchesTokensAndFuzzy } from '~/utils/productSearch'
+
 definePageMeta({ middleware: ['owner'] })
 
 const loading = ref(false)
@@ -10,6 +12,7 @@ const units = ref<Array<{ code: string; label: string }>>([])
 const customerGroups = ref<Array<{ code: string; label: string }>>([])
 
 const selectedProductId = ref('')
+const productSearch = ref('')
 
 const presentationRules = ref<any[]>([])
 const wholesaleTiers = ref<any[]>([])
@@ -55,6 +58,72 @@ const newCustomerGroupPrice = reactive({
 const selectedProduct = computed(() =>
   products.value.find((product) => product.id === selectedProductId.value)
 )
+
+const productLabel = (product: any) =>
+  `${String(product?.name || '').trim()}${product?.sku ? ` (${String(product.sku).trim()})` : ''}`.trim()
+
+const productSearchableText = (product: any) =>
+  `${product?.name || ''} ${product?.sku || ''} ${product?.brand || ''} ${product?.category_name || product?.product_type || ''}`
+
+const MAX_PRODUCT_SUGGESTIONS = 40
+const productSearchOpen = ref(false)
+let productSearchCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+const filteredProducts = computed(() => {
+  const term = productSearch.value
+  return products.value.filter((product) =>
+    matchesTokensAndFuzzy(term, productSearchableText(product))
+  )
+})
+
+const productSuggestions = computed(() => filteredProducts.value.slice(0, MAX_PRODUCT_SUGGESTIONS))
+
+const hasProductSearch = computed(() => productSearch.value.trim().length > 0)
+
+const clearProductSearch = () => {
+  productSearch.value = ''
+  productSearchOpen.value = true
+}
+
+const isSelectedProductOption = (product: any) =>
+  String(product?.id || '') === String(selectedProductId.value || '')
+
+const selectProduct = (product: any) => {
+  selectedProductId.value = String(product?.id || '')
+  productSearch.value = ''
+  productSearchOpen.value = false
+}
+
+const cancelProductSearchClose = () => {
+  if (productSearchCloseTimer) {
+    clearTimeout(productSearchCloseTimer)
+    productSearchCloseTimer = null
+  }
+}
+
+const openProductSearch = () => {
+  cancelProductSearchClose()
+  productSearchOpen.value = true
+}
+
+const closeProductSearchSoon = () => {
+  cancelProductSearchClose()
+  productSearchCloseTimer = setTimeout(() => {
+    productSearchOpen.value = false
+  }, 120)
+}
+
+const handleProductSearchKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    clearProductSearch()
+    return
+  }
+  if (event.key !== 'Enter') return
+  const first = productSuggestions.value[0]
+  if (!first) return
+  event.preventDefault()
+  selectProduct(first)
+}
 
 const unitLabel = (code: string) =>
   units.value.find((item) => item.code === code)?.label || code || '-'
@@ -443,6 +512,10 @@ watch(selectedProductId, () => {
 })
 
 onMounted(loadCatalogs)
+
+onBeforeUnmount(() => {
+  cancelProductSearchClose()
+})
 </script>
 
 <template>
@@ -457,14 +530,62 @@ onMounted(loadCatalogs)
             <span class="ui-meta-chip">Motor de precios activo</span>
           </div>
         </div>
-        <div class="min-w-[320px]">
+        <div class="min-w-[320px] space-y-2">
           <label class="ui-label">Producto</label>
-          <select v-model="selectedProductId" class="ui-select">
-            <option value="">Seleccionar</option>
-            <option v-for="product in products" :key="product.id" :value="product.id">
-              {{ product.name }} {{ product.sku ? `(${product.sku})` : '' }}
-            </option>
-          </select>
+          <div class="relative" @focusin="openProductSearch" @focusout="closeProductSearchSoon">
+            <input
+              v-model="productSearch"
+              class="ui-input pr-10"
+              type="text"
+              placeholder="Buscar por nombre, SKU, marca o categoría..."
+              @focus="openProductSearch"
+              @input="openProductSearch"
+              @keydown="handleProductSearchKeydown"
+            />
+            <button
+              v-if="hasProductSearch"
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              @mousedown.prevent
+              @click="clearProductSearch"
+            >
+              Limpiar
+            </button>
+
+            <div
+              v-if="productSearchOpen"
+              class="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
+            >
+              <button
+                v-for="product in productSuggestions"
+                :key="product.id"
+                type="button"
+                class="block w-full rounded-lg px-3 py-2 text-left transition"
+                :class="
+                  isSelectedProductOption(product)
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-slate-700 hover:bg-slate-50'
+                "
+                @mousedown.prevent="selectProduct(product)"
+              >
+                <p class="truncate text-sm font-semibold">{{ product.name || 'Sin nombre' }}</p>
+                <p class="truncate text-xs text-slate-500">
+                  {{ product.sku || 'Sin SKU' }}
+                  {{ product.brand ? `· ${product.brand}` : '' }}
+                </p>
+              </button>
+
+              <p v-if="!productSuggestions.length" class="px-3 py-2 text-xs font-semibold text-amber-600">
+                No hay productos que coincidan con "{{ productSearch.trim() }}".
+              </p>
+            </div>
+          </div>
+          <p v-if="selectedProduct" class="text-xs font-semibold text-slate-700">
+            Seleccionado: {{ productLabel(selectedProduct) }}
+          </p>
+          <p class="text-xs text-slate-500">
+            Mostrando {{ productSuggestions.length }} de {{ filteredProducts.length }} coincidencias ({{ products.length }} total)
+          </p>
         </div>
       </div>
 

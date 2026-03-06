@@ -8,24 +8,27 @@ export const makeSupabaseMaintenanceRepository = (accessToken: string): Maintena
 
   return {
     async getAll(): Promise<MaintenanceDataResult> {
-      const [unitsRes, methodsRes, groupsRes] = await Promise.all([
+      const [unitsRes, methodsRes, groupsRes, categoriesRes] = await Promise.all([
         supabase.from('uom_catalog').select('code, label, active').order('label'),
         supabase
           .from('payment_method_catalog')
           .select('code, label, active, sort_order')
           .order('sort_order')
           .order('label'),
-        supabase.from('customer_groups').select('code, label, active, sort_order').order('sort_order').order('label')
+        supabase.from('customer_groups').select('code, label, active, sort_order').order('sort_order').order('label'),
+        supabase.from('product_categories').select('code, name, active, sort_order').order('sort_order').order('name')
       ])
 
       if (unitsRes.error) throw createError({ statusCode: 500, statusMessage: unitsRes.error.message })
       if (methodsRes.error) throw createError({ statusCode: 500, statusMessage: methodsRes.error.message })
       if (groupsRes.error) throw createError({ statusCode: 500, statusMessage: groupsRes.error.message })
+      if (categoriesRes.error) throw createError({ statusCode: 500, statusMessage: categoriesRes.error.message })
 
       return {
         units: unitsRes.data || [],
         paymentMethods: methodsRes.data || [],
-        customerGroups: groupsRes.data || []
+        customerGroups: groupsRes.data || [],
+        categories: categoriesRes.data || []
       }
     },
 
@@ -133,7 +136,44 @@ export const makeSupabaseMaintenanceRepository = (accessToken: string): Maintena
       const { error } = await supabase.from('customer_groups').update({ label, active, sort_order: sortOrder }).eq('code', groupCode)
       if (error) throw createError({ statusCode: 500, statusMessage: error.message })
       return { ok: true as const }
+    },
+
+    async createCategory(input) {
+      const code = String(input?.code || '').trim()
+      const label = String(input?.label || '').trim()
+      const sortOrder = Number((input as any)?.sort_order || 100)
+
+      if (!code || !label) {
+        throw createError({ statusCode: 400, statusMessage: 'Datos inválidos' })
+      }
+
+      const { error } = await supabase
+        .from('product_categories')
+        .insert({ code, name: label, sort_order: sortOrder, active: true })
+      if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+      return { ok: true as const }
+    },
+
+    async updateCategory(code, input) {
+      const categoryCode = String(code || '').trim()
+      if (!categoryCode) {
+        throw createError({ statusCode: 400, statusMessage: 'Código inválido' })
+      }
+
+      const label = String(input?.label || '').trim()
+      const active = (input as any)?.active !== false
+      const sortOrder = Number((input as any)?.sort_order || 100)
+
+      if (!label) {
+        throw createError({ statusCode: 400, statusMessage: 'Nombre obligatorio' })
+      }
+
+      const { error } = await supabase
+        .from('product_categories')
+        .update({ name: label, active, sort_order: sortOrder })
+        .eq('code', categoryCode)
+      if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+      return { ok: true as const }
     }
   }
 }
-

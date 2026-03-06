@@ -1,0 +1,35 @@
+product_id,sku,name,brand,current_product_type,suggested_category,suggested_action,confidence,confidence_score,reason
+3ac8e390-19d6-41bd-8f3e-53240b25131e,SKU-FB6932B48B,Baja Lengua  de color grande,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+ddc7df36-1594-4459-b5ef-d9a3ba4497b1,SKU-7A82393C55,Baja Lengua - Blanco,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+03bc301e-c9c7-4c36-be8e-3e5a96a76e0c,SKU-C756F39052,Baja Lengua de color pequeño,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+b36e7699-fe76-49b7-ae12-3d77141dbcb8,SKU-B1DE97BF6F,brocheta intermedia,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+fdef210a-f2e7-4d3a-b8aa-84a6ec1d1f92,SKU-EC04730CBE,chinches,,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+6d872606-2325-4b51-a61f-75214f4364e9,SKU-COMP-AYR-002-CJALF,Cj Alfiler,,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+3faefc15-377a-494c-88fa-62094eb77aa6,SKU-COMP-AYR-002-CJCHM,Cj Chinche Mariposa,,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+46cbe6db-8ed2-4579-a828-5adbe1d4b2e1,SKU-COMP-AYR-002-CJCLIP,Cj Clips,,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+6d6255b9-19a1-4b5a-b4f6-548cca039ccf,SKU-9E86C13A28,Crepe con diseño,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+137b6b5f-296a-4f3d-8ff3-f23d285c5a38,SKU-BFF6AAF2E2,Cuadernillo de anotes grande,,,Cuaderno,asignar_existente,alta,3,keyword_cuadernillo
+91274f02-7c26-4360-b31f-789fc288de06,SKU-980649732C,Cuadernillo de anotes pequeño,,,Cuaderno,asignar_existente,alta,3,keyword_cuadernillo
+fce53732-7a95-45d6-8a3d-2cd6c6d5ae9e,SKU-3E2C39E2F6,Escarcha,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+38ba3d6d-b862-4fdb-b86e-5281baf92741,SKU-E9EF9D1B06,Fastener de Gusano,Artesco,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+e39b7cff-ff4f-4d13-8aa9-2290d3953fca,SKU-CD28C46730,Fastener de metal,Artesco,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+ce942090-0328-4576-b524-e877df85abf0,SKU-D2E3DF6E54,gancho picos de colores,,,Gancho,asignar_existente,alta,3,keyword_gancho
+9d3bf567-ba5a-4ba2-97e2-9a4fa4a9d612,SKU-3702ECA90D,Imperdible Amarillo Pequeño,,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+449ef057-4cd0-459b-802a-82199a3f2da0,SKU-D937B9BE42,Imperdible Blanco,,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+147c7e6e-8ef6-4448-b49a-af8d9410fd8f,SKU-3D1BE72419,Lentejuelas grandes,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+e58d38de-4912-45ea-86fc-3b3a63dada51,SKU-4B882EFB24,Lentejuelas JhinPequeñas,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+42d7249c-320a-4983-8c06-c4bdf7e02781,SKU-D7B21404F3,Llavero capibara monedero,,,Llavero,crear_nueva,alta,3,familia_llaveros
+95bc77db-fcb4-438e-938e-44f76d8732ff,SKU-4D785AB75B,Llavero capibara televisor,,,Llavero,crear_nueva,alta,3,familia_llaveros
+751bc068-7f19-4fc9-8c51-e0a6632cc8bc,SKU-0F68E2EC13,Micas A4,Artesco,,Mica,crear_nueva,alta,3,familia_micas
+445ae7c2-4ccf-4647-bfa8-f7477bf95e90,SKU-A8C9B88E81,micas con diseño,,,Mica,crear_nueva,alta,3,familia_micas
+c18d509c-6181-4211-a8b2-4e673d3cd696,SKU-93E5BF3071,Microporoso escarchado A4,,,Microporoso,crear_nueva,alta,3,familia_microporoso
+f2dbbac0-e4fb-4293-8fe8-1bc579c39023,SKU-96A54B592D,Microporoso Glitter self Adhesivo letras escarchados,,,Microporoso,crear_nueva,alta,3,familia_microporoso
+0d0561f1-bada-48c7-a126-255244f53bc2,SKU-D0B9BAA1A3,Ojitos,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+6b2a6284-4cf4-407d-a5ca-59b36504012c,SKU-A4C46F4DA5,Papel microporoso liso,,,Microporoso,crear_nueva,alta,3,familia_microporoso
+210f4db7-ba28-4136-b97a-a698b189b62b,SKU-AF85D08933,pinza de 12 und,,,Sujetadores,crear_nueva,alta,3,familia_sujecion
+59046d59-4875-4b1d-bcc2-9aa5118dc075,SKU-3AD10ADE3E,Pompones,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+05d10ae8-f9fb-4e56-a3d1-609adb325992,SKU-5AF26D5396,Sobre Manila A4 premium,,,Papel,asignar_existente,alta,3,keyword_sobre_manila
+bfa3491d-2afd-4a60-95cc-671b22ac73c3,SKU-8A83060E82,Tarjador animalitos,,,Sacapunta,asignar_existente,alta,3,keyword_tarjador
+1eafa601-6269-4137-9611-714728910cc8,SKU-COMP-AYR-002-TRFOMY,Tira Fomy (ilegible),,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+da5f96cf-4506-4cb0-be2b-34fade0b3385,SKU-COMP-AYR-002-TROJOS,Tira Ojos,,,Manualidades,crear_nueva,alta,3,insumo_manualidades
+3b3246fa-1324-4fa9-bfc3-5285ad9ff144,SKU-COMP-AYR-002-TRPERL,Tira Perlas,,,Manualidades,crear_nueva,alta,3,insumo_manualidades

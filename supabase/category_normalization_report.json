@@ -1,0 +1,1672 @@
+{
+  "generatedAt": "2026-03-04T04:19:35.120Z",
+  "mode": "apply",
+  "totals": {
+    "products": 388,
+    "categories": 48,
+    "uncategorizedBefore": 112,
+    "highConfidenceAssignments": 1,
+    "lowConfidenceSuggestions": 10,
+    "newCategoriesPlanned": 0,
+    "assignmentsPlannedViaNewCategories": 0,
+    "unresolvedAfterPlan": 101,
+    "uncategorizedAfter": 111
+  },
+  "categoryMerges": [
+    {
+      "fromId": "c0435c01-a62f-461f-b079-3c710b35c6a5",
+      "fromName": "Cuaderno",
+      "toId": "d4bd58a9-c203-4191-86bc-154d1d929a19",
+      "toName": "Cuaderno",
+      "movedProducts": 0
+    },
+    {
+      "fromId": "389a5714-1026-4f58-9996-2b8e24e8a187",
+      "fromName": "Plumón",
+      "toId": "dd050032-3916-4f95-9585-a34c39942a6d",
+      "toName": "Plumon",
+      "movedProducts": 0
+    },
+    {
+      "fromId": "5b85e5e7-fade-402c-b97e-30985143af5d",
+      "fromName": "SketchBook",
+      "toId": "1d7a51a7-de27-4fff-bce5-5bd854df55f1",
+      "toName": "Sketchbook",
+      "movedProducts": 0
+    }
+  ],
+  "categoryRenames": [],
+  "uncategorizedBefore": [
+    {
+      "id": "d5cb21dd-9597-46b9-bd89-4e520e7b9fc0",
+      "sku": "SKU-AAD11162D5",
+      "name": "adorno niño selvatico",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "898c3f67-9b87-44d4-90b8-dfdd247129d1",
+      "sku": "SKU-E784193A9C",
+      "name": "adornos para el dia del padre",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "3ac8e390-19d6-41bd-8f3e-53240b25131e",
+      "sku": "SKU-FB6932B48B",
+      "name": "Baja Lengua  de color grande",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "ddc7df36-1594-4459-b5ef-d9a3ba4497b1",
+      "sku": "SKU-7A82393C55",
+      "name": "Baja Lengua - Blanco",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "03bc301e-c9c7-4c36-be8e-3e5a96a76e0c",
+      "sku": "SKU-C756F39052",
+      "name": "Baja Lengua de color pequeño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "2ce6d532-c087-469d-a61e-ca8779ce2aba",
+      "sku": "SKU-CC77E1CB6E",
+      "name": "Banderas",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "5164d375-fb4c-476d-bd72-359a62d49236",
+      "sku": "SKU-B8D34F9520",
+      "name": "Batisoga grande",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "526e27c5-727b-4a17-b1a7-a8d197457ade",
+      "sku": "SKU-5B727C91A4",
+      "name": "Batisoga pequeño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "b227bddc-8b11-4d7a-a396-c5b1ec61f6b9",
+      "sku": "SKU-CB9437A81C",
+      "name": "Bolsa de Lona",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "9d1317af-313c-4f03-8906-b1fa39d27a01",
+      "sku": "SKU-A39A5CB534",
+      "name": "Botones",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "b36e7699-fe76-49b7-ae12-3d77141dbcb8",
+      "sku": "SKU-B1DE97BF6F",
+      "name": "brocheta intermedia",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "5de30a5a-3603-4167-9ccb-db200097d66d",
+      "sku": "SKU-1B4019FFD0",
+      "name": "carton cartulina",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "4bd3bb00-983a-499c-9437-83f4e0b58761",
+      "sku": "SKU-87FB5C45C1",
+      "name": "Cartulina blanca",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "2203c2d9-ad9c-4b42-9a98-ac08603deb8a",
+      "sku": "SKU-5972A924E8",
+      "name": "cartulinas de pliego a color A4",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "c6460e9f-c9e3-44e6-8dba-3e86091b9208",
+      "sku": "SKU-8EC5F5CD1C",
+      "name": "cepillo colgate",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "c3bb9c67-c317-4243-84de-b06867c5beba",
+      "sku": "SKU-7BEEA9F353",
+      "name": "chapitas",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "fdef210a-f2e7-4d3a-b8aa-84a6ec1d1f92",
+      "sku": "SKU-EC04730CBE",
+      "name": "chinches",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "54c5e38b-1138-465d-b8a9-718753a2784d",
+      "sku": "SKU-65B092F11F",
+      "name": "cholito",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "6d872606-2325-4b51-a61f-75214f4364e9",
+      "sku": "SKU-COMP-AYR-002-CJALF",
+      "name": "Cj Alfiler",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "3faefc15-377a-494c-88fa-62094eb77aa6",
+      "sku": "SKU-COMP-AYR-002-CJCHM",
+      "name": "Cj Chinche Mariposa",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "46cbe6db-8ed2-4579-a828-5adbe1d4b2e1",
+      "sku": "SKU-COMP-AYR-002-CJCLIP",
+      "name": "Cj Clips",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "2fae435c-ec16-44b0-84f6-0e271cecb4fe",
+      "sku": "SKU-65B593846C",
+      "name": "colet negros",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "fb29a27d-1537-4a33-9cd4-6565a33c5e31",
+      "sku": "SKU-D15BAC6AB0",
+      "name": "Cometas",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "349e7826-6a89-432c-a9d4-72ef1fefc1a2",
+      "sku": "SKU-08D71F3C55",
+      "name": "Corazon de regalos",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "b7327baf-a4bc-4ab1-81e3-c688e08f8b3f",
+      "sku": "SKU-95A43F219B",
+      "name": "Cordones",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "e0d8ccd9-328a-4641-968e-9add52792130",
+      "sku": "SKU-96FF456458",
+      "name": "cortauña pequeña",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "6d6255b9-19a1-4b5a-b4f6-548cca039ccf",
+      "sku": "SKU-9E86C13A28",
+      "name": "Crepe con diseño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "137b6b5f-296a-4f3d-8ff3-f23d285c5a38",
+      "sku": "SKU-BFF6AAF2E2",
+      "name": "Cuadernillo de anotes grande",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "91274f02-7c26-4360-b31f-789fc288de06",
+      "sku": "SKU-980649732C",
+      "name": "Cuadernillo de anotes pequeño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "78ab9a96-5124-4a86-8d32-c0e5c81dfe40",
+      "sku": "SKU-818ED060B7",
+      "name": "Dados pequeños",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "fca5d4b0-fdc9-453c-94d0-b75dd755acf5",
+      "sku": "SKU-9D9DA3D551",
+      "name": "escarapela",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "fce53732-7a95-45d6-8a3d-2cd6c6d5ae9e",
+      "sku": "SKU-3E2C39E2F6",
+      "name": "Escarcha",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "90902c7d-0022-44b9-9a62-2468ce284627",
+      "sku": "SKU-B3C78D2293",
+      "name": "Escobilla Grande de Zapato",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "0065e1a6-2714-4833-8e6c-b511ee5c91f9",
+      "sku": "SKU-E325832F3F",
+      "name": "Escobilla Pequeña de Zapato",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "eb32025c-9dd9-41cf-ab3d-984578404bb0",
+      "sku": "SKU-ECD780DC01",
+      "name": "Espejo Mediano",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "6fbce598-3dd1-44e0-9d29-6bf44a7a9170",
+      "sku": "SKU-E0DA16F501",
+      "name": "Espejo Pequeño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "835d53bd-5c86-435b-9521-a1ef42e61620",
+      "sku": "SKU-2DF149588E",
+      "name": "Esponja Merlin",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "38ba3d6d-b862-4fdb-b86e-5281baf92741",
+      "sku": "SKU-E9EF9D1B06",
+      "name": "Fastener de Gusano",
+      "brand": "Artesco",
+      "product_type": null
+    },
+    {
+      "id": "e39b7cff-ff4f-4d13-8aa9-2290d3953fca",
+      "sku": "SKU-CD28C46730",
+      "name": "Fastener de metal",
+      "brand": "Artesco",
+      "product_type": null
+    },
+    {
+      "id": "ce942090-0328-4576-b524-e877df85abf0",
+      "sku": "SKU-D2E3DF6E54",
+      "name": "gancho picos de colores",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "c447a7f5-3cb7-434b-a252-e8059d01c8bb",
+      "sku": "SKU-AB321F3F5E",
+      "name": "Globos",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "e97191e9-4364-49eb-acfb-7ff42a024a90",
+      "sku": "SKU-FEC4345327",
+      "name": "Guantes",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "d655e756-0edf-4e9d-9087-3d496c82a07c",
+      "sku": "SKU-CB6A706CAF",
+      "name": "guillet",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "da16ce79-cc19-44a2-9914-5e233c8fa6b7",
+      "sku": "SKU-F06AE39D3D",
+      "name": "Hizopo",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "e63344f7-32ed-4446-9e24-72cb151a0407",
+      "sku": "SKU-C74ADF4922",
+      "name": "Hojas de color 100 und",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "9d3bf567-ba5a-4ba2-97e2-9a4fa4a9d612",
+      "sku": "SKU-3702ECA90D",
+      "name": "Imperdible Amarillo Pequeño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "449ef057-4cd0-459b-802a-82199a3f2da0",
+      "sku": "SKU-D937B9BE42",
+      "name": "Imperdible Blanco",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "9f18d492-4658-490a-93f3-2f9ae8f156ba",
+      "sku": "SKU-26FF8F2A26",
+      "name": "Jabon liquido grande",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "b1f366ef-5690-4ce2-952c-4f8f53740c5c",
+      "sku": "SKU-C2A71FB517",
+      "name": "Jabon liquido pequeño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "74247b08-f63a-4cbb-ba07-0fa4af2357e1",
+      "sku": "SKU-81B56FA010",
+      "name": "jaboncillo camai",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "24f94d48-d636-405f-aa75-fb4802b9279b",
+      "sku": "SKU-EEDF6B72FC",
+      "name": "Jaboneras",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "726f74a2-5edb-4088-be76-398eb21160c3",
+      "sku": "SKU-8130CA3015",
+      "name": "Lana de colores",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "147c7e6e-8ef6-4448-b49a-af8d9410fd8f",
+      "sku": "SKU-3D1BE72419",
+      "name": "Lentejuelas grandes",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "e58d38de-4912-45ea-86fc-3b3a63dada51",
+      "sku": "SKU-4B882EFB24",
+      "name": "Lentejuelas JhinPequeñas",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "42d4b0a3-6117-44a3-9501-49e94aa49502",
+      "sku": "SKU-676E05737E",
+      "name": "liga de lana",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "41799b6b-b208-4da1-8ff9-c9d635c34e47",
+      "sku": "SKU-3198E087D3",
+      "name": "liga para cabello",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "0af0ed11-8fbf-40b1-9ecd-b978feaf6066",
+      "sku": "SKU-371E102C11",
+      "name": "llajes grande",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "a04d1600-efc6-4a52-8dad-e0dad6eea9ef",
+      "sku": "SKU-C61C6AC664",
+      "name": "llajes pequeños",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "42d7249c-320a-4983-8c06-c4bdf7e02781",
+      "sku": "SKU-D7B21404F3",
+      "name": "Llavero capibara monedero",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "95bc77db-fcb4-438e-938e-44f76d8732ff",
+      "sku": "SKU-4D785AB75B",
+      "name": "Llavero capibara televisor",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "2e2e346f-f0b1-4b9a-bc9c-1445da26a3a3",
+      "sku": "SKU-06298A559F",
+      "name": "loncheras",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "9a2e9fab-1809-4bf7-a938-3aad5cda367b",
+      "sku": "SKU-5B234D9B53",
+      "name": "Luces de colors 200 leds",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "95a91474-fd50-4a6a-bf04-7fcafd255c31",
+      "sku": "SKU-1A61EF5307",
+      "name": "Meseros Personales - Niños",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "751bc068-7f19-4fc9-8c51-e0a6632cc8bc",
+      "sku": "SKU-0F68E2EC13",
+      "name": "Micas A4",
+      "brand": "Artesco",
+      "product_type": null
+    },
+    {
+      "id": "445ae7c2-4ccf-4647-bfa8-f7477bf95e90",
+      "sku": "SKU-A8C9B88E81",
+      "name": "micas con diseño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "c18d509c-6181-4211-a8b2-4e673d3cd696",
+      "sku": "SKU-93E5BF3071",
+      "name": "Microporoso escarchado A4",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "f2dbbac0-e4fb-4293-8fe8-1bc579c39023",
+      "sku": "SKU-96A54B592D",
+      "name": "Microporoso Glitter self Adhesivo letras escarchados",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "195fdf6b-3c4c-4510-bffb-27702aed882f",
+      "sku": "SKU-E541A2F517",
+      "name": "Mistura Amarilla",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "d7ffbc82-cb9d-45ea-8de8-5fbcefe7445f",
+      "sku": "SKU-45575800B4",
+      "name": "Mistura de Color",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "4da70132-32ac-4735-bec6-496761b2c7d8",
+      "sku": "SKU-12188D3F87",
+      "name": "moñeras",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "0d0561f1-bada-48c7-a126-255244f53bc2",
+      "sku": "SKU-D0B9BAA1A3",
+      "name": "Ojitos",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "6b2a6284-4cf4-407d-a5ca-59b36504012c",
+      "sku": "SKU-A4C46F4DA5",
+      "name": "Papel microporoso liso",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "29ac5ed8-c0cf-42f8-a5fc-a83745afa40b",
+      "sku": "SKU-D80DB7710E",
+      "name": "papel sedita",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "e8bf5d65-2a4e-4360-8429-c1b7d0e2266a",
+      "sku": "SKU-FD56706B4D",
+      "name": "papel silufan",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "75100055-2fe5-4092-abd7-d69bef82d764",
+      "sku": "SKU-4EE3C50F1D",
+      "name": "Papel suave higienico",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "e9dc096c-33e3-43ad-bb7a-b4e07facd7bf",
+      "sku": "SKU-B513B72D31",
+      "name": "pares de pilis",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "c8870ffd-6348-4632-9aff-c085e6bb3e44",
+      "sku": "SKU-77F19E15CF",
+      "name": "Pasta dental",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "bdbfbcdc-b8b0-45bc-bbe5-422295604a51",
+      "sku": "SKU-8D8B2631DB",
+      "name": "Pelotas de trapo",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "a43d2721-124d-4f56-b740-3229397d9f62",
+      "sku": "SKU-D5444E56E1",
+      "name": "pelotitas de llajes",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "cc2b0179-5c51-4565-ad53-c5abbc72d3d5",
+      "sku": "SKU-94488B3896",
+      "name": "Percheros",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "00874705-71d7-4f83-9f7c-1b17bfca8f65",
+      "sku": "SKU-2BEED389E4",
+      "name": "perlas adornos",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "e89c9649-337f-4006-9ec5-5b2c17bb557a",
+      "sku": "SKU-2B270DE01B",
+      "name": "Piñes de Decoración",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "210f4db7-ba28-4136-b97a-a698b189b62b",
+      "sku": "SKU-AF85D08933",
+      "name": "pinza de 12 und",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "78885ee3-6638-4b42-b10d-c53615251730",
+      "sku": "SKU-0C7D0AC4E6",
+      "name": "pirañas grandes",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "59046d59-4875-4b1d-bcc2-9aa5118dc075",
+      "sku": "SKU-3AD10ADE3E",
+      "name": "Pompones",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "0794efad-7cf1-4a43-b016-280fe88ad516",
+      "sku": "SKU-3BE02203E7",
+      "name": "posit cuadriculado",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "5138ecb3-3dae-46ae-b20f-4300313016af",
+      "sku": "SKU-D9A535C356",
+      "name": "Pozzis limpiatipo",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "47a86d6e-0b0f-442e-8dd5-d1c3fa74012e",
+      "sku": "SKU-479171A7EE",
+      "name": "Pulsera ojito",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "307620f3-5f74-4cb2-b3be-bf12fbc356fa",
+      "sku": "SKU-8601F96067",
+      "name": "Puntero",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "f2cc6229-a088-4f9b-81e1-18a739a03f32",
+      "sku": "SKU-44D2FC2D50",
+      "name": "rosas",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "9cd545eb-06ef-4ede-8c0a-fd2e7b77fb7c",
+      "sku": "SKU-383B65F71F",
+      "name": "rosas con osito",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "3e35e197-b52f-4a7a-badd-8c6a48821539",
+      "sku": "SKU-0C2AB09E16",
+      "name": "rositas x 3",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "c266a889-d120-41f9-8213-3e414d17fc39",
+      "sku": "SKU-B2904A3F21",
+      "name": "serpentina",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "4d2b4a0a-803a-445c-8c8b-d029d9fa2bdb",
+      "sku": "SKU-64AF411C73",
+      "name": "Set de escuadras kuromi",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "0528c92d-5dbc-425d-b7cd-8b2574b00886",
+      "sku": "SKU-530AAFE75A",
+      "name": "silvato pequeño",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "05d10ae8-f9fb-4e56-a3d1-609adb325992",
+      "sku": "SKU-5AF26D5396",
+      "name": "Sobre Manila A4 premium",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "ac3ca922-03b4-49c3-b206-305f12e3ddf8",
+      "sku": "SKU-259711D0CD",
+      "name": "Super esponja",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "7b72d34a-cae7-4bc6-94e9-e01824cc8618",
+      "sku": "SKU-F8C11BD284",
+      "name": "Tabla periodica",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "e2b5852c-32f8-4525-9524-6efea47607e3",
+      "sku": "SKU-0D608B9E69",
+      "name": "Tableros Acrilicos",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "3a7230e5-089b-45e0-a8d1-727b9449c81d",
+      "sku": "SKU-4FD29741F2",
+      "name": "taps",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "bfa3491d-2afd-4a60-95cc-671b22ac73c3",
+      "sku": "SKU-8A83060E82",
+      "name": "Tarjador animalitos",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "375e866f-9cc4-4fc6-ae06-7be0dcd3f796",
+      "sku": "SKU-58B59695F9",
+      "name": "tasa con rosas",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "1eafa601-6269-4137-9611-714728910cc8",
+      "sku": "SKU-COMP-AYR-002-TRFOMY",
+      "name": "Tira Fomy (ilegible)",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "da5f96cf-4506-4cb0-be2b-34fade0b3385",
+      "sku": "SKU-COMP-AYR-002-TROJOS",
+      "name": "Tira Ojos",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "3b3246fa-1324-4fa9-bfc3-5285ad9ff144",
+      "sku": "SKU-COMP-AYR-002-TRPERL",
+      "name": "Tira Perlas",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "0c193034-4c2d-41c4-b843-5c9d14ba63c4",
+      "sku": "SKU-COMP-AYR-002-TRROSA",
+      "name": "Tira Rosa",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "3c49265c-e055-48b1-a205-e1282e3e5b88",
+      "sku": "SKU-980BA39232",
+      "name": "tiros",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "8ce8b968-db6c-42a1-8d95-f2c2013c1a1e",
+      "sku": "SKU-3F113AD6D9",
+      "name": "Trish",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "af947bc0-69e8-40d4-8fa6-300187421592",
+      "sku": "SKU-35F30621F4",
+      "name": "trompos",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "8aab88e6-64a5-4cd6-b2b2-457a833ad636",
+      "sku": "SKU-E4F5832814",
+      "name": "ula ula",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "3cf5c61e-dd65-454f-b2a9-e1512d2136a8",
+      "sku": "SKU-232269CDDF",
+      "name": "Vaso de plastico",
+      "brand": null,
+      "product_type": null
+    },
+    {
+      "id": "27e94aa3-4bcc-4e8a-b972-5695097ba4c1",
+      "sku": "SKU-1AE47B4AA5",
+      "name": "vincha 104",
+      "brand": null,
+      "product_type": null
+    }
+  ],
+  "highConfidenceAssignments": [
+    {
+      "productId": "ce942090-0328-4576-b524-e877df85abf0",
+      "sku": "SKU-D2E3DF6E54",
+      "name": "gancho picos de colores",
+      "brand": null,
+      "productType": null,
+      "categoryId": "34d721e7-dd8d-4356-ac6a-0b40cb2a771e",
+      "categoryName": "Gancho",
+      "score": 5,
+      "margin": 2,
+      "reason": "phrase_match"
+    }
+  ],
+  "lowConfidenceSuggestions": [
+    {
+      "productId": "3ac8e390-19d6-41bd-8f3e-53240b25131e",
+      "sku": "SKU-FB6932B48B",
+      "name": "Baja Lengua  de color grande",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "6cd89d6a-6478-49a6-9920-00c63f82ee40",
+      "suggestedCategoryName": "Colores",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "03bc301e-c9c7-4c36-be8e-3e5a96a76e0c",
+      "sku": "SKU-C756F39052",
+      "name": "Baja Lengua de color pequeño",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "6cd89d6a-6478-49a6-9920-00c63f82ee40",
+      "suggestedCategoryName": "Colores",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "2203c2d9-ad9c-4b42-9a98-ac08603deb8a",
+      "sku": "SKU-5972A924E8",
+      "name": "cartulinas de pliego a color A4",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "6cd89d6a-6478-49a6-9920-00c63f82ee40",
+      "suggestedCategoryName": "Colores",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "e63344f7-32ed-4446-9e24-72cb151a0407",
+      "sku": "SKU-C74ADF4922",
+      "name": "Hojas de color 100 und",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "6cd89d6a-6478-49a6-9920-00c63f82ee40",
+      "suggestedCategoryName": "Colores",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "726f74a2-5edb-4088-be76-398eb21160c3",
+      "sku": "SKU-8130CA3015",
+      "name": "Lana de colores",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "6cd89d6a-6478-49a6-9920-00c63f82ee40",
+      "suggestedCategoryName": "Colores",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "d7ffbc82-cb9d-45ea-8de8-5fbcefe7445f",
+      "sku": "SKU-45575800B4",
+      "name": "Mistura de Color",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "6cd89d6a-6478-49a6-9920-00c63f82ee40",
+      "suggestedCategoryName": "Colores",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "6b2a6284-4cf4-407d-a5ca-59b36504012c",
+      "sku": "SKU-A4C46F4DA5",
+      "name": "Papel microporoso liso",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "bb657519-0401-463c-a890-de4503bbb2bd",
+      "suggestedCategoryName": "Papel",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "29ac5ed8-c0cf-42f8-a5fc-a83745afa40b",
+      "sku": "SKU-D80DB7710E",
+      "name": "papel sedita",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "bb657519-0401-463c-a890-de4503bbb2bd",
+      "suggestedCategoryName": "Papel",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "e8bf5d65-2a4e-4360-8429-c1b7d0e2266a",
+      "sku": "SKU-FD56706B4D",
+      "name": "papel silufan",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "bb657519-0401-463c-a890-de4503bbb2bd",
+      "suggestedCategoryName": "Papel",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    },
+    {
+      "productId": "75100055-2fe5-4092-abd7-d69bef82d764",
+      "sku": "SKU-4EE3C50F1D",
+      "name": "Papel suave higienico",
+      "brand": null,
+      "productType": null,
+      "suggestedCategoryId": "bb657519-0401-463c-a890-de4503bbb2bd",
+      "suggestedCategoryName": "Papel",
+      "score": 3,
+      "margin": 3,
+      "reason": "phrase_match"
+    }
+  ],
+  "newCategoriesPlan": [],
+  "unresolvedAfterPlan": [
+    {
+      "productId": "d5cb21dd-9597-46b9-bd89-4e520e7b9fc0",
+      "sku": "SKU-AAD11162D5",
+      "name": "adorno niño selvatico",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "898c3f67-9b87-44d4-90b8-dfdd247129d1",
+      "sku": "SKU-E784193A9C",
+      "name": "adornos para el dia del padre",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "ddc7df36-1594-4459-b5ef-d9a3ba4497b1",
+      "sku": "SKU-7A82393C55",
+      "name": "Baja Lengua - Blanco",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "2ce6d532-c087-469d-a61e-ca8779ce2aba",
+      "sku": "SKU-CC77E1CB6E",
+      "name": "Banderas",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "5164d375-fb4c-476d-bd72-359a62d49236",
+      "sku": "SKU-B8D34F9520",
+      "name": "Batisoga grande",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "526e27c5-727b-4a17-b1a7-a8d197457ade",
+      "sku": "SKU-5B727C91A4",
+      "name": "Batisoga pequeño",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "b227bddc-8b11-4d7a-a396-c5b1ec61f6b9",
+      "sku": "SKU-CB9437A81C",
+      "name": "Bolsa de Lona",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "9d1317af-313c-4f03-8906-b1fa39d27a01",
+      "sku": "SKU-A39A5CB534",
+      "name": "Botones",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "b36e7699-fe76-49b7-ae12-3d77141dbcb8",
+      "sku": "SKU-B1DE97BF6F",
+      "name": "brocheta intermedia",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "5de30a5a-3603-4167-9ccb-db200097d66d",
+      "sku": "SKU-1B4019FFD0",
+      "name": "carton cartulina",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "4bd3bb00-983a-499c-9437-83f4e0b58761",
+      "sku": "SKU-87FB5C45C1",
+      "name": "Cartulina blanca",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "c6460e9f-c9e3-44e6-8dba-3e86091b9208",
+      "sku": "SKU-8EC5F5CD1C",
+      "name": "cepillo colgate",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "c3bb9c67-c317-4243-84de-b06867c5beba",
+      "sku": "SKU-7BEEA9F353",
+      "name": "chapitas",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "fdef210a-f2e7-4d3a-b8aa-84a6ec1d1f92",
+      "sku": "SKU-EC04730CBE",
+      "name": "chinches",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "54c5e38b-1138-465d-b8a9-718753a2784d",
+      "sku": "SKU-65B092F11F",
+      "name": "cholito",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "6d872606-2325-4b51-a61f-75214f4364e9",
+      "sku": "SKU-COMP-AYR-002-CJALF",
+      "name": "Cj Alfiler",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "3faefc15-377a-494c-88fa-62094eb77aa6",
+      "sku": "SKU-COMP-AYR-002-CJCHM",
+      "name": "Cj Chinche Mariposa",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "46cbe6db-8ed2-4579-a828-5adbe1d4b2e1",
+      "sku": "SKU-COMP-AYR-002-CJCLIP",
+      "name": "Cj Clips",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "2fae435c-ec16-44b0-84f6-0e271cecb4fe",
+      "sku": "SKU-65B593846C",
+      "name": "colet negros",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "fb29a27d-1537-4a33-9cd4-6565a33c5e31",
+      "sku": "SKU-D15BAC6AB0",
+      "name": "Cometas",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "349e7826-6a89-432c-a9d4-72ef1fefc1a2",
+      "sku": "SKU-08D71F3C55",
+      "name": "Corazon de regalos",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "b7327baf-a4bc-4ab1-81e3-c688e08f8b3f",
+      "sku": "SKU-95A43F219B",
+      "name": "Cordones",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "e0d8ccd9-328a-4641-968e-9add52792130",
+      "sku": "SKU-96FF456458",
+      "name": "cortauña pequeña",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "6d6255b9-19a1-4b5a-b4f6-548cca039ccf",
+      "sku": "SKU-9E86C13A28",
+      "name": "Crepe con diseño",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "137b6b5f-296a-4f3d-8ff3-f23d285c5a38",
+      "sku": "SKU-BFF6AAF2E2",
+      "name": "Cuadernillo de anotes grande",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "91274f02-7c26-4360-b31f-789fc288de06",
+      "sku": "SKU-980649732C",
+      "name": "Cuadernillo de anotes pequeño",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "78ab9a96-5124-4a86-8d32-c0e5c81dfe40",
+      "sku": "SKU-818ED060B7",
+      "name": "Dados pequeños",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "fca5d4b0-fdc9-453c-94d0-b75dd755acf5",
+      "sku": "SKU-9D9DA3D551",
+      "name": "escarapela",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "fce53732-7a95-45d6-8a3d-2cd6c6d5ae9e",
+      "sku": "SKU-3E2C39E2F6",
+      "name": "Escarcha",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "90902c7d-0022-44b9-9a62-2468ce284627",
+      "sku": "SKU-B3C78D2293",
+      "name": "Escobilla Grande de Zapato",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "0065e1a6-2714-4833-8e6c-b511ee5c91f9",
+      "sku": "SKU-E325832F3F",
+      "name": "Escobilla Pequeña de Zapato",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "eb32025c-9dd9-41cf-ab3d-984578404bb0",
+      "sku": "SKU-ECD780DC01",
+      "name": "Espejo Mediano",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "6fbce598-3dd1-44e0-9d29-6bf44a7a9170",
+      "sku": "SKU-E0DA16F501",
+      "name": "Espejo Pequeño",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "835d53bd-5c86-435b-9521-a1ef42e61620",
+      "sku": "SKU-2DF149588E",
+      "name": "Esponja Merlin",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "38ba3d6d-b862-4fdb-b86e-5281baf92741",
+      "sku": "SKU-E9EF9D1B06",
+      "name": "Fastener de Gusano",
+      "brand": "Artesco",
+      "productType": null
+    },
+    {
+      "productId": "e39b7cff-ff4f-4d13-8aa9-2290d3953fca",
+      "sku": "SKU-CD28C46730",
+      "name": "Fastener de metal",
+      "brand": "Artesco",
+      "productType": null
+    },
+    {
+      "productId": "c447a7f5-3cb7-434b-a252-e8059d01c8bb",
+      "sku": "SKU-AB321F3F5E",
+      "name": "Globos",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "e97191e9-4364-49eb-acfb-7ff42a024a90",
+      "sku": "SKU-FEC4345327",
+      "name": "Guantes",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "d655e756-0edf-4e9d-9087-3d496c82a07c",
+      "sku": "SKU-CB6A706CAF",
+      "name": "guillet",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "da16ce79-cc19-44a2-9914-5e233c8fa6b7",
+      "sku": "SKU-F06AE39D3D",
+      "name": "Hizopo",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "9d3bf567-ba5a-4ba2-97e2-9a4fa4a9d612",
+      "sku": "SKU-3702ECA90D",
+      "name": "Imperdible Amarillo Pequeño",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "449ef057-4cd0-459b-802a-82199a3f2da0",
+      "sku": "SKU-D937B9BE42",
+      "name": "Imperdible Blanco",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "9f18d492-4658-490a-93f3-2f9ae8f156ba",
+      "sku": "SKU-26FF8F2A26",
+      "name": "Jabon liquido grande",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "b1f366ef-5690-4ce2-952c-4f8f53740c5c",
+      "sku": "SKU-C2A71FB517",
+      "name": "Jabon liquido pequeño",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "74247b08-f63a-4cbb-ba07-0fa4af2357e1",
+      "sku": "SKU-81B56FA010",
+      "name": "jaboncillo camai",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "24f94d48-d636-405f-aa75-fb4802b9279b",
+      "sku": "SKU-EEDF6B72FC",
+      "name": "Jaboneras",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "147c7e6e-8ef6-4448-b49a-af8d9410fd8f",
+      "sku": "SKU-3D1BE72419",
+      "name": "Lentejuelas grandes",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "e58d38de-4912-45ea-86fc-3b3a63dada51",
+      "sku": "SKU-4B882EFB24",
+      "name": "Lentejuelas JhinPequeñas",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "42d4b0a3-6117-44a3-9501-49e94aa49502",
+      "sku": "SKU-676E05737E",
+      "name": "liga de lana",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "41799b6b-b208-4da1-8ff9-c9d635c34e47",
+      "sku": "SKU-3198E087D3",
+      "name": "liga para cabello",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "0af0ed11-8fbf-40b1-9ecd-b978feaf6066",
+      "sku": "SKU-371E102C11",
+      "name": "llajes grande",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "a04d1600-efc6-4a52-8dad-e0dad6eea9ef",
+      "sku": "SKU-C61C6AC664",
+      "name": "llajes pequeños",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "42d7249c-320a-4983-8c06-c4bdf7e02781",
+      "sku": "SKU-D7B21404F3",
+      "name": "Llavero capibara monedero",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "95bc77db-fcb4-438e-938e-44f76d8732ff",
+      "sku": "SKU-4D785AB75B",
+      "name": "Llavero capibara televisor",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "2e2e346f-f0b1-4b9a-bc9c-1445da26a3a3",
+      "sku": "SKU-06298A559F",
+      "name": "loncheras",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "9a2e9fab-1809-4bf7-a938-3aad5cda367b",
+      "sku": "SKU-5B234D9B53",
+      "name": "Luces de colors 200 leds",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "95a91474-fd50-4a6a-bf04-7fcafd255c31",
+      "sku": "SKU-1A61EF5307",
+      "name": "Meseros Personales - Niños",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "751bc068-7f19-4fc9-8c51-e0a6632cc8bc",
+      "sku": "SKU-0F68E2EC13",
+      "name": "Micas A4",
+      "brand": "Artesco",
+      "productType": null
+    },
+    {
+      "productId": "445ae7c2-4ccf-4647-bfa8-f7477bf95e90",
+      "sku": "SKU-A8C9B88E81",
+      "name": "micas con diseño",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "c18d509c-6181-4211-a8b2-4e673d3cd696",
+      "sku": "SKU-93E5BF3071",
+      "name": "Microporoso escarchado A4",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "f2dbbac0-e4fb-4293-8fe8-1bc579c39023",
+      "sku": "SKU-96A54B592D",
+      "name": "Microporoso Glitter self Adhesivo letras escarchados",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "195fdf6b-3c4c-4510-bffb-27702aed882f",
+      "sku": "SKU-E541A2F517",
+      "name": "Mistura Amarilla",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "4da70132-32ac-4735-bec6-496761b2c7d8",
+      "sku": "SKU-12188D3F87",
+      "name": "moñeras",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "0d0561f1-bada-48c7-a126-255244f53bc2",
+      "sku": "SKU-D0B9BAA1A3",
+      "name": "Ojitos",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "e9dc096c-33e3-43ad-bb7a-b4e07facd7bf",
+      "sku": "SKU-B513B72D31",
+      "name": "pares de pilis",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "c8870ffd-6348-4632-9aff-c085e6bb3e44",
+      "sku": "SKU-77F19E15CF",
+      "name": "Pasta dental",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "bdbfbcdc-b8b0-45bc-bbe5-422295604a51",
+      "sku": "SKU-8D8B2631DB",
+      "name": "Pelotas de trapo",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "a43d2721-124d-4f56-b740-3229397d9f62",
+      "sku": "SKU-D5444E56E1",
+      "name": "pelotitas de llajes",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "cc2b0179-5c51-4565-ad53-c5abbc72d3d5",
+      "sku": "SKU-94488B3896",
+      "name": "Percheros",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "00874705-71d7-4f83-9f7c-1b17bfca8f65",
+      "sku": "SKU-2BEED389E4",
+      "name": "perlas adornos",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "e89c9649-337f-4006-9ec5-5b2c17bb557a",
+      "sku": "SKU-2B270DE01B",
+      "name": "Piñes de Decoración",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "210f4db7-ba28-4136-b97a-a698b189b62b",
+      "sku": "SKU-AF85D08933",
+      "name": "pinza de 12 und",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "78885ee3-6638-4b42-b10d-c53615251730",
+      "sku": "SKU-0C7D0AC4E6",
+      "name": "pirañas grandes",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "59046d59-4875-4b1d-bcc2-9aa5118dc075",
+      "sku": "SKU-3AD10ADE3E",
+      "name": "Pompones",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "0794efad-7cf1-4a43-b016-280fe88ad516",
+      "sku": "SKU-3BE02203E7",
+      "name": "posit cuadriculado",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "5138ecb3-3dae-46ae-b20f-4300313016af",
+      "sku": "SKU-D9A535C356",
+      "name": "Pozzis limpiatipo",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "47a86d6e-0b0f-442e-8dd5-d1c3fa74012e",
+      "sku": "SKU-479171A7EE",
+      "name": "Pulsera ojito",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "307620f3-5f74-4cb2-b3be-bf12fbc356fa",
+      "sku": "SKU-8601F96067",
+      "name": "Puntero",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "f2cc6229-a088-4f9b-81e1-18a739a03f32",
+      "sku": "SKU-44D2FC2D50",
+      "name": "rosas",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "9cd545eb-06ef-4ede-8c0a-fd2e7b77fb7c",
+      "sku": "SKU-383B65F71F",
+      "name": "rosas con osito",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "3e35e197-b52f-4a7a-badd-8c6a48821539",
+      "sku": "SKU-0C2AB09E16",
+      "name": "rositas x 3",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "c266a889-d120-41f9-8213-3e414d17fc39",
+      "sku": "SKU-B2904A3F21",
+      "name": "serpentina",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "4d2b4a0a-803a-445c-8c8b-d029d9fa2bdb",
+      "sku": "SKU-64AF411C73",
+      "name": "Set de escuadras kuromi",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "0528c92d-5dbc-425d-b7cd-8b2574b00886",
+      "sku": "SKU-530AAFE75A",
+      "name": "silvato pequeño",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "05d10ae8-f9fb-4e56-a3d1-609adb325992",
+      "sku": "SKU-5AF26D5396",
+      "name": "Sobre Manila A4 premium",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "ac3ca922-03b4-49c3-b206-305f12e3ddf8",
+      "sku": "SKU-259711D0CD",
+      "name": "Super esponja",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "7b72d34a-cae7-4bc6-94e9-e01824cc8618",
+      "sku": "SKU-F8C11BD284",
+      "name": "Tabla periodica",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "e2b5852c-32f8-4525-9524-6efea47607e3",
+      "sku": "SKU-0D608B9E69",
+      "name": "Tableros Acrilicos",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "3a7230e5-089b-45e0-a8d1-727b9449c81d",
+      "sku": "SKU-4FD29741F2",
+      "name": "taps",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "bfa3491d-2afd-4a60-95cc-671b22ac73c3",
+      "sku": "SKU-8A83060E82",
+      "name": "Tarjador animalitos",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "375e866f-9cc4-4fc6-ae06-7be0dcd3f796",
+      "sku": "SKU-58B59695F9",
+      "name": "tasa con rosas",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "1eafa601-6269-4137-9611-714728910cc8",
+      "sku": "SKU-COMP-AYR-002-TRFOMY",
+      "name": "Tira Fomy (ilegible)",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "da5f96cf-4506-4cb0-be2b-34fade0b3385",
+      "sku": "SKU-COMP-AYR-002-TROJOS",
+      "name": "Tira Ojos",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "3b3246fa-1324-4fa9-bfc3-5285ad9ff144",
+      "sku": "SKU-COMP-AYR-002-TRPERL",
+      "name": "Tira Perlas",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "0c193034-4c2d-41c4-b843-5c9d14ba63c4",
+      "sku": "SKU-COMP-AYR-002-TRROSA",
+      "name": "Tira Rosa",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "3c49265c-e055-48b1-a205-e1282e3e5b88",
+      "sku": "SKU-980BA39232",
+      "name": "tiros",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "8ce8b968-db6c-42a1-8d95-f2c2013c1a1e",
+      "sku": "SKU-3F113AD6D9",
+      "name": "Trish",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "af947bc0-69e8-40d4-8fa6-300187421592",
+      "sku": "SKU-35F30621F4",
+      "name": "trompos",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "8aab88e6-64a5-4cd6-b2b2-457a833ad636",
+      "sku": "SKU-E4F5832814",
+      "name": "ula ula",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "3cf5c61e-dd65-454f-b2a9-e1512d2136a8",
+      "sku": "SKU-232269CDDF",
+      "name": "Vaso de plastico",
+      "brand": null,
+      "productType": null
+    },
+    {
+      "productId": "27e94aa3-4bcc-4e8a-b972-5695097ba4c1",
+      "sku": "SKU-1AE47B4AA5",
+      "name": "vincha 104",
+      "brand": null,
+      "productType": null
+    }
+  ],
+  "createdCategories": []
+}

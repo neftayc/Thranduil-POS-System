@@ -10,7 +10,7 @@ type Body = {
   p_name?: string
   p_unit?: string | null
   p_brand?: string | null
-  p_product_type?: string | null
+  p_category_name?: string | null
   p_barcode?: string | null
   p_active?: boolean
   p_sale_price?: number
@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
       p_name: String(body?.p_name || '').trim(),
       p_unit: body?.p_unit ?? null,
       p_brand: body?.p_brand ?? null,
-      p_product_type: body?.p_product_type ?? null,
+      p_category_name: body?.p_category_name ?? null,
       p_barcode: body?.p_barcode ?? null,
       p_active: body?.p_active,
       p_sale_price: body?.p_sale_price,

@@ -1,0 +1,16 @@
+product_id,sku,name,brand,current_product_type,suggested_category,suggested_action,confidence,confidence_score,reason
+5164d375-fb4c-476d-bd72-359a62d49236,SKU-B8D34F9520,Batisoga grande,,,Textil Escolar,crear_nueva,baja,1,familia_batisoga
+526e27c5-727b-4a17-b1a7-a8d197457ade,SKU-5B727C91A4,Batisoga pequeño,,,Textil Escolar,crear_nueva,baja,1,familia_batisoga
+b227bddc-8b11-4d7a-a396-c5b1ec61f6b9,SKU-CB9437A81C,Bolsa de Lona,,,,revisar_manual,baja,1,sin_regla
+9d1317af-313c-4f03-8906-b1fa39d27a01,SKU-A39A5CB534,Botones,,,,revisar_manual,baja,1,sin_regla
+c3bb9c67-c317-4243-84de-b06867c5beba,SKU-7BEEA9F353,chapitas,,,,revisar_manual,baja,1,sin_regla
+54c5e38b-1138-465d-b8a9-718753a2784d,SKU-65B092F11F,cholito,,,,revisar_manual,baja,1,descripcion_ambigua
+eb32025c-9dd9-41cf-ab3d-984578404bb0,SKU-ECD780DC01,Espejo Mediano,,,,revisar_manual,baja,1,sin_regla
+6fbce598-3dd1-44e0-9d29-6bf44a7a9170,SKU-E0DA16F501,Espejo Pequeño,,,,revisar_manual,baja,1,sin_regla
+0af0ed11-8fbf-40b1-9ecd-b978feaf6066,SKU-371E102C11,llajes grande,,,Merceria,crear_nueva,baja,1,termino_local_no_estandar
+a04d1600-efc6-4a52-8dad-e0dad6eea9ef,SKU-C61C6AC664,llajes pequeños,,,Merceria,crear_nueva,baja,1,termino_local_no_estandar
+a43d2721-124d-4f56-b740-3229397d9f62,SKU-D5444E56E1,pelotitas de llajes,,,Merceria,crear_nueva,baja,1,termino_local_no_estandar
+0794efad-7cf1-4a43-b016-280fe88ad516,SKU-3BE02203E7,posit cuadriculado,,,,revisar_manual,baja,1,sin_regla
+3e35e197-b52f-4a7a-badd-8c6a48821539,SKU-0C2AB09E16,rositas x 3,,,,revisar_manual,baja,1,sin_regla
+3a7230e5-089b-45e0-a8d1-727b9449c81d,SKU-4FD29741F2,taps,,,,revisar_manual,baja,1,descripcion_ambigua
+3c49265c-e055-48b1-a205-e1282e3e5b88,SKU-980BA39232,tiros,,,,revisar_manual,baja,1,descripcion_ambigua

@@ -17,7 +17,7 @@ export const makeSupabaseSalesRepository = (accessToken: string): SalesRepositor
       const [productsRes, uomsRes, paymentRes, customersRes, customerGroupsRes, historyRes] = await Promise.all([
         supabase
           .from('product_catalog')
-          .select('id, name, sku, brand, product_type, unit, sale_price, stock_on_hand')
+          .select('id, name, sku, brand, category_name, unit, sale_price, stock_on_hand')
           .eq('active', true)
           .order('name'),
         supabase

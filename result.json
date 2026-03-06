@@ -1,0 +1,1681 @@
+{
+  "list": {
+    "id": "dc8d8a5e-6978-44e2-9ee8-2614ce1eb3c6",
+    "institution_name": "IEMx 50413 Virgen del Rosario - Sunchubamba",
+    "grade_name": "1er Grado",
+    "grade_level": "primaria",
+    "section_name": "A",
+    "year": 2026,
+    "notes": null
+  },
+  "metrics": {
+    "default": {
+      "total_price": 119.5,
+      "completable_sets": 0,
+      "realizable_value": 0,
+      "coverage_pct": 94.44444444444444,
+      "items_with_product": 34
+    },
+    "economic": {
+      "total_price": 122,
+      "completable_sets": 0,
+      "realizable_value": 0,
+      "coverage_pct": 94.44444444444444,
+      "items_with_product": 34
+    },
+    "premium": {
+      "total_price": 139,
+      "completable_sets": 0,
+      "realizable_value": 0,
+      "coverage_pct": 94.44444444444444,
+      "items_with_product": 34
+    },
+    "total_items": 36
+  },
+  "items": [
+    {
+      "id": "0a6b409f-096f-4957-8af1-9db65d26a4b6",
+      "description": "Cuadernos cuadriculados 1x1 A4 de 100 hojas (Matemática color rojo, comunicación color celeste)",
+      "qty": 2,
+      "notes": "100 Hojas",
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "e5c775a2-e4eb-4ce0-a1fb-607d960aed1c",
+            "sku": "SKU-4BB9031A88",
+            "name": "cuaderno surco 1x1",
+            "brand": "Surco",
+            "sale_price": 3.5,
+            "stock_on_hand": 14,
+            "unit": "unidad"
+          },
+          "subtotal": 7,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "e5c775a2-e4eb-4ce0-a1fb-607d960aed1c",
+            "sku": "SKU-4BB9031A88",
+            "name": "cuaderno surco 1x1",
+            "brand": "Surco",
+            "sale_price": 3.5,
+            "stock_on_hand": 14,
+            "unit": "unidad"
+          },
+          "subtotal": 7,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "d50b1f36-a1e6-4041-aba4-05e8234c32f6",
+            "sku": "SKU-2101C27711",
+            "name": "cuadernouniversal 1x1",
+            "brand": "universal",
+            "sale_price": 7,
+            "stock_on_hand": 2,
+            "unit": "unidad"
+          },
+          "subtotal": 14,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "50030d07-5e3f-4ffd-bf36-b9529cf254f9",
+      "description": "Cuaderno triple reglón tamaño A4 de 100 Hojas para caligrafáa color anaranjado",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "2c422c07-20cc-4634-8839-fb6861da6a24",
+            "sku": "SKU-CFD9211956",
+            "name": "cuaderno layconsa puppy # 100 h",
+            "brand": "Layconsa",
+            "sale_price": 5,
+            "stock_on_hand": 14,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "11e50ea7-818b-46e4-acd7-079e44551ae3",
+            "sku": "SKU-7346AC1948",
+            "name": "Cuaderno surco triple reglon 100 h",
+            "brand": "Surco",
+            "sale_price": 3.5,
+            "stock_on_hand": 70,
+            "unit": "unidad"
+          },
+          "subtotal": 3.5,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "2c422c07-20cc-4634-8839-fb6861da6a24",
+            "sku": "SKU-CFD9211956",
+            "name": "cuaderno layconsa puppy # 100 h",
+            "brand": "Layconsa",
+            "sale_price": 5,
+            "stock_on_hand": 14,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "0f910ca7-419c-456a-b26a-43bcea06db1b",
+      "description": "Cuadernos cuadriculados de 50 hojas A4 (personal social color amarillo, ciencia y tecnologia color verde oscuro)",
+      "qty": 2,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "f1a53771-7652-400f-914f-07221fe03ac8",
+            "sku": "SKU-8F4446C65E",
+            "name": "cuaderno surco grnade # 50 h",
+            "brand": "Surco",
+            "sale_price": 2.5,
+            "stock_on_hand": 3,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "f1a53771-7652-400f-914f-07221fe03ac8",
+            "sku": "SKU-8F4446C65E",
+            "name": "cuaderno surco grnade # 50 h",
+            "brand": "Surco",
+            "sale_price": 2.5,
+            "stock_on_hand": 3,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "f1a53771-7652-400f-914f-07221fe03ac8",
+            "sku": "SKU-8F4446C65E",
+            "name": "cuaderno surco grnade # 50 h",
+            "brand": "Surco",
+            "sale_price": 2.5,
+            "stock_on_hand": 3,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "c007cadd-19ce-478c-9d6d-deb4772034d6",
+      "description": "Un SKETCH BOOK para arte",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "4e354cf2-6a87-4aa6-a694-e22d30a98bd4",
+            "sku": "SKU-FCEB95A265",
+            "name": "Sketch book 15h",
+            "brand": "Sketch book 15h",
+            "sale_price": 3.5,
+            "stock_on_hand": 23,
+            "unit": "unidad"
+          },
+          "subtotal": 3.5,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "4e354cf2-6a87-4aa6-a694-e22d30a98bd4",
+            "sku": "SKU-FCEB95A265",
+            "name": "Sketch book 15h",
+            "brand": "Sketch book 15h",
+            "sale_price": 3.5,
+            "stock_on_hand": 23,
+            "unit": "unidad"
+          },
+          "subtotal": 3.5,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "2a85d4c2-06fe-4de6-8a9b-a8d50b2b5bc4",
+            "sku": "SKU-D458444EA7",
+            "name": "Sketch book 50h",
+            "brand": "Sketch book 50h",
+            "sale_price": 8,
+            "stock_on_hand": 10,
+            "unit": "unidad"
+          },
+          "subtotal": 8,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "558faa14-1bcd-4346-8e45-44c4927d045b",
+      "description": "Cartuchera",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "04ceda90-dd25-45bb-934b-c2fca68f3d6c",
+            "sku": "SKU-088F490747",
+            "name": "Cartuchera Forta",
+            "brand": "Cartuchera Forta",
+            "sale_price": 10,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 10,
+          "match_status": "out_of_stock"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "04ceda90-dd25-45bb-934b-c2fca68f3d6c",
+            "sku": "SKU-088F490747",
+            "name": "Cartuchera Forta",
+            "brand": "Cartuchera Forta",
+            "sale_price": 10,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 10,
+          "match_status": "out_of_stock"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "04ceda90-dd25-45bb-934b-c2fca68f3d6c",
+            "sku": "SKU-088F490747",
+            "name": "Cartuchera Forta",
+            "brand": "Cartuchera Forta",
+            "sale_price": 10,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 10,
+          "match_status": "out_of_stock"
+        }
+      }
+    },
+    {
+      "id": "1b43f1bb-885f-4624-979c-2ea8491a3b88",
+      "description": "Caja de Colores Grandes x 12",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "7a7a4e84-4a25-4d32-80ab-41471c2e08da",
+            "sku": "SKU-24D54B3207",
+            "name": "Colores Largos x 12",
+            "brand": "Faber Castell",
+            "sale_price": 0,
+            "stock_on_hand": 20,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "f7d62e17-2aa9-41c1-b4f2-b705d52d001d",
+            "sku": "SKU-43639DD892",
+            "name": "Lapices de Color largos x 12",
+            "brand": "Layconsa",
+            "sale_price": 6,
+            "stock_on_hand": 3,
+            "unit": "unidad"
+          },
+          "subtotal": 6,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "f7d62e17-2aa9-41c1-b4f2-b705d52d001d",
+            "sku": "SKU-43639DD892",
+            "name": "Lapices de Color largos x 12",
+            "brand": "Layconsa",
+            "sale_price": 6,
+            "stock_on_hand": 3,
+            "unit": "unidad"
+          },
+          "subtotal": 6,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "0f4022a1-276e-4145-ade3-f54751361ec6",
+      "description": "Tarjador con deposito",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "bc873aae-a264-4042-8a35-2a4be5a04005",
+            "sku": "SKU-35AF7B573B",
+            "name": "Saca Punta con Deposito 8917",
+            "brand": "Relampago",
+            "sale_price": 2,
+            "stock_on_hand": 10,
+            "unit": "unidad"
+          },
+          "subtotal": 2,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "bc873aae-a264-4042-8a35-2a4be5a04005",
+            "sku": "SKU-35AF7B573B",
+            "name": "Saca Punta con Deposito 8917",
+            "brand": "Relampago",
+            "sale_price": 2,
+            "stock_on_hand": 10,
+            "unit": "unidad"
+          },
+          "subtotal": 2,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "98172075-0aa4-41da-8d43-cf636981fca8",
+            "sku": "SKU-403887F2ED",
+            "name": "Saca Punta con Deposito",
+            "brand": "Artesco",
+            "sale_price": 3.5,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 3.5,
+          "match_status": "out_of_stock"
+        }
+      }
+    },
+    {
+      "id": "ffecf3e7-2cc8-407d-bd08-f39318c9f4be",
+      "description": "Borrador LA-2O",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "f90dd7c6-be43-45a4-b9ff-520f0d8351f9",
+            "sku": "SKU-20D4B162C0",
+            "name": "Borrador LA-2O",
+            "brand": "Layconsa",
+            "sale_price": 1,
+            "stock_on_hand": 10,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "f90dd7c6-be43-45a4-b9ff-520f0d8351f9",
+            "sku": "SKU-20D4B162C0",
+            "name": "Borrador LA-2O",
+            "brand": "Layconsa",
+            "sale_price": 1,
+            "stock_on_hand": 10,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "f90dd7c6-be43-45a4-b9ff-520f0d8351f9",
+            "sku": "SKU-20D4B162C0",
+            "name": "Borrador LA-2O",
+            "brand": "Layconsa",
+            "sale_price": 1,
+            "stock_on_hand": 10,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "ff47a4e5-8172-48df-98d2-79fc0a4b6913",
+      "description": "Lapiz 2B negro",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "4ebae9a3-46c2-4a64-a5ee-3c8232fd2568",
+            "sku": "SKU-9B7EDEA31E",
+            "name": "Lapiz 2B",
+            "brand": "Vikingo",
+            "sale_price": 1,
+            "stock_on_hand": 22,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "4ebae9a3-46c2-4a64-a5ee-3c8232fd2568",
+            "sku": "SKU-9B7EDEA31E",
+            "name": "Lapiz 2B",
+            "brand": "Vikingo",
+            "sale_price": 1,
+            "stock_on_hand": 22,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "75f4e3c2-9759-4196-b3be-65e55a1eff03",
+            "sku": "SKU-308DF87D2B",
+            "name": "Lapiz 2B Titan",
+            "brand": "Faber Castell",
+            "sale_price": 1.5,
+            "stock_on_hand": 31,
+            "unit": "unidad"
+          },
+          "subtotal": 1.5,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "241a4dd1-db16-49a9-91ac-43dd0414ec2f",
+      "description": "Lapiz Chequeo Rojo",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "09fa983d-1498-4f4d-9524-bf48c55d4e68",
+            "sku": "SKU-81A994DEC0",
+            "name": "Lapiz Chequeo Rojo",
+            "brand": "Artesco",
+            "sale_price": 1,
+            "stock_on_hand": 60,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "09fa983d-1498-4f4d-9524-bf48c55d4e68",
+            "sku": "SKU-81A994DEC0",
+            "name": "Lapiz Chequeo Rojo",
+            "brand": "Artesco",
+            "sale_price": 1,
+            "stock_on_hand": 60,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "09fa983d-1498-4f4d-9524-bf48c55d4e68",
+            "sku": "SKU-81A994DEC0",
+            "name": "Lapiz Chequeo Rojo",
+            "brand": "Artesco",
+            "sale_price": 1,
+            "stock_on_hand": 60,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "4cdf518b-7a7e-4003-9a93-b3277aeede52",
+      "description": "Reglas de 20 cm",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "13b63cb3-06bf-41a2-ae2b-b1dadf9d0dc9",
+            "sku": "SKU-FAB7A65F90",
+            "name": "Reglas de 20 cm",
+            "brand": "Layconsa",
+            "sale_price": 1,
+            "stock_on_hand": 34,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "13b63cb3-06bf-41a2-ae2b-b1dadf9d0dc9",
+            "sku": "SKU-FAB7A65F90",
+            "name": "Reglas de 20 cm",
+            "brand": "Layconsa",
+            "sale_price": 1,
+            "stock_on_hand": 34,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "13b63cb3-06bf-41a2-ae2b-b1dadf9d0dc9",
+            "sku": "SKU-FAB7A65F90",
+            "name": "Reglas de 20 cm",
+            "brand": "Layconsa",
+            "sale_price": 1,
+            "stock_on_hand": 34,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "76f4ec65-88c1-46e1-b9c2-61c29d374537",
+      "description": "Tijera Artesco mango goma",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "2a4e1d5b-5875-433d-a640-d5628cdbd679",
+            "sku": "SKU-7538FE51BC",
+            "name": "Tijera Artesco mango goma",
+            "brand": "Artesco",
+            "sale_price": 0,
+            "stock_on_hand": 3,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "2a4e1d5b-5875-433d-a640-d5628cdbd679",
+            "sku": "SKU-7538FE51BC",
+            "name": "Tijera Artesco mango goma",
+            "brand": "Artesco",
+            "sale_price": 0,
+            "stock_on_hand": 3,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "2a4e1d5b-5875-433d-a640-d5628cdbd679",
+            "sku": "SKU-7538FE51BC",
+            "name": "Tijera Artesco mango goma",
+            "brand": "Artesco",
+            "sale_price": 0,
+            "stock_on_hand": 3,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "50ce7e2b-c163-4f53-ae4b-ea348a00f899",
+      "description": "Temperas con dispensador de 250 ml de color rojo, azul, amarillo, negro, blanco",
+      "qty": 5,
+      "notes": "Color: rojo, azul, amarillo, negro, blanco",
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "bd808bc8-7c4b-4e03-847a-7f62213f1216",
+            "sku": "SKU-71703659EC",
+            "name": "Botellas de Temperas (Amarillo, rojo, Azul) -  (Rojo, azul,  verde, amarillo, negro, blanco)",
+            "brand": "Layconsa",
+            "sale_price": 7,
+            "stock_on_hand": 26,
+            "unit": "unidad"
+          },
+          "subtotal": 35,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "bd808bc8-7c4b-4e03-847a-7f62213f1216",
+            "sku": "SKU-71703659EC",
+            "name": "Botellas de Temperas (Amarillo, rojo, Azul) -  (Rojo, azul,  verde, amarillo, negro, blanco)",
+            "brand": "Layconsa",
+            "sale_price": 7,
+            "stock_on_hand": 26,
+            "unit": "unidad"
+          },
+          "subtotal": 35,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "bd808bc8-7c4b-4e03-847a-7f62213f1216",
+            "sku": "SKU-71703659EC",
+            "name": "Botellas de Temperas (Amarillo, rojo, Azul) -  (Rojo, azul,  verde, amarillo, negro, blanco)",
+            "brand": "Layconsa",
+            "sale_price": 7,
+            "stock_on_hand": 26,
+            "unit": "unidad"
+          },
+          "subtotal": 35,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "54e8e23a-e22a-426c-ae85-37844902f8df",
+      "description": "Paletas color blanco",
+      "qty": 1,
+      "notes": "color blanco",
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "19963b25-45ea-418c-a1de-d8c16bc452f7",
+            "sku": "SKU-0E6AA9F21D",
+            "name": "Paletas de pinturas",
+            "brand": "Paletas de pinturas",
+            "sale_price": 3,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 3,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "19963b25-45ea-418c-a1de-d8c16bc452f7",
+            "sku": "SKU-0E6AA9F21D",
+            "name": "Paletas de pinturas",
+            "brand": "Paletas de pinturas",
+            "sale_price": 3,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 3,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "19963b25-45ea-418c-a1de-d8c16bc452f7",
+            "sku": "SKU-0E6AA9F21D",
+            "name": "Paletas de pinturas",
+            "brand": "Paletas de pinturas",
+            "sale_price": 3,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 3,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "88dfa237-8821-4542-91dc-f101bf080adb",
+      "description": "Archivador forrado",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "ee80b4ed-a242-4775-8882-f71760f81d86",
+            "sku": "SKU-00358783C1",
+            "name": "Archivador Ray Perú y Artesco",
+            "brand": "Archivador Ray Perú y Artesco",
+            "sale_price": 10,
+            "stock_on_hand": 9,
+            "unit": "unidad"
+          },
+          "subtotal": 10,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "ee80b4ed-a242-4775-8882-f71760f81d86",
+            "sku": "SKU-00358783C1",
+            "name": "Archivador Ray Perú y Artesco",
+            "brand": "Archivador Ray Perú y Artesco",
+            "sale_price": 10,
+            "stock_on_hand": 9,
+            "unit": "unidad"
+          },
+          "subtotal": 10,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "ee80b4ed-a242-4775-8882-f71760f81d86",
+            "sku": "SKU-00358783C1",
+            "name": "Archivador Ray Perú y Artesco",
+            "brand": "Archivador Ray Perú y Artesco",
+            "sale_price": 10,
+            "stock_on_hand": 9,
+            "unit": "unidad"
+          },
+          "subtotal": 10,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "681dcbc1-3f40-4043-8d47-4e9a0ab6dbe1",
+      "description": "Folder plastificado con gusano",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "e02f386d-7623-467b-8f92-97fe2f933b65",
+            "sku": "SKU-A95695902B",
+            "name": "Folder Vinifan",
+            "brand": "Folder Vinifan",
+            "sale_price": 5,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "d3957f44-5296-4461-9e39-582f37c9da38",
+            "sku": "SKU-92E9FC0267",
+            "name": "Folder Top",
+            "brand": "Folder Top",
+            "sale_price": 4,
+            "stock_on_hand": 25,
+            "unit": "unidad"
+          },
+          "subtotal": 4,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "e02f386d-7623-467b-8f92-97fe2f933b65",
+            "sku": "SKU-A95695902B",
+            "name": "Folder Vinifan",
+            "brand": "Folder Vinifan",
+            "sale_price": 5,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "4f15421f-e621-4314-8b99-7c2d895d5de3",
+      "description": "Silicona liquida 250g",
+      "qty": 1,
+      "notes": "Validar si existe en pomo",
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "1924b77c-701a-40e6-8d8a-ac7440dc02c0",
+            "sku": "SKU-9A059C1BC2",
+            "name": "Silicona liquida 250g",
+            "brand": "Layconsa",
+            "sale_price": 0,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "1924b77c-701a-40e6-8d8a-ac7440dc02c0",
+            "sku": "SKU-9A059C1BC2",
+            "name": "Silicona liquida 250g",
+            "brand": "Layconsa",
+            "sale_price": 0,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "1924b77c-701a-40e6-8d8a-ac7440dc02c0",
+            "sku": "SKU-9A059C1BC2",
+            "name": "Silicona liquida 250g",
+            "brand": "Layconsa",
+            "sale_price": 0,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "792c41fd-a4fb-4024-b49a-51ab3638127c",
+      "description": "Goma liquida 250g",
+      "qty": 1,
+      "notes": "validar el pomo",
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "242186fd-874d-4bf9-8e0e-727ad90a8a0b",
+            "sku": "SKU-BF27740F3E",
+            "name": "Goma liquida 250g",
+            "brand": "Layconsa",
+            "sale_price": 0,
+            "stock_on_hand": 15,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "242186fd-874d-4bf9-8e0e-727ad90a8a0b",
+            "sku": "SKU-BF27740F3E",
+            "name": "Goma liquida 250g",
+            "brand": "Layconsa",
+            "sale_price": 0,
+            "stock_on_hand": 15,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "242186fd-874d-4bf9-8e0e-727ad90a8a0b",
+            "sku": "SKU-BF27740F3E",
+            "name": "Goma liquida 250g",
+            "brand": "Layconsa",
+            "sale_price": 0,
+            "stock_on_hand": 15,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "11e36dd6-bc26-498c-a834-39d3b95a2c01",
+      "description": "Micas A4",
+      "qty": 2,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "751bc068-7f19-4fc9-8c51-e0a6632cc8bc",
+            "sku": "SKU-0F68E2EC13",
+            "name": "Micas A4",
+            "brand": "Artesco",
+            "sale_price": 1,
+            "stock_on_hand": 35,
+            "unit": "unidad"
+          },
+          "subtotal": 2,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "751bc068-7f19-4fc9-8c51-e0a6632cc8bc",
+            "sku": "SKU-0F68E2EC13",
+            "name": "Micas A4",
+            "brand": "Artesco",
+            "sale_price": 1,
+            "stock_on_hand": 35,
+            "unit": "unidad"
+          },
+          "subtotal": 2,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "751bc068-7f19-4fc9-8c51-e0a6632cc8bc",
+            "sku": "SKU-0F68E2EC13",
+            "name": "Micas A4",
+            "brand": "Artesco",
+            "sale_price": 1,
+            "stock_on_hand": 35,
+            "unit": "unidad"
+          },
+          "subtotal": 2,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "a1dd5f3a-4190-4b15-940f-0552b6f6b5b5",
+      "description": "Base diez y regletas",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "d08db8fc-284c-448e-af15-e9c366278778",
+            "sku": "SKU-E082FFFBDB",
+            "name": "Base 10",
+            "brand": "Base 10",
+            "sale_price": 0,
+            "stock_on_hand": 5,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "d08db8fc-284c-448e-af15-e9c366278778",
+            "sku": "SKU-E082FFFBDB",
+            "name": "Base 10",
+            "brand": "Base 10",
+            "sale_price": 0,
+            "stock_on_hand": 5,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "d08db8fc-284c-448e-af15-e9c366278778",
+            "sku": "SKU-E082FFFBDB",
+            "name": "Base 10",
+            "brand": "Base 10",
+            "sale_price": 0,
+            "stock_on_hand": 5,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "21022f6a-39b2-471a-b54c-da9d744bd673",
+      "description": "Letras moviles",
+      "qty": 1,
+      "notes": "Falta esto",
+      "variants": {
+        "default": {
+          "linked_product": null,
+          "subtotal": 0,
+          "match_status": "no_match"
+        },
+        "economic": {
+          "linked_product": null,
+          "subtotal": 0,
+          "match_status": "no_match"
+        },
+        "premium": {
+          "linked_product": null,
+          "subtotal": 0,
+          "match_status": "no_match"
+        }
+      }
+    },
+    {
+      "id": "34425c63-e046-459f-a946-5307971b17a2",
+      "description": "Tangram",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "17d4ef57-c7c4-40c2-8f5a-84aa12c3338e",
+            "sku": "SKU-398C843E98",
+            "name": "Tamgram",
+            "brand": "Tamgram",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "17d4ef57-c7c4-40c2-8f5a-84aa12c3338e",
+            "sku": "SKU-398C843E98",
+            "name": "Tamgram",
+            "brand": "Tamgram",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "17d4ef57-c7c4-40c2-8f5a-84aa12c3338e",
+            "sku": "SKU-398C843E98",
+            "name": "Tamgram",
+            "brand": "Tamgram",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "dfc209c9-9518-4258-a608-5f20ea488dbb",
+      "description": "Abaco",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "5245bca2-b804-4936-b14c-731ade4c9b00",
+            "sku": "SKU-8697FBECCC",
+            "name": "Abaco",
+            "brand": "Abaco",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "5245bca2-b804-4936-b14c-731ade4c9b00",
+            "sku": "SKU-8697FBECCC",
+            "name": "Abaco",
+            "brand": "Abaco",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "5245bca2-b804-4936-b14c-731ade4c9b00",
+            "sku": "SKU-8697FBECCC",
+            "name": "Abaco",
+            "brand": "Abaco",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "c2864acf-ef2e-4477-b20c-265d5fd307a2",
+      "description": "Dados Grandes",
+      "qty": 2,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "89892525-a6bd-488e-804c-834fc7ba8b3d",
+            "sku": "SKU-66529C0038",
+            "name": "Dados Grandes",
+            "brand": "Dados Grandes",
+            "sale_price": 0,
+            "stock_on_hand": 111,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "89892525-a6bd-488e-804c-834fc7ba8b3d",
+            "sku": "SKU-66529C0038",
+            "name": "Dados Grandes",
+            "brand": "Dados Grandes",
+            "sale_price": 0,
+            "stock_on_hand": 111,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "89892525-a6bd-488e-804c-834fc7ba8b3d",
+            "sku": "SKU-66529C0038",
+            "name": "Dados Grandes",
+            "brand": "Dados Grandes",
+            "sale_price": 0,
+            "stock_on_hand": 111,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "aa60eaeb-0898-4488-99ae-8829a737fdce",
+      "description": "Cojin",
+      "qty": 1,
+      "notes": "falta este producto",
+      "variants": {
+        "default": {
+          "linked_product": null,
+          "subtotal": 0,
+          "match_status": "no_match"
+        },
+        "economic": {
+          "linked_product": null,
+          "subtotal": 0,
+          "match_status": "no_match"
+        },
+        "premium": {
+          "linked_product": null,
+          "subtotal": 0,
+          "match_status": "no_match"
+        }
+      }
+    },
+    {
+      "id": "3570ab21-4566-4541-855b-a4e46373f711",
+      "description": "Una Caja de Plastilina Jumbo",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "24abcb4c-1f7d-4dc3-8273-b269f9cad1e3",
+            "sku": "SKU-FF0A8D4DCB",
+            "name": "Plastilina",
+            "brand": "Layconsa",
+            "sale_price": 5.5,
+            "stock_on_hand": 25,
+            "unit": "unidad"
+          },
+          "subtotal": 5.5,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "24abcb4c-1f7d-4dc3-8273-b269f9cad1e3",
+            "sku": "SKU-FF0A8D4DCB",
+            "name": "Plastilina",
+            "brand": "Layconsa",
+            "sale_price": 5.5,
+            "stock_on_hand": 25,
+            "unit": "unidad"
+          },
+          "subtotal": 5.5,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "24abcb4c-1f7d-4dc3-8273-b269f9cad1e3",
+            "sku": "SKU-FF0A8D4DCB",
+            "name": "Plastilina",
+            "brand": "Layconsa",
+            "sale_price": 5.5,
+            "stock_on_hand": 25,
+            "unit": "unidad"
+          },
+          "subtotal": 5.5,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "72a4da88-63e9-4e61-9438-3802c462b301",
+      "description": "Plumon marcador Jumbo L-47 x12",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "193482d9-3be7-45cc-b95d-0cfc87e1350e",
+            "sku": "SKU-6381846E56",
+            "name": "Plumon marcador Jumbo L-47 x12",
+            "brand": "Layconsa",
+            "sale_price": 15,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 15,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "193482d9-3be7-45cc-b95d-0cfc87e1350e",
+            "sku": "SKU-6381846E56",
+            "name": "Plumon marcador Jumbo L-47 x12",
+            "brand": "Layconsa",
+            "sale_price": 15,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 15,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "193482d9-3be7-45cc-b95d-0cfc87e1350e",
+            "sku": "SKU-6381846E56",
+            "name": "Plumon marcador Jumbo L-47 x12",
+            "brand": "Layconsa",
+            "sale_price": 15,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 15,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "56a50e94-11da-4c5f-a618-9b9f4eb2ace0",
+      "description": "Papel Crepe",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "c62bf0a9-44c5-424d-bb39-755cbdc24d49",
+            "sku": "SKU-7762F9C08A",
+            "name": "Papel Crepe",
+            "brand": "Papel Crepe",
+            "sale_price": 1,
+            "stock_on_hand": 82,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "c62bf0a9-44c5-424d-bb39-755cbdc24d49",
+            "sku": "SKU-7762F9C08A",
+            "name": "Papel Crepe",
+            "brand": "Papel Crepe",
+            "sale_price": 1,
+            "stock_on_hand": 82,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "c62bf0a9-44c5-424d-bb39-755cbdc24d49",
+            "sku": "SKU-7762F9C08A",
+            "name": "Papel Crepe",
+            "brand": "Papel Crepe",
+            "sale_price": 1,
+            "stock_on_hand": 82,
+            "unit": "unidad"
+          },
+          "subtotal": 1,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "6e5e9c6a-2c7d-412b-bd28-4ef85e124574",
+      "description": "tapitas de botella",
+      "qty": 20,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "20289989-0e7b-4a3d-8c51-6e366c8bdca6",
+            "sku": "SKU-E4B751776A",
+            "name": "tapitas de botella",
+            "brand": "tapitas de botella",
+            "sale_price": 0,
+            "stock_on_hand": 60,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "20289989-0e7b-4a3d-8c51-6e366c8bdca6",
+            "sku": "SKU-E4B751776A",
+            "name": "tapitas de botella",
+            "brand": "tapitas de botella",
+            "sale_price": 0,
+            "stock_on_hand": 60,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "20289989-0e7b-4a3d-8c51-6e366c8bdca6",
+            "sku": "SKU-E4B751776A",
+            "name": "tapitas de botella",
+            "brand": "tapitas de botella",
+            "sale_price": 0,
+            "stock_on_hand": 60,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "d7854d5b-2a7b-46de-9b6a-8515604ac282",
+      "description": "Papel suave higienico",
+      "qty": 2,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "75100055-2fe5-4092-abd7-d69bef82d764",
+            "sku": "SKU-4EE3C50F1D",
+            "name": "Papel suave higienico",
+            "brand": "Papel suave higienico",
+            "sale_price": 0,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "out_of_stock"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "75100055-2fe5-4092-abd7-d69bef82d764",
+            "sku": "SKU-4EE3C50F1D",
+            "name": "Papel suave higienico",
+            "brand": "Papel suave higienico",
+            "sale_price": 0,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "out_of_stock"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "75100055-2fe5-4092-abd7-d69bef82d764",
+            "sku": "SKU-4EE3C50F1D",
+            "name": "Papel suave higienico",
+            "brand": "Papel suave higienico",
+            "sale_price": 0,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "out_of_stock"
+        }
+      }
+    },
+    {
+      "id": "227450a1-0ebc-4fc3-9af2-251197483c40",
+      "description": "papel toalla",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "c16b366a-1805-4c4d-a89b-612f292eeb15",
+            "sku": "SKU-B1B6F52169",
+            "name": "papel toalla",
+            "brand": "papel toalla",
+            "sale_price": 0,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "out_of_stock"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "c16b366a-1805-4c4d-a89b-612f292eeb15",
+            "sku": "SKU-B1B6F52169",
+            "name": "papel toalla",
+            "brand": "papel toalla",
+            "sale_price": 0,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "out_of_stock"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "c16b366a-1805-4c4d-a89b-612f292eeb15",
+            "sku": "SKU-B1B6F52169",
+            "name": "papel toalla",
+            "brand": "papel toalla",
+            "sale_price": 0,
+            "stock_on_hand": 0,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "out_of_stock"
+        }
+      }
+    },
+    {
+      "id": "fb3ade9c-eb92-4bad-8274-bdbd80d6a643",
+      "description": "Toalla con diseño",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "72dae0b9-716b-4043-a725-f998cb624b2c",
+            "sku": "SKU-FA80AA5B55",
+            "name": "Toalla con diseño",
+            "brand": "Toalla con diseño",
+            "sale_price": 5,
+            "stock_on_hand": 7,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "057a1a51-7fea-422c-8ee7-32e985011995",
+            "sku": "SKU-A292B4DE9C",
+            "name": "Toalla sin diseño",
+            "brand": "Toalla sin diseño",
+            "sale_price": 4,
+            "stock_on_hand": 5,
+            "unit": "unidad"
+          },
+          "subtotal": 4,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "72dae0b9-716b-4043-a725-f998cb624b2c",
+            "sku": "SKU-FA80AA5B55",
+            "name": "Toalla con diseño",
+            "brand": "Toalla con diseño",
+            "sale_price": 5,
+            "stock_on_hand": 7,
+            "unit": "unidad"
+          },
+          "subtotal": 5,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "89b6e93b-e7aa-42d5-b2a1-d64a541ea1fd",
+      "description": "Percheros",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "cc2b0179-5c51-4565-ad53-c5abbc72d3d5",
+            "sku": "SKU-94488B3896",
+            "name": "Percheros",
+            "brand": "Percheros",
+            "sale_price": 1.5,
+            "stock_on_hand": 37,
+            "unit": "unidad"
+          },
+          "subtotal": 1.5,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "cc2b0179-5c51-4565-ad53-c5abbc72d3d5",
+            "sku": "SKU-94488B3896",
+            "name": "Percheros",
+            "brand": "Percheros",
+            "sale_price": 1.5,
+            "stock_on_hand": 37,
+            "unit": "unidad"
+          },
+          "subtotal": 1.5,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "cc2b0179-5c51-4565-ad53-c5abbc72d3d5",
+            "sku": "SKU-94488B3896",
+            "name": "Percheros",
+            "brand": "Percheros",
+            "sale_price": 1.5,
+            "stock_on_hand": 37,
+            "unit": "unidad"
+          },
+          "subtotal": 1.5,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "48e7cea2-8257-44dc-a4ef-76bdcc757ac5",
+      "description": "Pasta dental",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "c8870ffd-6348-4632-9aff-c085e6bb3e44",
+            "sku": "SKU-77F19E15CF",
+            "name": "Pasta dental",
+            "brand": "Pasta dental",
+            "sale_price": 0,
+            "stock_on_hand": 2,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "c8870ffd-6348-4632-9aff-c085e6bb3e44",
+            "sku": "SKU-77F19E15CF",
+            "name": "Pasta dental",
+            "brand": "Pasta dental",
+            "sale_price": 0,
+            "stock_on_hand": 2,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "c8870ffd-6348-4632-9aff-c085e6bb3e44",
+            "sku": "SKU-77F19E15CF",
+            "name": "Pasta dental",
+            "brand": "Pasta dental",
+            "sale_price": 0,
+            "stock_on_hand": 2,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "6b11139a-153a-4e7a-a6c0-ae1f623fbb16",
+      "description": "cepillo colgate",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "c6460e9f-c9e3-44e6-8dba-3e86091b9208",
+            "sku": "SKU-8EC5F5CD1C",
+            "name": "cepillo colgate",
+            "brand": "cepillo colgate",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "c6460e9f-c9e3-44e6-8dba-3e86091b9208",
+            "sku": "SKU-8EC5F5CD1C",
+            "name": "cepillo colgate",
+            "brand": "cepillo colgate",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "c6460e9f-c9e3-44e6-8dba-3e86091b9208",
+            "sku": "SKU-8EC5F5CD1C",
+            "name": "cepillo colgate",
+            "brand": "cepillo colgate",
+            "sale_price": 0,
+            "stock_on_hand": 1,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    },
+    {
+      "id": "5b4cd9fe-b2a8-4b86-9ef2-40ba792ebb8e",
+      "description": "Vaso de plastico",
+      "qty": 1,
+      "notes": null,
+      "variants": {
+        "default": {
+          "linked_product": {
+            "id": "3cf5c61e-dd65-454f-b2a9-e1512d2136a8",
+            "sku": "SKU-232269CDDF",
+            "name": "Vaso de plastico",
+            "brand": "Vaso de plastico",
+            "sale_price": 0,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "economic": {
+          "linked_product": {
+            "id": "3cf5c61e-dd65-454f-b2a9-e1512d2136a8",
+            "sku": "SKU-232269CDDF",
+            "name": "Vaso de plastico",
+            "brand": "Vaso de plastico",
+            "sale_price": 0,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        },
+        "premium": {
+          "linked_product": {
+            "id": "3cf5c61e-dd65-454f-b2a9-e1512d2136a8",
+            "sku": "SKU-232269CDDF",
+            "name": "Vaso de plastico",
+            "brand": "Vaso de plastico",
+            "sale_price": 0,
+            "stock_on_hand": 16,
+            "unit": "unidad"
+          },
+          "subtotal": 0,
+          "match_status": "ok"
+        }
+      }
+    }
+  ]
+}

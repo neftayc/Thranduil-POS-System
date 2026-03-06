@@ -45,7 +45,7 @@ export const makeSupabaseInventoryRepository = (accessToken: string): InventoryR
       const [productsRes, sessionRes] = await Promise.all([
         supabase
           .from('product_catalog')
-          .select('id, sku, name, unit, stock_on_hand, min_stock, avg_cost, sale_price, active')
+          .select('id, sku, name, brand, unit, stock_on_hand, min_stock, avg_cost, sale_price, active')
           .order('name'),
         supabase
           .from('inventory_count_sessions')
@@ -136,7 +136,7 @@ export const makeSupabaseInventoryRepository = (accessToken: string): InventoryR
       }
 
       const { data: product, error: productError } = await supabase
-        .from('products')
+        .from('product_catalog')
         .select('id, stock_on_hand, avg_cost, min_stock, active')
         .eq('id', productId)
         .single()
@@ -258,4 +258,3 @@ export const makeSupabaseInventoryRepository = (accessToken: string): InventoryR
     }
   }
 }
-

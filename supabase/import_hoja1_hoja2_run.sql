@@ -231,6 +231,10 @@ where lower(s.name) = lower('Empresa Ayrampo');
 insert into public.purchase_items (
   purchase_id,
   product_id,
+  unit_name,
+  qty_uom,
+  factor_to_base,
+  cost_unit_uom,
   qty,
   cost_unit,
   total_cost,
@@ -239,9 +243,16 @@ insert into public.purchase_items (
 select
   p.id,
   pr.id,
-  st.qty,
+  u.unit_code as unit_name,
+  st.qty as qty_uom,
+  f.factor_to_base,
   case
     when st.qty > 0 then coalesce(st.total_cost, 0) / st.qty
+    else 0
+  end as cost_unit_uom,
+  st.qty * f.factor_to_base,
+  case
+    when st.qty > 0 and f.factor_to_base > 0 then (coalesce(st.total_cost, 0) / st.qty) / f.factor_to_base
     else 0
   end as cost_unit,
   coalesce(st.total_cost, 0),
@@ -249,11 +260,31 @@ select
 from public.stg_compras_tania_import st
 join public.products pr on pr.sku = trim(st.product_sku)
 join public.purchases p on p.invoice_no = 'IMPORT-HOJA1-TANIA-YUCRA-001'
+join lateral (
+  select
+    coalesce(public.resolve_uom_code(st.unit), public.normalize_uom_code(st.unit), 'unidad') as unit_code,
+    coalesce(public.resolve_uom_code(pr.unit), public.normalize_uom_code(pr.unit), 'unidad') as base_unit_code
+) u on true
+left join public.product_unit_conversions puc
+  on puc.product_id = pr.id
+ and lower(puc.unit_name) = lower(u.unit_code)
+ and puc.is_active = true
+join lateral (
+  select case
+    when u.unit_code = u.base_unit_code then 1::numeric
+    when coalesce(puc.factor_to_base, 0) > 0 then puc.factor_to_base
+    else 1::numeric
+  end as factor_to_base
+) f on true
 where coalesce(st.qty, 0) > 0;
 
 insert into public.purchase_items (
   purchase_id,
   product_id,
+  unit_name,
+  qty_uom,
+  factor_to_base,
+  cost_unit_uom,
   qty,
   cost_unit,
   total_cost,
@@ -262,9 +293,16 @@ insert into public.purchase_items (
 select
   p.id,
   pr.id,
-  st.qty,
+  u.unit_code as unit_name,
+  st.qty as qty_uom,
+  f.factor_to_base,
   case
     when st.qty > 0 then coalesce(st.total_cost, 0) / st.qty
+    else 0
+  end as cost_unit_uom,
+  st.qty * f.factor_to_base,
+  case
+    when st.qty > 0 and f.factor_to_base > 0 then (coalesce(st.total_cost, 0) / st.qty) / f.factor_to_base
     else 0
   end as cost_unit,
   coalesce(st.total_cost, 0),
@@ -272,6 +310,22 @@ select
 from public.stg_compras_ayrampo_import st
 join public.products pr on pr.sku = trim(st.product_sku)
 join public.purchases p on p.invoice_no = 'IMPORT-HOJA1-EMPRESA-AYRAMPO-001'
+join lateral (
+  select
+    coalesce(public.resolve_uom_code(st.unit), public.normalize_uom_code(st.unit), 'unidad') as unit_code,
+    coalesce(public.resolve_uom_code(pr.unit), public.normalize_uom_code(pr.unit), 'unidad') as base_unit_code
+) u on true
+left join public.product_unit_conversions puc
+  on puc.product_id = pr.id
+ and lower(puc.unit_name) = lower(u.unit_code)
+ and puc.is_active = true
+join lateral (
+  select case
+    when u.unit_code = u.base_unit_code then 1::numeric
+    when coalesce(puc.factor_to_base, 0) > 0 then puc.factor_to_base
+    else 1::numeric
+  end as factor_to_base
+) f on true
 where coalesce(st.qty, 0) > 0;
 
 update public.purchases p

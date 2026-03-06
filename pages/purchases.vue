@@ -16,6 +16,10 @@ const items = ref<any[]>([makeLine()]);
 // Modal state
 const showDetails = ref(false);
 const selectedPurchase = ref<any>(null);
+const editingDetails = ref(false);
+const savingDetails = ref(false);
+const detailDraftItems = ref<any[]>([]);
+const detailSearch = ref("");
 
 const loadData = async () => {
   message.value = "";
@@ -152,7 +156,6 @@ const onChangeUnit = (item: any) => {
   const product = getProduct(item.product_id);
   if (!product) return;
 
-  const previousFactor = Number(item.factor_to_base || 1);
   const nextFactor = getFactor(product.id, item.unit_name);
 
   if (nextFactor <= 0) {
@@ -161,13 +164,7 @@ const onChangeUnit = (item: any) => {
     return;
   }
 
-  const baseCost =
-    previousFactor > 0
-      ? Number(item.cost_unit || 0) / previousFactor
-      : Number(product.avg_cost || 0);
-
   item.factor_to_base = nextFactor;
-  item.cost_unit = Number((baseCost * nextFactor).toFixed(4));
   message.value = "";
 };
 
@@ -175,17 +172,245 @@ const formatUnitLabel = (value: string) => {
   return getUnitLabel(value);
 };
 
+const toNumber = (value: any) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getHistoryQty = (item: any) => {
+  const qtyUom = toNumber(item?.qty_uom);
+  if (qtyUom > 0) return qtyUom;
+
+  const qtyBase = toNumber(item?.qty);
+  if (qtyBase > 0) return qtyBase;
+
+  return qtyUom || qtyBase;
+};
+
+const getHistoryUnitCost = (item: any) => {
+  const costUom = toNumber(item?.cost_unit_uom);
+  if (costUom > 0) return costUom;
+
+  const costBase = toNumber(item?.cost_unit);
+  if (costBase > 0) return costBase;
+
+  const qty = getHistoryQty(item);
+  const total = toNumber(item?.total_cost);
+  if (qty > 0 && total > 0) return total / qty;
+
+  return costUom || costBase;
+};
+
 const formatHistoryQty = (item: any) => {
-  const value = item.qty_uom ?? item.qty ?? 0;
-  return Number(value).toFixed(2);
+  return getHistoryQty(item).toFixed(0);
 };
 
 const formatHistoryUnit = (item: any) =>
   formatUnitLabel(item.unit_name || item.products?.unit || "unidad");
 
 const formatHistoryCost = (item: any) => {
-  const value = item.cost_unit_uom ?? item.cost_unit ?? 0;
-  return Number(value).toFixed(4);
+  return getHistoryUnitCost(item).toFixed(2);
+};
+
+const normalizeSearchText = (value: any) =>
+  String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const detailRows = computed(() =>
+  editingDetails.value
+    ? detailDraftItems.value
+    : Array.isArray(selectedPurchase.value?.purchase_items)
+      ? selectedPurchase.value.purchase_items
+      : [],
+);
+
+const detailFilteredRows = computed(() => {
+  const term = normalizeSearchText(detailSearch.value);
+  if (!term) return detailRows.value;
+
+  return detailRows.value.filter((item) => {
+    const name = normalizeSearchText(item?.products?.name || "");
+    const unit = normalizeSearchText(item?.unit_name || item?.products?.unit || "unidad");
+    return name.includes(term) || unit.includes(term);
+  });
+});
+
+const detailVisibleCount = computed(() => detailFilteredRows.value.length);
+const detailTotalCount = computed(() => detailRows.value.length);
+
+const detailRowAmount = (item: any) => {
+  if (editingDetails.value) {
+    return Number(item?.qty || 0) * Number(item?.cost_unit || 0);
+  }
+  return Number(item?.total_cost || 0);
+};
+
+const detailFilteredSubtotal = computed(() =>
+  detailFilteredRows.value.reduce((sum, item) => sum + detailRowAmount(item), 0),
+);
+
+const detailModalTotal = computed(() => {
+  if (editingDetails.value) {
+    return detailDraftItems.value.reduce(
+      (sum, item) => sum + Number(item.qty || 0) * Number(item.cost_unit || 0),
+      0,
+    );
+  }
+  return Number(selectedPurchase.value?.total_cost || 0);
+});
+
+const buildDetailDraft = (item: any) => ({
+  id: String(item?.id || ""),
+  product_id: String(item?.product_id || ""),
+  qty: getHistoryQty(item),
+  unit_name: normalizeUnitName(item?.unit_name || item?.products?.unit || "unidad"),
+  cost_unit: getHistoryUnitCost(item),
+  products: item?.products || null,
+});
+
+const startEditingDetails = () => {
+  const rows = Array.isArray(selectedPurchase.value?.purchase_items)
+    ? selectedPurchase.value.purchase_items
+    : [];
+  detailDraftItems.value = rows.map(buildDetailDraft);
+  editingDetails.value = true;
+  message.value = "";
+};
+
+const cancelEditingDetails = () => {
+  editingDetails.value = false;
+  detailDraftItems.value = [];
+};
+
+const detailLineUnitOptions = (item: any) => {
+  const productId = String(item?.product_id || "");
+  if (!productId) {
+    const fromCatalog = (uomCatalog.value || []).map((row) => ({
+      unit_name: normalizeUnitName(row.code),
+      label: row.label,
+      factor_to_base: 1,
+      configured: true,
+    }));
+    if (fromCatalog.length) return fromCatalog;
+
+    const unit = normalizeUnitName(item?.unit_name || "unidad");
+    return [{ unit_name: unit, label: formatUnitLabel(unit), factor_to_base: 1, configured: true }];
+  }
+
+  // Mostrar siempre todo el catálogo global de unidades (desde BD).
+  // Las que no tengan factor para este producto se marcan como "sin factor".
+  return getUomOptions(productId);
+};
+
+const saveDetailsChanges = async () => {
+  const purchaseId = String(selectedPurchase.value?.id || "");
+  if (!purchaseId || !detailDraftItems.value.length) return;
+
+  const currentRows = Array.isArray(selectedPurchase.value?.purchase_items)
+    ? selectedPurchase.value.purchase_items
+    : [];
+  const originalById = new Map<
+    string,
+    { qty: number; unit_name: string; cost_unit: number; factor_to_base: number }
+  >();
+  for (const row of currentRows) {
+    const rowId = String(row?.id || "");
+    if (!rowId) continue;
+    originalById.set(rowId, {
+      qty: Number(getHistoryQty(row).toFixed(3)),
+      unit_name: normalizeUnitName(row?.unit_name || row?.products?.unit || "unidad"),
+      cost_unit: Number(getHistoryUnitCost(row).toFixed(2)),
+      factor_to_base: Number(row?.factor_to_base || 0),
+    });
+  }
+
+  let changed: Array<{
+    id: string;
+    product_id: string;
+    qty: number;
+    unit_name: string;
+    cost_unit: number;
+  }> = [];
+  try {
+    const cleaned = detailDraftItems.value.map((item) => {
+      const productId = String(item?.product_id || "");
+      const unitName = normalizeUnitName(item?.unit_name || "");
+      const original = originalById.get(String(item.id));
+      const qty = Number(Number(original?.qty || item?.qty || 0).toFixed(3));
+      const costUnit = Number(Number(original?.cost_unit || item?.cost_unit || 0).toFixed(2));
+
+      if (!productId) throw new Error("Producto inválido en detalle.");
+      if (!original) throw new Error("Detalle de compra inválido.");
+      if (!unitName) throw new Error("Unidad inválida en detalle.");
+      if (!Number.isFinite(qty) || qty <= 0) {
+        throw new Error("Cantidad inválida en detalle.");
+      }
+      if (!Number.isFinite(costUnit) || costUnit < 0) {
+        throw new Error("Costo inválido en detalle.");
+      }
+
+      return {
+        id: String(item.id),
+        product_id: productId,
+        qty,
+        unit_name: unitName,
+        cost_unit: costUnit,
+      };
+    });
+
+    changed = cleaned.filter((item) => {
+      const original = originalById.get(item.id);
+      if (!original) return true;
+      return original.unit_name !== item.unit_name;
+    });
+
+    if (!changed.length) {
+      message.value = "No hay cambios para guardar.";
+      return;
+    }
+
+    for (const item of changed) {
+      const factorFromConfig = getFactor(item.product_id, item.unit_name);
+      const original = originalById.get(item.id);
+      const factorFromOriginal =
+        original && original.unit_name === item.unit_name
+          ? Number(original.factor_to_base || 0)
+          : 0;
+
+      if (factorFromConfig <= 0 && factorFromOriginal <= 0) {
+        throw new Error(`Configura factor para "${getUnitLabel(item.unit_name)}" en el producto.`);
+      }
+    }
+  } catch (err: any) {
+    message.value = err?.message || "No se pudo validar el detalle.";
+    return;
+  }
+
+  savingDetails.value = true;
+  message.value = "";
+  try {
+    await $fetch("/api/purchases/items", {
+      method: "PATCH",
+      body: {
+        purchase_id: purchaseId,
+        items: changed,
+      },
+    });
+
+    await loadData();
+    const refreshed = history.value.find((row) => String(row.id) === purchaseId);
+    selectedPurchase.value = refreshed || null;
+    editingDetails.value = false;
+    detailDraftItems.value = [];
+    message.value = "Detalle de compra actualizado.";
+  } catch (err: any) {
+    message.value = err?.data?.statusMessage || err?.message || "No se pudo actualizar el detalle.";
+  } finally {
+    savingDetails.value = false;
+  }
 };
 
 const total = computed(() =>
@@ -256,12 +481,19 @@ const closeRegisterModal = () => {
 
 const openDetails = (purchase: any) => {
   selectedPurchase.value = purchase;
+  editingDetails.value = false;
+  detailDraftItems.value = [];
+  detailSearch.value = "";
   showDetails.value = true;
 };
 
 const closeDetails = () => {
+  if (savingDetails.value) return;
   showDetails.value = false;
   selectedPurchase.value = null;
+  editingDetails.value = false;
+  detailDraftItems.value = [];
+  detailSearch.value = "";
 };
 
 onMounted(loadData);
@@ -642,7 +874,7 @@ onMounted(loadData);
 
         <!-- Modal Content -->
         <div
-          class="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200"
+          class="relative w-full max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200"
         >
         <!-- Header -->
         <div
@@ -683,6 +915,42 @@ onMounted(loadData);
           </button>
         </div>
 
+        <div class="border-b border-slate-200 bg-white px-6 py-3">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="relative w-full sm:max-w-md">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                v-model="detailSearch"
+                type="text"
+                class="ui-input w-full pl-9 pr-3"
+                placeholder="Buscar producto o unidad..."
+              />
+            </div>
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+              <span class="ui-meta-chip">
+                Mostrando {{ detailVisibleCount }} / {{ detailTotalCount }}
+              </span>
+              <span class="ui-meta-chip">
+                Subtotal visible: S/ {{ Number(detailFilteredSubtotal || 0).toFixed(2) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Body -->
         <div class="overflow-y-auto p-0 flex-1">
           <table class="w-full text-sm text-left text-slate-600">
@@ -698,7 +966,7 @@ onMounted(loadData);
             </thead>
             <tbody class="divide-y divide-slate-200">
               <tr
-                v-for="item in selectedPurchase?.purchase_items"
+                v-for="item in detailFilteredRows"
                 :key="item.id"
                 class="hover:bg-indigo-50/30"
               >
@@ -706,13 +974,35 @@ onMounted(loadData);
                   {{ item.products?.name || "Producto Desconocido" }}
                 </td>
                 <td class="px-6 py-3 text-right font-mono">
-                  {{ formatHistoryQty(item) }} {{ formatHistoryUnit(item) }}
+                  <div v-if="editingDetails" class="flex flex-col items-end gap-2">
+                    <span>{{ formatHistoryQty(item) }}</span>
+                    <select v-model="item.unit_name" class="ui-select w-36 text-right">
+                      <option
+                        v-for="option in detailLineUnitOptions(item)"
+                        :key="`${item.id}-${option.unit_name}`"
+                        :value="option.unit_name"
+                      >
+                        {{ option.label }}{{ option.configured ? "" : " (sin factor)" }}
+                      </option>
+                    </select>
+                  </div>
+                  <span v-else>
+                    {{ formatHistoryQty(item) }} {{ formatHistoryUnit(item) }}
+                  </span>
                 </td>
                 <td class="px-6 py-3 text-right font-mono text-slate-400">
                   S/ {{ formatHistoryCost(item) }}
                 </td>
                 <td class="px-6 py-3 text-right font-semibold text-emerald-600">
-                  S/ {{ Number(item.total_cost).toFixed(2) }}
+                  S/
+                  {{
+                    Number(detailRowAmount(item) || 0).toFixed(2)
+                  }}
+                </td>
+              </tr>
+              <tr v-if="!detailFilteredRows.length">
+                <td colspan="4" class="px-6 py-10 text-center text-sm text-slate-400">
+                  No hay productos que coincidan con la búsqueda.
                 </td>
               </tr>
             </tbody>
@@ -721,16 +1011,45 @@ onMounted(loadData);
 
         <!-- Footer -->
         <div
-          class="border-t border-slate-200 bg-slate-50 px-6 py-4 flex justify-between items-center"
+          class="border-t border-slate-200 bg-slate-50 px-6 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
         >
           <div class="text-xs text-slate-500 font-mono">
             ID: {{ selectedPurchase?.id.slice(0, 8) }}...
+          </div>
+          <div class="flex flex-col items-start gap-2">
+            <button
+              v-if="!editingDetails"
+              class="ui-btn-secondary px-3 py-2"
+              :disabled="savingDetails"
+              @click="startEditingDetails"
+            >
+              Editar detalle
+            </button>
+            <template v-else>
+              <button
+                class="ui-btn-secondary px-3 py-2"
+                :disabled="savingDetails"
+                @click="cancelEditingDetails"
+              >
+                Cancelar
+              </button>
+              <button
+                class="ui-btn px-3 py-2"
+                :disabled="savingDetails"
+                @click="saveDetailsChanges"
+              >
+                {{ savingDetails ? "Guardando..." : "Guardar cambios" }}
+              </button>
+            </template>
+            <p v-if="editingDetails" class="text-[11px] text-slate-500">
+              Edición de registro histórico: no ajusta stock actual.
+            </p>
           </div>
           <div class="text-right">
             <span class="text-sm text-slate-400 mr-3">Total Compra:</span>
             <span class="text-xl font-bold text-indigo-600"
               >S/
-              {{ Number(selectedPurchase?.total_cost || 0).toFixed(2) }}</span
+              {{ Number(detailModalTotal || 0).toFixed(2) }}</span
             >
           </div>
         </div>

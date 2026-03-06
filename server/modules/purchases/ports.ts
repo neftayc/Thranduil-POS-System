@@ -19,8 +19,20 @@ export type CreatePurchaseInput = {
   items: PurchaseItemInput[]
 }
 
+export type UpdatePurchaseItemInput = {
+  id: string
+  qty: number
+  unit_name: string
+  cost_unit: number
+}
+
+export type UpdatePurchaseItemsInput = {
+  purchase_id: string
+  items: UpdatePurchaseItemInput[]
+}
+
 export type PurchasesRepository = {
   getPage(): Promise<PurchasesPageResult>
   createPurchase(input: CreatePurchaseInput): Promise<{ ok: true }>
+  updatePurchaseItems(input: UpdatePurchaseItemsInput): Promise<{ ok: true }>
 }
-

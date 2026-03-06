@@ -4,11 +4,12 @@ definePageMeta({ middleware: ['owner'] })
 const loading = ref(false)
 const saving = ref(false)
 const message = ref('')
-const activeTab = ref<'units' | 'payments' | 'customer_groups'>('units')
+const activeTab = ref<'units' | 'payments' | 'customer_groups' | 'categories'>('units')
 
 const units = ref<Array<{ code: string; label: string; active: boolean }>>([])
 const paymentMethods = ref<Array<{ code: string; label: string; active: boolean; sort_order: number }>>([])
 const customerGroups = ref<Array<{ code: string; label: string; active: boolean; sort_order: number }>>([])
+const categories = ref<Array<{ code: string; label: string; active: boolean; sort_order: number }>>([])
 
 const newUnit = reactive({
   label: ''
@@ -20,6 +21,11 @@ const newPaymentMethod = reactive({
 })
 
 const newCustomerGroup = reactive({
+  label: '',
+  sort_order: 100
+})
+
+const newCategory = reactive({
   label: '',
   sort_order: 100
 })
@@ -44,6 +50,7 @@ const loadData = async () => {
       units: any[]
       paymentMethods: any[]
       customerGroups: any[]
+      categories: any[]
     }>('/api/maintenance')
 
     units.value = (data.units || []).map((item) => ({
@@ -62,6 +69,13 @@ const loadData = async () => {
     customerGroups.value = (data.customerGroups || []).map((item) => ({
       code: String(item.code || ''),
       label: String(item.label || ''),
+      active: item.active !== false,
+      sort_order: Number(item.sort_order || 100)
+    }))
+
+    categories.value = (data.categories || []).map((item) => ({
+      code: String(item.code || ''),
+      label: String(item.name || item.label || ''),
       active: item.active !== false,
       sort_order: Number(item.sort_order || 100)
     }))
@@ -252,6 +266,63 @@ const saveCustomerGroup = async (group: { code: string; label: string; active: b
   }
 }
 
+const addCategory = async () => {
+  const label = String(newCategory.label || '').trim()
+  const code = normalizeCode(label)
+
+  if (!label || !code) {
+    message.value = 'Ingresa un nombre válido para la categoría.'
+    return
+  }
+
+  saving.value = true
+  message.value = ''
+  try {
+    await $fetch('/api/maintenance/category', {
+      method: 'POST',
+      body: {
+        code,
+        label,
+        sort_order: Number(newCategory.sort_order || 100)
+      }
+    })
+
+    newCategory.label = ''
+    newCategory.sort_order = 100
+    await loadData()
+    message.value = `Categoría creada: ${label}`
+  } catch (err: any) {
+    message.value = err?.data?.statusMessage || err?.message || 'No se pudo crear la categoría.'
+  } finally {
+    saving.value = false
+  }
+}
+
+const saveCategory = async (category: { code: string; label: string; active: boolean; sort_order: number }) => {
+  if (!category.label.trim()) {
+    message.value = 'El nombre de la categoría es obligatorio.'
+    return
+  }
+
+  saving.value = true
+  message.value = ''
+  try {
+    await $fetch(`/api/maintenance/category/${category.code}`, {
+      method: 'PATCH',
+      body: {
+        label: category.label.trim(),
+        active: category.active,
+        sort_order: Number(category.sort_order || 100)
+      }
+    })
+    message.value = `Categoría actualizada: ${category.label}`
+  } catch (err: any) {
+    message.value = err?.data?.statusMessage || err?.message || 'No se pudo actualizar la categoría.'
+  } finally {
+    saving.value = false
+  }
+}
+
 onMounted(loadData)
 </script>
 
@@ -259,7 +330,7 @@ onMounted(loadData)
   <div class="space-y-6">
     <section class="ui-card card-hover">
       <h2 class="ui-heading">Mantenimiento</h2>
-      <p class="ui-subtitle">Administra variables globales del sistema: unidades, métodos de pago y catálogos de operación.</p>
+      <p class="ui-subtitle">Administra variables globales del sistema: unidades, categorías, métodos de pago y catálogos de operación.</p>
 
       <div class="mt-5 flex flex-wrap gap-2">
         <button
@@ -282,6 +353,13 @@ onMounted(loadData)
           @click="activeTab = 'payments'"
         >
           Métodos de pago
+        </button>
+        <button
+          class="rounded-xl px-4 py-2 text-sm font-bold transition-all"
+          :class="activeTab === 'categories' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'border border-gray-200 bg-white text-slate-600 shadow-sm hover:bg-gray-50'"
+          @click="activeTab = 'categories'"
+        >
+          Categorías de producto
         </button>
       </div>
 
@@ -517,6 +595,87 @@ onMounted(loadData)
 
       <p v-if="!customerGroups.length && !loading" class="ui-empty-state">
         No hay tipos de cliente configurados.
+      </p>
+    </section>
+
+    <section v-if="activeTab === 'categories'" class="ui-card card-hover space-y-5">
+      <div class="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
+        <div>
+          <label class="ui-label">Nueva categoría</label>
+          <input
+            v-model="newCategory.label"
+            class="ui-input"
+            type="text"
+            placeholder="Ej: Higiene personal, Librería fina"
+          />
+        </div>
+        <div>
+          <label class="ui-label">Orden</label>
+          <input
+            v-model.number="newCategory.sort_order"
+            class="ui-input"
+            type="number"
+            min="1"
+            step="1"
+          />
+        </div>
+        <div class="flex items-end">
+          <button class="ui-btn w-full sm:w-auto" :disabled="saving" @click="addCategory">
+            {{ saving ? 'Guardando...' : 'Agregar categoría' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="ui-table-wrap">
+        <table class="ui-table">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre visible</th>
+              <th>Orden</th>
+              <th>Activo</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="category in categories" :key="category.code">
+              <td>
+                <span class="inline-flex rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-500 border border-slate-200">{{ prettyCode(category.code) }}</span>
+              </td>
+              <td>
+                <input v-model="category.label" class="ui-input w-56" type="text" />
+              </td>
+              <td>
+                <input
+                  v-model.number="category.sort_order"
+                  class="ui-input w-24"
+                  type="number"
+                  min="1"
+                  step="1"
+                />
+              </td>
+              <td>
+                <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                  <input
+                    v-model="category.active"
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-slate-300"
+                  />
+                  {{ category.active ? 'Sí' : 'No' }}
+                </label>
+              </td>
+              <td>
+                <button class="ui-btn-secondary px-3 py-2" :disabled="saving" @click="saveCategory(category)">
+                  Guardar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p v-if="!categories.length && !loading" class="ui-empty-state">
+        No hay categorías configuradas.
       </p>
     </section>
   </div>

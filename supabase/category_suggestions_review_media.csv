@@ -1,0 +1,64 @@
+product_id,sku,name,brand,current_product_type,suggested_category,suggested_action,confidence,confidence_score,reason
+d5cb21dd-9597-46b9-bd89-4e520e7b9fc0,SKU-AAD11162D5,adorno niño selvatico,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+898c3f67-9b87-44d4-90b8-dfdd247129d1,SKU-E784193A9C,adornos para el dia del padre,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+2ce6d532-c087-469d-a61e-ca8779ce2aba,SKU-CC77E1CB6E,Banderas,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+5de30a5a-3603-4167-9ccb-db200097d66d,SKU-1B4019FFD0,carton cartulina,,,Papel,asignar_existente,media,2,familia_papel_cartulina
+4bd3bb00-983a-499c-9437-83f4e0b58761,SKU-87FB5C45C1,Cartulina blanca,,,Papel,asignar_existente,media,2,familia_papel_cartulina
+2203c2d9-ad9c-4b42-9a98-ac08603deb8a,SKU-5972A924E8,cartulinas de pliego a color A4,,,Papel,asignar_existente,media,2,familia_papel_cartulina
+c6460e9f-c9e3-44e6-8dba-3e86091b9208,SKU-8EC5F5CD1C,cepillo colgate,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+2fae435c-ec16-44b0-84f6-0e271cecb4fe,SKU-65B593846C,colet negros,,,Accesorios de Cabello,crear_nueva,media,2,accesorios_cabello
+fb29a27d-1537-4a33-9cd4-6565a33c5e31,SKU-D15BAC6AB0,Cometas,,,Juguetes,asignar_existente,media,2,producto_ludico
+349e7826-6a89-432c-a9d4-72ef1fefc1a2,SKU-08D71F3C55,Corazon de regalos,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+b7327baf-a4bc-4ab1-81e3-c688e08f8b3f,SKU-95A43F219B,Cordones,,,Accesorios de Cabello,crear_nueva,media,2,accesorios_cabello
+e0d8ccd9-328a-4641-968e-9add52792130,SKU-96FF456458,cortauña pequeña,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+78ab9a96-5124-4a86-8d32-c0e5c81dfe40,SKU-818ED060B7,Dados pequeños,,,Juguetes,asignar_existente,media,2,producto_ludico
+fca5d4b0-fdc9-453c-94d0-b75dd755acf5,SKU-9D9DA3D551,escarapela,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+90902c7d-0022-44b9-9a62-2468ce284627,SKU-B3C78D2293,Escobilla Grande de Zapato,,,Limpieza Hogar,crear_nueva,media,2,hogar_limpieza
+0065e1a6-2714-4833-8e6c-b511ee5c91f9,SKU-E325832F3F,Escobilla Pequeña de Zapato,,,Limpieza Hogar,crear_nueva,media,2,hogar_limpieza
+835d53bd-5c86-435b-9521-a1ef42e61620,SKU-2DF149588E,Esponja Merlin,,,Limpieza Hogar,crear_nueva,media,2,hogar_limpieza
+c447a7f5-3cb7-434b-a252-e8059d01c8bb,SKU-AB321F3F5E,Globos,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+e97191e9-4364-49eb-acfb-7ff42a024a90,SKU-FEC4345327,Guantes,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+d655e756-0edf-4e9d-9087-3d496c82a07c,SKU-CB6A706CAF,guillet,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+da16ce79-cc19-44a2-9914-5e233c8fa6b7,SKU-F06AE39D3D,Hizopo,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+e63344f7-32ed-4446-9e24-72cb151a0407,SKU-C74ADF4922,Hojas de color 100 und,,,Papel,asignar_existente,media,2,familia_papel_cartulina
+9f18d492-4658-490a-93f3-2f9ae8f156ba,SKU-26FF8F2A26,Jabon liquido grande,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+b1f366ef-5690-4ce2-952c-4f8f53740c5c,SKU-C2A71FB517,Jabon liquido pequeño,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+74247b08-f63a-4cbb-ba07-0fa4af2357e1,SKU-81B56FA010,jaboncillo camai,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+24f94d48-d636-405f-aa75-fb4802b9279b,SKU-EEDF6B72FC,Jaboneras,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+726f74a2-5edb-4088-be76-398eb21160c3,SKU-8130CA3015,Lana de colores,,,Manualidades,crear_nueva,media,2,insumo_lana_manualidades
+42d4b0a3-6117-44a3-9501-49e94aa49502,SKU-676E05737E,liga de lana,,,Manualidades,crear_nueva,media,2,insumo_lana_manualidades
+41799b6b-b208-4da1-8ff9-c9d635c34e47,SKU-3198E087D3,liga para cabello,,,Accesorios de Cabello,crear_nueva,media,2,accesorios_cabello
+2e2e346f-f0b1-4b9a-bc9c-1445da26a3a3,SKU-06298A559F,loncheras,,,Lonchera,crear_nueva,media,2,familia_loncheras
+9a2e9fab-1809-4bf7-a938-3aad5cda367b,SKU-5B234D9B53,Luces de colors 200 leds,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+95a91474-fd50-4a6a-bf04-7fcafd255c31,SKU-1A61EF5307,Meseros Personales - Niños,,,Material Educativo,crear_nueva,media,2,material_escolar_educativo
+195fdf6b-3c4c-4510-bffb-27702aed882f,SKU-E541A2F517,Mistura Amarilla,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+d7ffbc82-cb9d-45ea-8de8-5fbcefe7445f,SKU-45575800B4,Mistura de Color,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+4da70132-32ac-4735-bec6-496761b2c7d8,SKU-12188D3F87,moñeras,,,Accesorios de Cabello,crear_nueva,media,2,accesorios_cabello
+29ac5ed8-c0cf-42f8-a5fc-a83745afa40b,SKU-D80DB7710E,papel sedita,,,Papel,asignar_existente,media,2,familia_papel_cartulina
+e8bf5d65-2a4e-4360-8429-c1b7d0e2266a,SKU-FD56706B4D,papel silufan,,,Papel,asignar_existente,media,2,familia_papel_cartulina
+75100055-2fe5-4092-abd7-d69bef82d764,SKU-4EE3C50F1D,Papel suave higienico,,,Papel,asignar_existente,media,2,familia_papel_cartulina
+e9dc096c-33e3-43ad-bb7a-b4e07facd7bf,SKU-B513B72D31,pares de pilis,,,Accesorios de Cabello,crear_nueva,media,2,accesorios_cabello
+c8870ffd-6348-4632-9aff-c085e6bb3e44,SKU-77F19E15CF,Pasta dental,,,Aseo Personal,crear_nueva,media,2,higiene_personal
+bdbfbcdc-b8b0-45bc-bbe5-422295604a51,SKU-8D8B2631DB,Pelotas de trapo,,,Juguetes,asignar_existente,media,2,producto_ludico
+cc2b0179-5c51-4565-ad53-c5abbc72d3d5,SKU-94488B3896,Percheros,,,Limpieza Hogar,crear_nueva,media,2,hogar_limpieza
+00874705-71d7-4f83-9f7c-1b17bfca8f65,SKU-2BEED389E4,perlas adornos,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+e89c9649-337f-4006-9ec5-5b2c17bb557a,SKU-2B270DE01B,Piñes de Decoración,,,Fiestas y Decoracion,crear_nueva,media,2,pines_decorativos
+78885ee3-6638-4b42-b10d-c53615251730,SKU-0C7D0AC4E6,pirañas grandes,,,Accesorios de Cabello,crear_nueva,media,2,accesorios_cabello
+5138ecb3-3dae-46ae-b20f-4300313016af,SKU-D9A535C356,Pozzis limpiatipo,,,Goma,asignar_existente,media,2,adhesivo_reutilizable
+47a86d6e-0b0f-442e-8dd5-d1c3fa74012e,SKU-479171A7EE,Pulsera ojito,,,Accesorios de Cabello,crear_nueva,media,2,accesorios_cabello
+307620f3-5f74-4cb2-b3be-bf12fbc356fa,SKU-8601F96067,Puntero,,,Material Educativo,crear_nueva,media,2,material_escolar_educativo
+f2cc6229-a088-4f9b-81e1-18a739a03f32,SKU-44D2FC2D50,rosas,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+9cd545eb-06ef-4ede-8c0a-fd2e7b77fb7c,SKU-383B65F71F,rosas con osito,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+c266a889-d120-41f9-8213-3e414d17fc39,SKU-B2904A3F21,serpentina,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+4d2b4a0a-803a-445c-8c8b-d029d9fa2bdb,SKU-64AF411C73,Set de escuadras kuromi,,,Regla,asignar_existente,media,2,escuadra_es_util_de_medicion
+0528c92d-5dbc-425d-b7cd-8b2574b00886,SKU-530AAFE75A,silvato pequeño,,,Juguetes,asignar_existente,media,2,producto_ludico
+ac3ca922-03b4-49c3-b206-305f12e3ddf8,SKU-259711D0CD,Super esponja,,,Limpieza Hogar,crear_nueva,media,2,hogar_limpieza
+7b72d34a-cae7-4bc6-94e9-e01824cc8618,SKU-F8C11BD284,Tabla periodica,,,Material Educativo,crear_nueva,media,2,material_escolar_educativo
+e2b5852c-32f8-4525-9524-6efea47607e3,SKU-0D608B9E69,Tableros Acrilicos,,,Material Educativo,crear_nueva,media,2,material_escolar_educativo
+375e866f-9cc4-4fc6-ae06-7be0dcd3f796,SKU-58B59695F9,tasa con rosas,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+0c193034-4c2d-41c4-b843-5c9d14ba63c4,SKU-COMP-AYR-002-TRROSA,Tira Rosa,,,Fiestas y Decoracion,crear_nueva,media,2,fiesta_decoracion
+8ce8b968-db6c-42a1-8d95-f2c2013c1a1e,SKU-3F113AD6D9,Trish,,,Juguetes,asignar_existente,media,2,producto_ludico
+af947bc0-69e8-40d4-8fa6-300187421592,SKU-35F30621F4,trompos,,,Juguetes,asignar_existente,media,2,producto_ludico
+8aab88e6-64a5-4cd6-b2b2-457a833ad636,SKU-E4F5832814,ula ula,,,Juguetes,asignar_existente,media,2,producto_ludico
+3cf5c61e-dd65-454f-b2a9-e1512d2136a8,SKU-232269CDDF,Vaso de plastico,,,Limpieza Hogar,crear_nueva,media,2,hogar_limpieza
+27e94aa3-4bcc-4e8a-b972-5695097ba4c1,SKU-1AE47B4AA5,vincha 104,,,Accesorios de Cabello,crear_nueva,media,2,accesorios_cabello

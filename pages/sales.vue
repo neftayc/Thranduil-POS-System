@@ -1227,11 +1227,11 @@ const matchesProductFilter = (product: any, filterKey: ProductFilterKey) => {
   const name = normalizeFilterText(product?.name);
   const sku = normalizeFilterText(product?.sku);
   const brand = normalizeFilterText(product?.brand);
-  const type = normalizeFilterText(product?.product_type);
+  const type = normalizeFilterText(product?.category_name || product?.product_type);
   const haystack = `${name} ${sku} ${brand} ${type}`;
 
-  return filterKeywordMap[filterKey].some(
-    (keyword) => haystack.includes(keyword),
+  return filterKeywordMap[filterKey].some((keyword) =>
+    haystack.includes(keyword),
   );
 };
 
@@ -1278,7 +1278,9 @@ const filteredProducts = computed(() => {
   if (!term) return [];
 
   return products.value
-    .filter((product) => matchesProductFilter(product, activeProductFilter.value))
+    .filter((product) =>
+      matchesProductFilter(product, activeProductFilter.value),
+    )
     .map((product) => ({ product, score: scoreProductMatch(product, term) }))
     .filter((row) => row.score > 0)
     .sort((a, b) => {
@@ -1530,6 +1532,52 @@ const submitSale = async (): Promise<SaleSubmitResult> => {
     return { ok: false, saleId: null, error: message.value };
   } finally {
     loading.value = false;
+  }
+};
+
+const checkoutNotifyMessage = ref("");
+const checkoutNotifyLoading = ref(false);
+const notifyFileInput = ref<HTMLInputElement | null>(null);
+const activeNotifyOrderId = ref<string | null>(null);
+
+const triggerNotifyReady = (saleId: string) => {
+  activeNotifyOrderId.value = saleId;
+  if (notifyFileInput.value) {
+    notifyFileInput.value.click();
+  }
+};
+
+const handleNotifyFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  const orderId = activeNotifyOrderId.value;
+  if (!file || !orderId) return;
+
+  checkoutNotifyLoading.value = true;
+  checkoutNotifyMessage.value = "";
+
+  try {
+    const formData = new FormData();
+    formData.append("orderId", orderId);
+    formData.append("image", file);
+
+    await $fetch("/api/webhook/notify-order-ready", {
+      method: "POST",
+      body: formData,
+    });
+
+    checkoutNotifyMessage.value = "¡Cliente notificado con éxito!";
+    setTimeout(() => {
+      checkoutNotifyMessage.value = "";
+    }, 3000);
+  } catch (err: any) {
+    console.error("Notify error", err);
+    checkoutNotifyMessage.value = "Error al notificar al cliente.";
+  } finally {
+    checkoutNotifyLoading.value = false;
+    // Clear input and state
+    if (notifyFileInput.value) notifyFileInput.value.value = "";
+    activeNotifyOrderId.value = null;
   }
 };
 
@@ -1837,7 +1885,9 @@ onBeforeUnmount(() => {
             >
               {{ ["📒", "🎒", "✏️", "🎨", "✂️", "🖊️", "📏", "🧴"][idx % 8] }}
             </div>
-            <p class="line-clamp-2 min-h-[48px] text-sm font-bold text-slate-800">
+            <p
+              class="line-clamp-2 min-h-[48px] text-sm font-bold text-slate-800"
+            >
               {{ product.name }}
             </p>
             <p class="mt-1 text-3xl leading-none text-indigo-600">
@@ -1859,7 +1909,9 @@ onBeforeUnmount(() => {
       >
         <div class="border-b border-gray-100 bg-white p-6">
           <h3 class="text-lg font-bold text-slate-800">Ticket Actual</h3>
-          <p class="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400">
+          <p
+            class="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400"
+          >
             #ORD-{{ String(Date.now()).slice(-4) }}
           </p>
         </div>
@@ -1874,7 +1926,9 @@ onBeforeUnmount(() => {
               <div
                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-lg text-indigo-600"
               >
-                {{ ["📒", "🎒", "✏️", "🎨", "✂️", "🖊️", "📏", "🧴"][index % 8] }}
+                {{
+                  ["📒", "🎒", "✏️", "🎨", "✂️", "🖊️", "📏", "🧴"][index % 8]
+                }}
               </div>
               <div class="min-w-0">
                 <p class="truncate text-sm font-bold text-slate-800">
@@ -1946,11 +2000,15 @@ onBeforeUnmount(() => {
         </div>
 
         <footer class="space-y-4 border-t border-gray-100 bg-slate-50 p-6">
-          <div class="flex items-center justify-between text-sm font-bold text-slate-500">
+          <div
+            class="flex items-center justify-between text-sm font-bold text-slate-500"
+          >
             <span>Subtotal</span>
             <span>{{ formatOrderMoney(total) }}</span>
           </div>
-          <div class="flex items-center justify-between text-[2rem] font-black text-slate-900">
+          <div
+            class="flex items-center justify-between text-[2rem] font-black text-slate-900"
+          >
             <span>Total</span>
             <span>{{ formatOrderMoney(total) }}</span>
           </div>
@@ -1984,29 +2042,43 @@ onBeforeUnmount(() => {
     >
       <header class="border-b border-gray-100 p-5 sm:p-6">
         <h3 class="text-lg font-bold text-slate-800">Historial de Ventas</h3>
-        <p class="text-sm text-slate-500">Transacciones recientes registradas</p>
+        <p class="text-sm text-slate-500">
+          Transacciones recientes registradas
+        </p>
       </header>
 
       <div class="flex-1 overflow-y-auto p-5 sm:p-6">
         <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
+          <div
+            class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+          >
+            <p
+              class="text-xs font-bold uppercase tracking-widest text-slate-400"
+            >
               Total ventas
             </p>
             <p class="mt-1 text-3xl font-bold text-slate-800">
               {{ totalSalesCount }}
             </p>
           </div>
-          <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
+          <div
+            class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+          >
+            <p
+              class="text-xs font-bold uppercase tracking-widest text-slate-400"
+            >
               Items vendidos
             </p>
             <p class="mt-1 text-3xl font-bold text-slate-800">
               {{ totalItemsSold }}
             </p>
           </div>
-          <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p class="text-xs font-bold uppercase tracking-widest text-emerald-500">
+          <div
+            class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+          >
+            <p
+              class="text-xs font-bold uppercase tracking-widest text-emerald-500"
+            >
               Ingresos
             </p>
             <p class="mt-1 text-3xl font-bold text-emerald-600">
@@ -2015,7 +2087,9 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div
+          class="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm"
+        >
           <table class="min-w-[760px] w-full text-left">
             <thead
               class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400"
@@ -2070,7 +2144,9 @@ onBeforeUnmount(() => {
                     {{ sale.sale_items?.length || 0 }}
                   </span>
                 </td>
-                <td class="px-8 py-5 text-right text-sm font-bold text-emerald-600">
+                <td
+                  class="px-8 py-5 text-right text-sm font-bold text-emerald-600"
+                >
                   S/ {{ Number(sale.total || 0).toFixed(2) }}
                 </td>
                 <td class="px-8 py-5 text-center">
@@ -2169,7 +2245,27 @@ onBeforeUnmount(() => {
               >
                 Eliminar
               </button>
+              <button
+                class="col-span-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95"
+                :disabled="checkoutNotifyLoading"
+                @click.stop="triggerNotifyReady(sale.id)"
+              >
+                {{
+                  checkoutNotifyLoading ? "Enviando..." : "📸 Notificar Listo"
+                }}
+              </button>
             </div>
+            <p
+              v-if="checkoutNotifyMessage && activeNotifyOrderId === sale.id"
+              class="mt-2 text-center text-[10px] font-bold"
+              :class="
+                checkoutNotifyMessage.includes('Error')
+                  ? 'text-rose-500'
+                  : 'text-emerald-600'
+              "
+            >
+              {{ checkoutNotifyMessage }}
+            </p>
           </article>
         </div>
         <div
@@ -2184,6 +2280,14 @@ onBeforeUnmount(() => {
             Crear nuevo pedido
           </button>
         </div>
+        <input
+          ref="notifyFileInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          class="hidden"
+          @change="handleNotifyFileChange"
+        />
       </section>
 
       <aside
@@ -2214,7 +2318,9 @@ onBeforeUnmount(() => {
               </div>
               <p class="text-sm font-bold text-slate-900">
                 {{
-                  formatOrderMoney(Number(item.qty || 0) * Number(item.price_unit || 0))
+                  formatOrderMoney(
+                    Number(item.qty || 0) * Number(item.price_unit || 0),
+                  )
                 }}
               </p>
             </article>
@@ -2236,9 +2342,13 @@ onBeforeUnmount(() => {
               </select>
             </div>
 
-            <div class="flex items-center justify-between text-xl font-bold text-slate-900">
+            <div
+              class="flex items-center justify-between text-xl font-bold text-slate-900"
+            >
               <span>Total</span>
-              <span>{{ formatOrderMoney(heldSaleTotal(selectedHeldSale)) }}</span>
+              <span>{{
+                formatOrderMoney(heldSaleTotal(selectedHeldSale))
+              }}</span>
             </div>
 
             <p
@@ -2286,7 +2396,9 @@ onBeforeUnmount(() => {
       class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto"
     >
       <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <article class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <article
+          class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+        >
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
             Ventas registradas
           </p>
@@ -2294,7 +2406,9 @@ onBeforeUnmount(() => {
             {{ totalSalesCount }}
           </p>
         </article>
-        <article class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <article
+          class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+        >
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
             Ingreso total
           </p>
@@ -2302,7 +2416,9 @@ onBeforeUnmount(() => {
             S/ {{ totalRevenue.toFixed(2) }}
           </p>
         </article>
-        <article class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <article
+          class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+        >
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
             Ticket promedio
           </p>
@@ -2313,7 +2429,9 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div
+          class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+        >
           <div class="border-b border-gray-100 p-5">
             <h3 class="text-lg font-bold text-slate-800">Ventas por metodo</h3>
             <p class="text-sm text-slate-500">Distribucion por forma de pago</p>
@@ -2329,7 +2447,9 @@ onBeforeUnmount(() => {
                 class="flex items-center justify-between px-4 py-3"
               >
                 <div>
-                  <p class="text-sm font-bold text-slate-800">{{ row.label }}</p>
+                  <p class="text-sm font-bold text-slate-800">
+                    {{ row.label }}
+                  </p>
                   <p class="text-xs text-slate-500">{{ row.count }} ventas</p>
                 </div>
                 <p class="text-sm font-bold text-emerald-600">
@@ -2346,10 +2466,14 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div
+          class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+        >
           <div class="border-b border-gray-100 p-5">
             <h3 class="text-lg font-bold text-slate-800">Top productos</h3>
-            <p class="text-sm text-slate-500">Productos con mayor facturacion</p>
+            <p class="text-sm text-slate-500">
+              Productos con mayor facturacion
+            </p>
           </div>
           <div class="p-4">
             <div
@@ -2398,130 +2522,132 @@ onBeforeUnmount(() => {
         <div
           class="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
         >
-        <div
-          class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-6 sm:py-4"
-        >
-          <div>
-            <h3 class="text-lg font-bold text-slate-800">Detalle de Venta</h3>
-            <p class="flex gap-2 text-sm text-slate-400">
-              <span>{{
-                new Date(selectedSale?.created_at).toLocaleString("es-PE", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              }}</span>
-            </p>
-          </div>
-          <button
-            class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-800"
-            @click="closeDetails"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-0">
           <div
-            class="grid grid-cols-1 gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 text-sm sm:grid-cols-2 sm:px-6"
+            class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-6 sm:py-4"
           >
             <div>
-              <span
-                class="mb-1 block text-xs font-semibold uppercase text-slate-500"
-                >Cliente</span
-              >
-              <span class="text-slate-700">{{
-                selectedSale?.customers?.name || "Consumidor Final"
-              }}</span>
+              <h3 class="text-lg font-bold text-slate-800">Detalle de Venta</h3>
+              <p class="flex gap-2 text-sm text-slate-400">
+                <span>{{
+                  new Date(selectedSale?.created_at).toLocaleString("es-PE", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                }}</span>
+              </p>
             </div>
-            <div>
-              <span
-                class="mb-1 block text-xs font-semibold uppercase text-slate-500"
-                >Pago</span
+            <button
+              class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-800"
+              @click="closeDetails"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
               >
-              <span class="text-slate-700">{{
-                paymentLabel(selectedSale?.payment_method || "efectivo")
-              }}</span>
-            </div>
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-[620px] text-left text-sm text-slate-600">
-              <thead
-                class="sticky top-0 border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500"
-              >
-                <tr>
-                  <th class="px-4 py-3 font-semibold sm:px-6">Producto</th>
-                  <th class="px-4 py-3 text-right font-semibold sm:px-6">
-                    Cant.
-                  </th>
-                  <th class="px-4 py-3 text-right font-semibold sm:px-6">
-                    Precio
-                  </th>
-                  <th class="px-4 py-3 text-right font-semibold sm:px-6">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200">
-                <tr
-                  v-for="item in selectedSale?.sale_items"
-                  :key="item.id"
-                  class="hover:bg-indigo-50/30"
+          <div class="flex-1 overflow-y-auto p-0">
+            <div
+              class="grid grid-cols-1 gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 text-sm sm:grid-cols-2 sm:px-6"
+            >
+              <div>
+                <span
+                  class="mb-1 block text-xs font-semibold uppercase text-slate-500"
+                  >Cliente</span
                 >
-                  <td class="px-4 py-3 font-medium text-slate-700 sm:px-6">
-                    {{ item.products?.name || "Producto Desconocido" }}
-                    <span class="block font-mono text-xs text-slate-500">{{
-                      item.products?.sku
-                    }}</span>
-                  </td>
-                  <td class="px-4 py-3 text-right font-mono sm:px-6">
-                    {{ formatHistoryQty(item) }} {{ formatHistoryUnit(item) }}
-                  </td>
-                  <td
-                    class="px-4 py-3 text-right font-mono text-slate-400 sm:px-6"
-                  >
-                    S/ {{ formatHistoryPrice(item) }}
-                  </td>
-                  <td
-                    class="px-4 py-3 text-right font-semibold text-emerald-600 sm:px-6"
-                  >
-                    S/ {{ Number(item.total).toFixed(2) }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+                <span class="text-slate-700">{{
+                  selectedSale?.customers?.name || "Consumidor Final"
+                }}</span>
+              </div>
+              <div>
+                <span
+                  class="mb-1 block text-xs font-semibold uppercase text-slate-500"
+                  >Pago</span
+                >
+                <span class="text-slate-700">{{
+                  paymentLabel(selectedSale?.payment_method || "efectivo")
+                }}</span>
+              </div>
+            </div>
 
-        <div
-          class="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
-        >
-          <div class="font-mono text-xs text-slate-500">
-            ID: {{ selectedSale?.id.slice(0, 8) }}...
+            <div class="overflow-x-auto">
+              <table
+                class="w-full min-w-[620px] text-left text-sm text-slate-600"
+              >
+                <thead
+                  class="sticky top-0 border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500"
+                >
+                  <tr>
+                    <th class="px-4 py-3 font-semibold sm:px-6">Producto</th>
+                    <th class="px-4 py-3 text-right font-semibold sm:px-6">
+                      Cant.
+                    </th>
+                    <th class="px-4 py-3 text-right font-semibold sm:px-6">
+                      Precio
+                    </th>
+                    <th class="px-4 py-3 text-right font-semibold sm:px-6">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                  <tr
+                    v-for="item in selectedSale?.sale_items"
+                    :key="item.id"
+                    class="hover:bg-indigo-50/30"
+                  >
+                    <td class="px-4 py-3 font-medium text-slate-700 sm:px-6">
+                      {{ item.products?.name || "Producto Desconocido" }}
+                      <span class="block font-mono text-xs text-slate-500">{{
+                        item.products?.sku
+                      }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-right font-mono sm:px-6">
+                      {{ formatHistoryQty(item) }} {{ formatHistoryUnit(item) }}
+                    </td>
+                    <td
+                      class="px-4 py-3 text-right font-mono text-slate-400 sm:px-6"
+                    >
+                      S/ {{ formatHistoryPrice(item) }}
+                    </td>
+                    <td
+                      class="px-4 py-3 text-right font-semibold text-emerald-600 sm:px-6"
+                    >
+                      S/ {{ Number(item.total).toFixed(2) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="w-full text-left sm:w-auto sm:text-right">
-            <span class="mr-3 text-sm text-slate-400">Total Venta:</span>
-            <span class="text-xl font-bold text-indigo-600">
-              S/ {{ Number(selectedSale?.total || 0).toFixed(2) }}
-            </span>
+
+          <div
+            class="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+          >
+            <div class="font-mono text-xs text-slate-500">
+              ID: {{ selectedSale?.id.slice(0, 8) }}...
+            </div>
+            <div class="w-full text-left sm:w-auto sm:text-right">
+              <span class="mr-3 text-sm text-slate-400">Total Venta:</span>
+              <span class="text-xl font-bold text-indigo-600">
+                S/ {{ Number(selectedSale?.total || 0).toFixed(2) }}
+              </span>
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </Teleport>

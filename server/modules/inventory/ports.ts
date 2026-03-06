@@ -27,6 +27,7 @@ export type ProductCatalogRow = {
   id: string
   sku: string | null
   name: string
+  brand: string | null
   unit: string | null
   stock_on_hand: number | null
   min_stock: number | null
@@ -76,4 +77,3 @@ export type InventoryRepository = {
   applyAdjustment(input: ApplyInventoryAdjustmentInput & { userId: string }): Promise<ApplyInventoryAdjustmentResult>
   closeSession(input: CloseInventorySessionInput & { userId: string }): Promise<CloseInventorySessionResult>
 }
-

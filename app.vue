@@ -95,6 +95,18 @@ const navItems = computed<NavItem[]>(() => {
       group: "gestion",
     });
     base.push({
+      to: "/financial-summary",
+      label: "Resumen financiero",
+      hint: "Totales de compras, ventas y ganancia",
+      group: "gestion",
+    });
+    base.push({
+      to: "/executive-profitability",
+      label: "Reporte ejecutivo",
+      hint: "Semanas, meses, anos y total",
+      group: "gestion",
+    });
+    base.push({
       to: "/pricing",
       label: "Reglas de venta",
       hint: "Mayorista y promos",
@@ -219,6 +231,10 @@ const navIcon = (to: string) => {
     return "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253";
   if (to === "/product-profitability")
     return "M3 3v18h18M7 15l3-3 3 2 4-5";
+  if (to === "/financial-summary")
+    return "M4 19h16M6 16V8m4 8V5m4 11v-6m4 6V9";
+  if (to === "/executive-profitability")
+    return "M4 19h16M6 17V9m4 8V7m4 10V5m4 12v-6";
   return "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z";
 };
 
@@ -641,12 +657,16 @@ onBeforeUnmount(() => {
       </header>
 
       <main
-        class="relative z-10 flex-1 p-4 sm:p-6 lg:p-8"
-        :class="isSalesPage ? 'overflow-hidden' : 'overflow-y-auto'"
+        class="relative z-10 flex-1"
+        :class="
+          isSalesPage
+            ? 'overflow-hidden p-3 sm:p-4 lg:p-5'
+            : 'overflow-y-auto p-4 sm:p-6 lg:p-8'
+        "
       >
         <div
-          class="mx-auto w-full max-w-[1600px]"
-          :class="isSalesPage ? 'h-full min-h-0' : ''"
+          class="mx-auto w-full"
+          :class="isSalesPage ? 'h-full min-h-0 max-w-[1860px]' : 'max-w-[1600px]'"
         >
           <NuxtPage />
         </div>

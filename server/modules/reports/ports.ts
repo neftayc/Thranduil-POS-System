@@ -51,6 +51,68 @@ export type ProductProfitabilitySummary = {
   inventory_value_total: number
 }
 
+export type FinancialSummaryResult = {
+  generated_at: string
+  period_code: ProductProfitabilityPeriodCode
+  period_start: string
+  period_end: string | null
+  adjustments_counted_as_sales: boolean
+  purchase_items_count: number
+  sale_items_count: number
+  adjustment_items_count: number
+  purchases_total: number
+  sales_recorded_total: number
+  sales_from_adjustment_total: number
+  sales_total: number
+  sales_cogs_total: number
+  adjustments_cogs_total: number
+  gross_profit_total: number
+  balance_total: number
+  margin_pct: number
+  profit_ten_percent: number
+  net_after_profit_share: number
+}
+
+export type ExecutiveProfitabilityBucketGranularity =
+  | 'weekly'
+  | 'monthly'
+  | 'yearly'
+  | 'total'
+
+export type ExecutiveProfitabilityBucket = {
+  granularity: ExecutiveProfitabilityBucketGranularity
+  key: string
+  label: string
+  start_date: string
+  end_date: string | null
+  purchase_items_count: number
+  sale_items_count: number
+  adjustment_items_count: number
+  purchases_total: number
+  sales_recorded_total: number
+  sales_from_adjustment_total: number
+  sales_total: number
+  sales_cogs_total: number
+  adjustments_cogs_total: number
+  gross_profit_total: number
+  balance_total: number
+  margin_pct: number
+  profit_ten_percent: number
+  net_after_profit_share: number
+}
+
+export type ExecutiveProfitabilityResult = {
+  generated_at: string
+  period_code: ProductProfitabilityPeriodCode
+  period_start: string
+  period_end: string | null
+  adjustments_counted_as_sales: boolean
+  totals: ExecutiveProfitabilityBucket
+  weekly: ExecutiveProfitabilityBucket[]
+  monthly: ExecutiveProfitabilityBucket[]
+  yearly: ExecutiveProfitabilityBucket[]
+}
+
 export type ProductProfitabilityPeriodCode =
   | 'recovery_2025_to_2026_03_08'
   | 'standard_from_2026_03_09'
@@ -71,4 +133,6 @@ export type ProductProfitabilityResult = {
 
 export type ReportsRepository = {
   getProductProfitability(query?: ProductProfitabilityQuery): Promise<ProductProfitabilityResult>
+  getFinancialSummary(query?: ProductProfitabilityQuery): Promise<FinancialSummaryResult>
+  getExecutiveProfitability(query?: ProductProfitabilityQuery): Promise<ExecutiveProfitabilityResult>
 }

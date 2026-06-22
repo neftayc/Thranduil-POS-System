@@ -1,6 +1,8 @@
 import { createError } from 'h3'
 
 import type {
+  ExecutiveProfitabilityResult,
+  FinancialSummaryResult,
   ProductProfitabilityPeriodCode,
   ProductProfitabilityQuery,
   ProductProfitabilityResult,
@@ -62,6 +64,240 @@ const resolvePeriod = (query?: ProductProfitabilityQuery): ProductProfitabilityP
   return nowMs < Date.parse(STANDARD_START_AT) ? RECOVERY_PERIOD : STANDARD_PERIOD
 }
 
+const PERU_OFFSET_MS = 5 * 60 * 60 * 1000
+const MONTH_LABELS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
+
+const pad2 = (value: number) => String(value).padStart(2, '0')
+
+const parseDateKey = (dateKey: string) => {
+  const [year, month, day] = String(dateKey || '').split('-').map((part) => Number(part))
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+const dateKeyFromDate = (date: Date) =>
+  `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`
+
+const getPeruLocalDateKeyFromMs = (ms: number) => {
+  const date = new Date(ms - PERU_OFFSET_MS)
+  return dateKeyFromDate(date)
+}
+
+const getPeruLocalDateKeyFromValue = (value: any) => {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+  const ms = Date.parse(raw)
+  if (!Number.isFinite(ms)) return null
+  return getPeruLocalDateKeyFromMs(ms)
+}
+
+const getCurrentPeruDateKey = () => getPeruLocalDateKeyFromMs(Date.now())
+
+const addDaysToKey = (dateKey: string, days: number) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  date.setUTCDate(date.getUTCDate() + days)
+  return dateKeyFromDate(date)
+}
+
+const addMonthsToKey = (dateKey: string, months: number) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  date.setUTCMonth(date.getUTCMonth() + months)
+  return dateKeyFromDate(date)
+}
+
+const addYearsToKey = (dateKey: string, years: number) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  date.setUTCFullYear(date.getUTCFullYear() + years)
+  return dateKeyFromDate(date)
+}
+
+const startOfWeekSundayKey = (dateKey: string) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  date.setUTCDate(date.getUTCDate() - date.getUTCDay())
+  return dateKeyFromDate(date)
+}
+
+const startOfMonthKey = (dateKey: string) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-01`
+}
+
+const endOfMonthKey = (dateKey: string) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  date.setUTCMonth(date.getUTCMonth() + 1)
+  date.setUTCDate(0)
+  return dateKeyFromDate(date)
+}
+
+const startOfYearKey = (dateKey: string) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  return `${date.getUTCFullYear()}-01-01`
+}
+
+const endOfYearKey = (dateKey: string) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  return `${date.getUTCFullYear()}-12-31`
+}
+
+const formatMonthKey = (dateKey: string) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  return `${MONTH_LABELS[date.getUTCMonth()] || ''} ${date.getUTCFullYear()}`
+}
+
+const formatYearKey = (dateKey: string) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  return `${date.getUTCFullYear()}`
+}
+
+type ExecutiveBucketDraft = {
+  key: string
+  start_date: string
+  end_date: string | null
+  purchase_items_count: number
+  sale_items_count: number
+  adjustment_items_count: number
+  purchases_total: number
+  sales_recorded_total: number
+  sales_from_adjustment_total: number
+  sales_total: number
+  sales_cogs_total: number
+  adjustments_cogs_total: number
+  gross_profit_total: number
+  balance_total: number
+  profit_ten_percent: number
+  net_after_profit_share: number
+}
+
+const createExecutiveBucketDraft = (key: string, startDate: string, endDate: string | null): ExecutiveBucketDraft => ({
+  key,
+  start_date: startDate,
+  end_date: endDate,
+  purchase_items_count: 0,
+  sale_items_count: 0,
+  adjustment_items_count: 0,
+  purchases_total: 0,
+  sales_recorded_total: 0,
+  sales_from_adjustment_total: 0,
+  sales_total: 0,
+  sales_cogs_total: 0,
+  adjustments_cogs_total: 0,
+  gross_profit_total: 0,
+  balance_total: 0,
+  profit_ten_percent: 0,
+  net_after_profit_share: 0
+})
+
+const finalizeExecutiveBucket = (
+  bucket: ExecutiveBucketDraft,
+  granularity: 'weekly' | 'monthly' | 'yearly' | 'total'
+): import('../ports').ExecutiveProfitabilityBucket => {
+  const salesRecordedTotal = roundAmount(bucket.sales_recorded_total)
+  const salesFromAdjustmentTotal = roundAmount(bucket.sales_from_adjustment_total)
+  const salesTotal = roundAmount(salesRecordedTotal + salesFromAdjustmentTotal)
+  const purchasesTotal = roundAmount(bucket.purchases_total)
+  const salesCogsTotal = roundAmount(bucket.sales_cogs_total)
+  const adjustmentsCogsTotal = roundAmount(bucket.adjustments_cogs_total)
+  const grossProfitTotal = roundAmount(salesTotal - (salesCogsTotal + adjustmentsCogsTotal))
+  const balanceTotal = roundAmount(salesTotal - purchasesTotal)
+  const marginPct = salesTotal > EPSILON ? roundPct((grossProfitTotal / salesTotal) * 100) : 0
+  const profitTenPercent = roundAmount(grossProfitTotal * 0.1)
+  const netAfterProfitShare = roundAmount(grossProfitTotal - profitTenPercent)
+
+  return {
+    granularity,
+    key: bucket.key,
+    label: bucket.key,
+    start_date: bucket.start_date,
+    end_date: bucket.end_date,
+    purchase_items_count: bucket.purchase_items_count,
+    sale_items_count: bucket.sale_items_count,
+    adjustment_items_count: bucket.adjustment_items_count,
+    purchases_total: purchasesTotal,
+    sales_recorded_total: salesRecordedTotal,
+    sales_from_adjustment_total: salesFromAdjustmentTotal,
+    sales_total: salesTotal,
+    sales_cogs_total: salesCogsTotal,
+    adjustments_cogs_total: adjustmentsCogsTotal,
+    gross_profit_total: grossProfitTotal,
+    balance_total: balanceTotal,
+    margin_pct: marginPct,
+    profit_ten_percent: profitTenPercent,
+    net_after_profit_share: netAfterProfitShare
+  }
+}
+
+const dateKeyToDisplay = (dateKey: string) => {
+  const date = parseDateKey(dateKey)
+  if (!date) return dateKey
+  return `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}`
+}
+
+const buildExecutiveLabel = (
+  granularity: 'weekly' | 'monthly' | 'yearly' | 'total',
+  key: string,
+  startDate: string,
+  endDate: string | null
+) => {
+  if (granularity === 'weekly') {
+    return `${dateKeyToDisplay(startDate)} - ${dateKeyToDisplay(endDate || startDate)}`
+  }
+
+  if (granularity === 'monthly') return formatMonthKey(startDate)
+  if (granularity === 'yearly') return formatYearKey(startDate)
+  return key === 'total' ? 'Total' : 'Total'
+}
+
+const buildDateSeries = (
+  granularity: 'weekly' | 'monthly' | 'yearly',
+  startKey: string,
+  endKey: string
+) => {
+  const keys: string[] = []
+  if (granularity === 'weekly') {
+    let cursor = startOfWeekSundayKey(startKey)
+    const last = startOfWeekSundayKey(endKey)
+    while (cursor <= last) {
+      keys.push(cursor)
+      cursor = addDaysToKey(cursor, 7)
+    }
+    return keys
+  }
+
+  if (granularity === 'monthly') {
+    let cursor = startOfMonthKey(startKey)
+    const last = startOfMonthKey(endKey)
+    while (cursor <= last) {
+      keys.push(cursor)
+      cursor = addMonthsToKey(cursor, 1)
+    }
+    return keys
+  }
+
+  let cursor = startOfYearKey(startKey)
+  const last = startOfYearKey(endKey)
+  while (cursor <= last) {
+    keys.push(cursor)
+    cursor = addYearsToKey(cursor, 1)
+  }
+  return keys
+}
+
+const bucketKeyForDate = (dateKey: string, granularity: 'weekly' | 'monthly' | 'yearly') => {
+  if (granularity === 'weekly') return startOfWeekSundayKey(dateKey)
+  if (granularity === 'monthly') return startOfMonthKey(dateKey)
+  return startOfYearKey(dateKey)
+}
+
 const isDateInPeriod = (value: any, period: ProductProfitabilityPeriod) => {
   const raw = String(value || '').trim()
   if (!raw) return false
@@ -106,6 +342,361 @@ export const makeSupabaseReportsRepository = (accessToken: string): ReportsRepos
   }
 
   return {
+    async getFinancialSummary(query?: ProductProfitabilityQuery): Promise<FinancialSummaryResult> {
+      const period = resolvePeriod(query)
+      const [products, purchaseItems, saleItems, saleMovements, adjustmentItems] = await Promise.all([
+        fetchAll<any>((from, to) =>
+          supabase
+            .from('product_catalog')
+            .select('id, sale_price')
+            .order('name')
+            .order('id')
+            .range(from, to)
+        ),
+        fetchAll<any>((from, to) => {
+          let q = supabase
+            .from('purchase_items')
+            .select('id, total_cost, created_at')
+            .gte('created_at', period.start_at)
+            .order('created_at')
+            .order('id')
+
+          if (period.end_at_exclusive) {
+            q = q.lt('created_at', period.end_at_exclusive)
+          }
+
+          return q.range(from, to)
+        }),
+        fetchAll<any>((from, to) => {
+          let q = supabase
+            .from('sale_items')
+            .select('id, total, created_at')
+            .gte('created_at', period.start_at)
+            .order('created_at')
+            .order('id')
+
+          if (period.end_at_exclusive) {
+            q = q.lt('created_at', period.end_at_exclusive)
+          }
+
+          return q.range(from, to)
+        }),
+        fetchAll<any>((from, to) => {
+          let q = supabase
+            .from('stock_movements')
+            .select('id, qty, cost_unit, created_at')
+            .eq('movement_type', 'sale')
+            .gte('created_at', period.start_at)
+            .order('created_at')
+            .order('id')
+
+          if (period.end_at_exclusive) {
+            q = q.lt('created_at', period.end_at_exclusive)
+          }
+
+          return q.range(from, to)
+        }),
+        period.adjustments_counted_as_sales
+          ? fetchAll<any>((from, to) => {
+              let q = supabase
+                .from('inventory_count_items')
+                .select('id, product_id, delta_qty, avg_cost, applied_at, updated_at, applied')
+                .eq('applied', true)
+                .gte('applied_at', period.start_at)
+                .order('applied_at')
+                .order('id')
+
+              if (period.end_at_exclusive) {
+                q = q.lt('applied_at', period.end_at_exclusive)
+              }
+
+              return q.range(from, to)
+            })
+          : Promise.resolve([])
+      ])
+
+      const salePriceByProduct = new Map<string, number>()
+      for (const product of products) {
+        const productId = String(product?.id || '').trim()
+        if (!productId) continue
+        salePriceByProduct.set(productId, toNumber(product?.sale_price))
+      }
+
+      let purchaseItemsCount = 0
+      let saleItemsCount = 0
+      let adjustmentItemsCount = 0
+      let purchasesTotal = 0
+      let salesRecordedTotal = 0
+      let salesFromAdjustmentTotal = 0
+      let salesCogsTotal = 0
+      let adjustmentsCogsTotal = 0
+
+      for (const row of purchaseItems) {
+        if (!isDateInPeriod(row?.created_at, period)) continue
+        purchaseItemsCount += 1
+        purchasesTotal += toNumber(row?.total_cost)
+      }
+
+      for (const row of saleItems) {
+        if (!isDateInPeriod(row?.created_at, period)) continue
+        saleItemsCount += 1
+        salesRecordedTotal += toNumber(row?.total)
+      }
+
+      for (const row of saleMovements) {
+        if (!isDateInPeriod(row?.created_at, period)) continue
+        salesCogsTotal += Math.abs(toNumber(row?.qty)) * toNumber(row?.cost_unit)
+      }
+
+      for (const row of adjustmentItems) {
+        const productId = String(row?.product_id || '').trim()
+        if (!productId) continue
+
+        const rowDate = String(row?.applied_at || row?.updated_at || '').trim()
+        if (!isDateInPeriod(rowDate, period)) continue
+
+        const deltaQty = toNumber(row?.delta_qty)
+        if (deltaQty >= -EPSILON) continue
+
+        const qtyOut = Math.abs(deltaQty)
+        const salePrice = toNumber(salePriceByProduct.get(productId) || 0)
+        adjustmentItemsCount += 1
+        salesFromAdjustmentTotal += qtyOut * salePrice
+        adjustmentsCogsTotal += qtyOut * toNumber(row?.avg_cost)
+      }
+
+      const salesTotal = salesRecordedTotal + salesFromAdjustmentTotal
+      const grossProfitTotal = salesTotal - (salesCogsTotal + adjustmentsCogsTotal)
+      const balanceTotal = salesTotal - purchasesTotal
+      const marginPct = salesTotal > EPSILON ? (grossProfitTotal / salesTotal) * 100 : 0
+      const profitTenPercent = grossProfitTotal * 0.1
+      const netAfterProfitShare = grossProfitTotal - profitTenPercent
+
+      return {
+        generated_at: new Date().toISOString(),
+        period_code: period.code,
+        period_start: period.period_start,
+        period_end: period.period_end,
+        adjustments_counted_as_sales: period.adjustments_counted_as_sales,
+        purchase_items_count: purchaseItemsCount,
+        sale_items_count: saleItemsCount,
+        adjustment_items_count: adjustmentItemsCount,
+        purchases_total: roundAmount(purchasesTotal),
+        sales_recorded_total: roundAmount(salesRecordedTotal),
+        sales_from_adjustment_total: roundAmount(salesFromAdjustmentTotal),
+        sales_total: roundAmount(salesTotal),
+        sales_cogs_total: roundAmount(salesCogsTotal),
+        adjustments_cogs_total: roundAmount(adjustmentsCogsTotal),
+        gross_profit_total: roundAmount(grossProfitTotal),
+        balance_total: roundAmount(balanceTotal),
+        margin_pct: roundPct(marginPct),
+        profit_ten_percent: roundAmount(profitTenPercent),
+        net_after_profit_share: roundAmount(netAfterProfitShare)
+      }
+    },
+    async getExecutiveProfitability(query?: ProductProfitabilityQuery): Promise<ExecutiveProfitabilityResult> {
+      const period = resolvePeriod(query)
+      const periodStartKey = period.period_start
+      const periodEndKey = period.period_end || getCurrentPeruDateKey()
+
+      const [products, purchaseItems, saleItems, saleMovements, adjustmentItems] = await Promise.all([
+        fetchAll<any>((from, to) =>
+          supabase
+            .from('product_catalog')
+            .select('id, sale_price')
+            .order('name')
+            .order('id')
+            .range(from, to)
+        ),
+        fetchAll<any>((from, to) => {
+          let q = supabase
+            .from('purchase_items')
+            .select('id, product_id, total_cost, qty, created_at')
+            .gte('created_at', period.start_at)
+            .order('created_at')
+            .order('id')
+
+          if (period.end_at_exclusive) {
+            q = q.lt('created_at', period.end_at_exclusive)
+          }
+
+          return q.range(from, to)
+        }),
+        fetchAll<any>((from, to) => {
+          let q = supabase
+            .from('sale_items')
+            .select('id, product_id, total, qty, created_at')
+            .gte('created_at', period.start_at)
+            .order('created_at')
+            .order('id')
+
+          if (period.end_at_exclusive) {
+            q = q.lt('created_at', period.end_at_exclusive)
+          }
+
+          return q.range(from, to)
+        }),
+        fetchAll<any>((from, to) => {
+          let q = supabase
+            .from('stock_movements')
+            .select('id, qty, cost_unit, created_at')
+            .eq('movement_type', 'sale')
+            .gte('created_at', period.start_at)
+            .order('created_at')
+            .order('id')
+
+          if (period.end_at_exclusive) {
+            q = q.lt('created_at', period.end_at_exclusive)
+          }
+
+          return q.range(from, to)
+        }),
+        period.adjustments_counted_as_sales
+          ? fetchAll<any>((from, to) => {
+              let q = supabase
+                .from('inventory_count_items')
+                .select('id, product_id, delta_qty, avg_cost, applied_at, updated_at, applied')
+                .eq('applied', true)
+                .gte('applied_at', period.start_at)
+                .order('applied_at')
+                .order('id')
+
+              if (period.end_at_exclusive) {
+                q = q.lt('applied_at', period.end_at_exclusive)
+              }
+
+              return q.range(from, to)
+            })
+          : Promise.resolve([])
+      ])
+
+      const salePriceByProduct = new Map<string, number>()
+      for (const product of products) {
+        const productId = String(product?.id || '').trim()
+        if (!productId) continue
+        salePriceByProduct.set(productId, toNumber(product?.sale_price))
+      }
+
+      const weeklyBuckets = new Map<string, ExecutiveBucketDraft>()
+      const monthlyBuckets = new Map<string, ExecutiveBucketDraft>()
+      const yearlyBuckets = new Map<string, ExecutiveBucketDraft>()
+
+      for (const key of buildDateSeries('weekly', periodStartKey, periodEndKey)) {
+        weeklyBuckets.set(
+          key,
+          createExecutiveBucketDraft(key, key, addDaysToKey(key, 6))
+        )
+      }
+
+      for (const key of buildDateSeries('monthly', periodStartKey, periodEndKey)) {
+        monthlyBuckets.set(
+          key,
+          createExecutiveBucketDraft(key, key, endOfMonthKey(key))
+        )
+      }
+
+      for (const key of buildDateSeries('yearly', periodStartKey, periodEndKey)) {
+        yearlyBuckets.set(
+          key,
+          createExecutiveBucketDraft(key, key, endOfYearKey(key))
+        )
+      }
+
+      const totalBucket = createExecutiveBucketDraft('total', periodStartKey, period.period_end || periodEndKey)
+
+      const addToBuckets = (
+        rowDateKey: string,
+        apply: (bucket: ExecutiveBucketDraft) => void
+      ) => {
+        const weeklyKey = bucketKeyForDate(rowDateKey, 'weekly')
+        const monthlyKey = bucketKeyForDate(rowDateKey, 'monthly')
+        const yearlyKey = bucketKeyForDate(rowDateKey, 'yearly')
+
+        const weeklyBucket = weeklyBuckets.get(weeklyKey)
+        if (weeklyBucket) apply(weeklyBucket)
+
+        const monthlyBucket = monthlyBuckets.get(monthlyKey)
+        if (monthlyBucket) apply(monthlyBucket)
+
+        const yearlyBucket = yearlyBuckets.get(yearlyKey)
+        if (yearlyBucket) apply(yearlyBucket)
+
+        apply(totalBucket)
+      }
+
+      for (const row of purchaseItems) {
+        const dateKey = getPeruLocalDateKeyFromValue(row?.created_at)
+        if (!dateKey) continue
+        if (!isDateInPeriod(row?.created_at, period)) continue
+        addToBuckets(dateKey, (bucket) => {
+          bucket.purchase_items_count += 1
+          bucket.purchases_total += toNumber(row?.total_cost)
+        })
+      }
+
+      for (const row of saleItems) {
+        const dateKey = getPeruLocalDateKeyFromValue(row?.created_at)
+        if (!dateKey) continue
+        if (!isDateInPeriod(row?.created_at, period)) continue
+        addToBuckets(dateKey, (bucket) => {
+          bucket.sale_items_count += 1
+          bucket.sales_recorded_total += toNumber(row?.total)
+        })
+      }
+
+      for (const row of saleMovements) {
+        const dateKey = getPeruLocalDateKeyFromValue(row?.created_at)
+        if (!dateKey) continue
+        if (!isDateInPeriod(row?.created_at, period)) continue
+        addToBuckets(dateKey, (bucket) => {
+          bucket.sales_cogs_total += Math.abs(toNumber(row?.qty)) * toNumber(row?.cost_unit)
+        })
+      }
+
+      for (const row of adjustmentItems) {
+        const productId = String(row?.product_id || '').trim()
+        if (!productId) continue
+
+        const rowDate = String(row?.applied_at || row?.updated_at || '').trim()
+        const dateKey = getPeruLocalDateKeyFromValue(rowDate)
+        if (!dateKey) continue
+        if (!isDateInPeriod(rowDate, period)) continue
+
+        const deltaQty = toNumber(row?.delta_qty)
+        if (deltaQty >= -EPSILON) continue
+
+        const qtyOut = Math.abs(deltaQty)
+        const salePrice = toNumber(salePriceByProduct.get(productId) || 0)
+        const estimateTotal = qtyOut * salePrice
+        const costTotal = qtyOut * toNumber(row?.avg_cost)
+
+        addToBuckets(dateKey, (bucket) => {
+          bucket.adjustment_items_count += 1
+          bucket.sales_from_adjustment_total += estimateTotal
+          bucket.adjustments_cogs_total += costTotal
+        })
+      }
+
+      const finalizeWithLabel = (
+        bucket: ExecutiveBucketDraft,
+        granularity: 'weekly' | 'monthly' | 'yearly' | 'total'
+      ) => ({
+        ...finalizeExecutiveBucket(bucket, granularity),
+        label: buildExecutiveLabel(granularity, bucket.key, bucket.start_date, bucket.end_date)
+      })
+
+      return {
+        generated_at: new Date().toISOString(),
+        period_code: period.code,
+        period_start: period.period_start,
+        period_end: period.period_end,
+        adjustments_counted_as_sales: period.adjustments_counted_as_sales,
+        totals: finalizeWithLabel(totalBucket, 'total'),
+        weekly: Array.from(weeklyBuckets.values()).map((bucket) => finalizeWithLabel(bucket, 'weekly')),
+        monthly: Array.from(monthlyBuckets.values()).map((bucket) => finalizeWithLabel(bucket, 'monthly')),
+        yearly: Array.from(yearlyBuckets.values()).map((bucket) => finalizeWithLabel(bucket, 'yearly'))
+      }
+    },
     async getProductProfitability(query?: ProductProfitabilityQuery): Promise<ProductProfitabilityResult> {
       const period = resolvePeriod(query)
       const [products, purchaseItems, saleItems, adjustmentItems] = await Promise.all([

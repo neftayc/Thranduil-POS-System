@@ -1,13 +1,16 @@
 import { getSupabaseAdminClient } from '../../../utils/supabase'
-import type { AgentCatalog } from '../app/prepareSale'
+import type { ValidationCatalog } from '../app/validateDraft'
+import type { SearchCatalog } from '../app/legacyDraftBuilder'
 import type { Product, StockLevel } from '../contracts'
 
 const columns = 'id, name, sku, brand, unit, stock_on_hand'
 const product = (row: any): Product => ({ id: row.id, name: row.name, sku: row.sku, brand: row.brand, unit: row.unit, stock: Number(row.stock_on_hand) })
+// IDs from the AI draft are untrusted: a malformed one is "not found", not a database error.
+const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 const stopwords = new Set(['de', 'del', 'el', 'la', 'los', 'las', 'un', 'una', 'con', 'para', 'hoja', 'hojas'])
 const tokens = (text: string) => text.match(/[\p{L}\p{N}]+/gu)?.filter(term => !stopwords.has(term.toLowerCase())).slice(0, 16) || []
 
-export const makeSupabaseAgentCatalog = (): AgentCatalog & { stockLevels(ids: string[]): Promise<StockLevel[]> } => {
+export const makeSupabaseAgentCatalog = (): ValidationCatalog & SearchCatalog & { stockLevels(ids: string[]): Promise<StockLevel[]> } => {
   const db = getSupabaseAdminClient()
   return {
     async findProducts(text, sku) {
@@ -25,6 +28,7 @@ export const makeSupabaseAgentCatalog = (): AgentCatalog & { stockLevels(ids: st
       return (data || []).map(product)
     },
     async getProduct(id) {
+      if (!isUuid(id)) return null
       const { data, error } = await db.from('product_catalog').select(columns).eq('active', true).eq('id', id).maybeSingle()
       if (error) throw error
       return data ? product(data) : null
@@ -37,6 +41,12 @@ export const makeSupabaseAgentCatalog = (): AgentCatalog & { stockLevels(ids: st
       const { data, error } = await query.order('name').limit(8)
       if (error) throw error
       return data || []
+    },
+    async customerExists(id) {
+      if (!isUuid(id)) return false
+      const { data, error } = await db.from('customers').select('id').eq('id', id).maybeSingle()
+      if (error) throw error
+      return Boolean(data)
     },
     async paymentMethods() {
       const { data, error } = await db.from('payment_method_catalog').select('code, label').eq('active', true).order('sort_order')

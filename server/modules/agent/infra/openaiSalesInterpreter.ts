@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { zodResponseFormat } from 'openai/helpers/zod'
-import { interpretationSchema, type Interpretation, type Operation } from '../contracts'
+import { interpretationSchema, type Interpretation } from '../contracts'
+import type { LegacyInterpreter } from '../app/legacyDraftBuilder'
 
 const prompt = `Eres el agente preparador de ventas de una papelería peruana.
 Extrae un pedido completo a partir de los mensajes y del borrador previo. Devuelve únicamente el esquema solicitado.
@@ -20,9 +21,9 @@ Ejemplo: "vender cuader a4 100 cuadriculado" => intent=sale, query="cuaderno A4 
 No preguntes por marca si no se indicó: el backend consultará las coincidencias reales antes de pedir elegir.
 question solo pregunta por ambigüedades del mensaje; no afirmes nada sobre disponibilidad o precios. Usa question=null cuando las respuestas del usuario hayan resuelto la ambigüedad.`
 
-export const makeOpenAISalesInterpreter = (apiKey: string, model: string) => {
+export const makeOpenAISalesInterpreter = (apiKey: string, model: string): LegacyInterpreter => {
   const client = new OpenAI({ apiKey, timeout: 30000, maxRetries: 0 })
-  return async (messages: string[], previous: Operation): Promise<Interpretation> => {
+  return async (messages, { previous, candidates }): Promise<Interpretation> => {
     const completion = await client.chat.completions.parse({
       model,
       store: false,
@@ -31,9 +32,8 @@ export const makeOpenAISalesInterpreter = (apiKey: string, model: string) => {
         { role: 'system', content: prompt },
         { role: 'user', content: JSON.stringify({
           messages,
-          previous_interpretation: previous.interpretation || null,
-          previous_draft: previous.draft || null,
-          candidates: previous.candidates
+          previous_draft: previous,
+          candidates: candidates.map(p => ({ id: p.id, name: p.name, brand: p.brand, sku: p.sku, unit: p.unit }))
         }) }
       ],
       response_format: zodResponseFormat(interpretationSchema, 'pos_sale_request')
@@ -41,7 +41,7 @@ export const makeOpenAISalesInterpreter = (apiKey: string, model: string) => {
     const message = completion.choices[0]?.message
     if (message?.refusal || !message?.parsed) throw new Error('No se pudo interpretar el pedido')
     const parsed = interpretationSchema.parse(message.parsed)
-    if (!previous.candidates.length) {
+    if (!candidates.length) {
       for (const item of parsed.items) item.product_id = null
     }
     return parsed

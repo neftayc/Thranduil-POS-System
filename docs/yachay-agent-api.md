@@ -161,22 +161,107 @@ Para completar o anular una venta por confirmar se usa su `operation_id` y un
 | Estado | Significado |
 | --- | --- |
 | `completed` | Venta registrada a nombre del vendedor; `result.reference`, `total`, `items`, `alerts`. |
-| `pending_review` | Venta por confirmar, NO registrada. `result.reference`, `pending` (lo que falta), `items` entendidos, `candidates`, `review_expires_at`, `alerts`. |
+| `pending_review` | Venta por confirmar, NO registrada. `result.reference`, `reasons` (códigos), `pending` (texto), `items`, `reservations`, `review_expires_at`, `alerts`. |
 | `rejected` | Cancelación, petición no soportada, venta por confirmar vencida o vendedor no autorizado al registrar. Leer `message`. |
 | `pending` | Trabajo concurrente o resultado indeterminado; reintentar el mismo `request_id`, no afirmar éxito. |
 
-Reglas: hasta 20 líneas; la cantidad no se inventa (`100 hojas` no es cantidad);
-sin presentación se usa la unidad base; sin cliente es venta al público. Para
-registrar directamente deben resolverse producto único, cantidad, precio
-(`resolve_sale_item_pricing`), stock disponible (stock menos reservas de otras
-ventas por confirmar) y una forma de pago existente; si no, `pending_review`.
-Si solo falta la forma de pago, queda por confirmar (no se asume efectivo).
+Reglas generales: hasta 20 líneas; la cantidad no se inventa (`100 hojas` no es
+cantidad); sin presentación se usa la unidad base; sin cliente es venta al público.
 
-Las ventas por confirmar reservan el stock de los artículos identificados (no lo
-descuentan del inventario) durante 48 h o hasta completarse o anularse.
+## Agente 1 y proceso 2
 
-Alertas: tras `completed` o `pending_review`, por cada producto afectado
-`disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`.
+Cada mensaje pasa por dos procesos separados:
+
+1. **Agente 1 (IA)**: interpreta el pedido, busca productos y entrega un borrador
+   `sale-draft/1` con IDs. Solo propone.
+2. **Proceso 2 (código determinista, sin IA)**: vuelve a verificar todo contra el
+   POS y decide si registra directo o deja la venta por confirmar
+   (`server/modules/agent/app/validateDraft.ts` y `salesAgent.ts`).
+
+### Contrato `sale-draft/1`
+
+```jsonc
+{
+  "version": "sale-draft/1",
+  "intent": "sale",                 // sale | cancel | unsupported
+  "items": [{                       // 0..20 líneas
+    "product_id": "uuid | null",    // null si no hubo un candidato único
+    "candidates": ["uuid"],         // alternativas (máx. 8)
+    "quantity": 2,                  // null si el pedido no dice cuántas
+    "unit": "docena | null",        // null = unidad base
+    "price_unit": 5.0,              // precio que vio el agente 1 (solo para comparar)
+    "confidence": "high",           // high | medium | low
+    "doubts": [{ "code": "ambiguous_product", "note": "…" }],
+    "query": "2 cuadernos A4"
+  }],
+  "payment_method": "efectivo | null", // código o etiqueta; null = no se dijo
+  "customer_id": "uuid | null",
+  "doubts": [],                     // dudas generales
+  "source_text": "pedido original"
+}
+```
+
+Códigos de duda: `ambiguous_product`, `product_not_found`, `missing_quantity`,
+`unit_unclear`, `missing_payment`, `customer_ambiguous`, `other`. Un borrador
+con campos desconocidos o fuera de rango no se acepta (`invalid_draft`).
+
+Mientras no llegue la búsqueda híbrida, el agente 1 provisional es el intérprete
+OpenAI con búsqueda por texto (`legacyDraftBuilder.ts`).
+
+### Regla de decisión (fija y auditable)
+
+Se registra **directo** a nombre del vendedor identificado solo si:
+
+- hay al menos una línea y **cada** línea tiene `product_id` de un producto que
+  existe y está activo, seguridad `high`, ninguna duda y una cantidad válida;
+- el precio oficial se resuelve con `resolve_sale_item_pricing` (con el cliente,
+  si lo hay) y coincide con `price_unit` del borrador (tolerancia S/ 0.005). Si el
+  borrador no trae precio, se usa el oficial. **Siempre** se envía el oficial;
+- el stock alcanza: `disponible = stock_on_hand − reservas de otras ventas por
+  confirmar vigentes`, sumando las líneas repetidas en unidad base;
+- la forma de pago existe y está activa en `payment_method_catalog`, y el cliente
+  (si se indicó) existe;
+- el agente 1 no reportó dudas generales.
+
+Si no, se guarda **por confirmar** con uno o más motivos codificados:
+
+| Código | Motivo |
+| --- | --- |
+| `invalid_draft` | Borrador fuera de contrato o sin líneas. |
+| `agent_doubt` | El agente 1 reportó una duda (general o de una línea). |
+| `low_confidence` | Una línea no tiene seguridad `high`. |
+| `product_unresolved` | Una línea no tiene `product_id` (varias opciones o no encontrado). |
+| `product_inactive` | El `product_id` no existe o está inactivo. |
+| `missing_quantity` | Falta la cantidad o no es válida. |
+| `price_unavailable` | No hay precio para esa presentación. |
+| `price_changed` | El precio oficial difiere del que vio el agente 1 (se muestran ambos). |
+| `insufficient_stock` | No alcanza el stock disponible. |
+| `missing_payment` | Falta la forma de pago (no se asume efectivo). |
+| `invalid_payment` | La forma de pago no existe en el POS. |
+| `invalid_customer` | El cliente indicado no existe. |
+| `pos_rejected` | `create_sale` respondió con error: no se registró nada. |
+
+### Reservas de ventas por confirmar
+
+- Se reserva por producto `mín(lo pedido, lo disponible)`; una línea sin producto
+  resuelto no reserva. La reserva **no** descuenta el inventario.
+- Se libera al completarse, al anularse («cancelar») o al vencer: 48 h
+  (`POS_AGENT_REVIEW_TTL_HOURS`). Una reserva vencida deja de contar de inmediato y
+  un seguimiento posterior responde que la venta venció.
+- Se guardan en `.data/agent` junto con el borrador original y los motivos, para
+  la futura pantalla de validación por lote.
+
+### Respuestas
+
+- `completed`: `result.reference` (id de la venta), `total`, `currency`, `items`
+  (precio oficial), `alerts`.
+- `pending_review`: `result.reference` (id de la operación), `reasons`
+  (`[{ code, line?, message }]`), `pending` (texto), `items`, `reservations`,
+  `review_expires_at`, `alerts`.
+
+Alertas: tras `completed` o `pending_review`, para cada producto afectado
+`disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`
+(de `product_catalog`). Un fallo al calcularlas nunca altera la venta.
 
 ## Reintentos y estado local
 
@@ -186,8 +271,15 @@ a los 8 segundos si sigue trabajando; reintenta el mismo UUID.
 
 `.data/agent` es privado, local y para una sola instalación. Un bloqueo
 exclusivo impide ejecuciones concurrentes. La marca `executing` se guarda antes de
-llamar a la RPC; un timeout posterior es indeterminado y nunca provoca una segunda
-llamada. Si el proceso muere puede quedar `processing.lock`: conciliar antes de
+llamar a `create_sale`. Después de enviarla:
+
+- respuesta con id → `completed`;
+- error **con código** de Postgres/PostgREST (p. ej. `P0001` «Stock insuficiente»,
+  o el rechazo de precio manual) → la transacción se revirtió: queda por confirmar
+  con `pos_rejected`;
+- error **sin código** (red, timeout, 502) → **indeterminado**: `pending`, nunca
+  éxito y nunca una segunda llamada; reintentar el mismo `request_id` devuelve
+  `pending` hasta conciliar. Si el proceso muere puede quedar `processing.lock`: conciliar antes de
 borrarlo. Varias réplicas o Vercel necesitan almacenamiento transaccional
 compartido (sesiones incluidas); no desplegar así.
 

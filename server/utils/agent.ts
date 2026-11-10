@@ -2,7 +2,8 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { join } from 'node:path'
 import { createError, getHeader, getRequestURL, setHeader, type H3Event } from 'h3'
 import { makeSalesAgent } from '../modules/agent/app/salesAgent'
-import { makeSalePreparer } from '../modules/agent/app/prepareSale'
+import { makeDraftValidator } from '../modules/agent/app/validateDraft'
+import { makeLegacyDraftBuilder } from '../modules/agent/app/legacyDraftBuilder'
 import { makeSealer, makeSellerSessions, SellerRejectedError, type ActiveSeller, type SellerSessions } from '../modules/agent/app/sellerSessions'
 import { makeFileAgentStore } from '../modules/agent/infra/fileAgentStore'
 import { makeFileSellerSessionStore } from '../modules/agent/infra/fileSellerSessionStore'
@@ -10,6 +11,7 @@ import { makeOpenAISalesInterpreter } from '../modules/agent/infra/openaiSalesIn
 import { makeSupabaseAgentCatalog } from '../modules/agent/infra/supabaseAgentCatalog'
 import { makeSupabaseSaleExecutor } from '../modules/agent/infra/supabaseSaleExecutor'
 import { makeSupabaseSellerAuth } from '../modules/agent/infra/supabaseSellerAuth'
+import { getSupabaseUserClient } from './supabase'
 
 export const SELLER_SESSION_HEADER = 'x-yachay-session'
 
@@ -64,9 +66,11 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   const catalog = makeSupabaseAgentCatalog()
   const agent = makeSalesAgent({
     store: makeFileAgentStore(String(config.posAgentStorageDir)),
-    interpret: makeOpenAISalesInterpreter(key, String(config.posAgentModel)),
-    prepare: makeSalePreparer(catalog),
-    execute: makeSupabaseSaleExecutor(seller.authorize),
+    // Agent 1 (AI). Provisional builder until the hybrid search lands.
+    buildDraft: makeLegacyDraftBuilder(makeOpenAISalesInterpreter(key, String(config.posAgentModel)), catalog),
+    // Process 2 (deterministic).
+    validate: makeDraftValidator(catalog),
+    execute: makeSupabaseSaleExecutor(seller.authorize, (token, args) => getSupabaseUserClient(token).rpc('create_sale', args) as any),
     stockLevels: ids => catalog.stockLevels(ids),
     reviewTtlMs: Number(config.posAgentReviewTtlHours || 48) * 60 * 60 * 1000
   })

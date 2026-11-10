@@ -7,11 +7,15 @@ La aplicación Nuxt expone HTTP al conector Python. El servidor MCP vive en
 
 1. **Alta en el POS.** El propietario crea al vendedor en *Usuarios* con rol
    `cashier` (o `manager`/`owner`). Ese es el único usuario que usará.
-2. **Agregar el conector en Claude.** Hoy, en modo local: Claude Code o Claude
-   Desktop en el mismo equipo, con el MCP `http://127.0.0.1:8000/mcp` (ver
-   `integrations/yachay-connector/LOCAL.md`). Claude web/celular requiere la fase 2
-   (HTTPS público).
-3. **«Vamos a vender».** Claude llama `list_systems` y `select_system("pos")`.
+2. **Carpeta de vendedores en Claude.** Hoy, en modo local: copia
+   `integrations/yachay-connector/workspace-vendedor/` fuera del repositorio
+   (por ejemplo `~/Ventas`) y ábrela en Claude Code (app de escritorio). Trae el MCP
+   `yachay-pos` (`http://127.0.0.1:8000/mcp`), un `CLAUDE.md` que **abre el sistema
+   en cada conversación** y permisos que bloquean terminal, edición y web. Los
+   vendedores nunca abren la carpeta del repositorio (código y `.env`). Claude
+   web/celular requiere la fase 2 (HTTPS público).
+3. **Primer mensaje** («hola», «vamos a vender»). Claude ofrece los sistemas
+   (`list_systems`) sin que se lo pidan y, al elegir, llama `select_system("pos")`.
    El POS responde con un enlace propio (`/vincular`) y un código corto, por
    ejemplo `7RX-PXP9`, válido 10 minutos.
 4. **Iniciar sesión en el POS.** El vendedor abre el enlace, escribe el código, su

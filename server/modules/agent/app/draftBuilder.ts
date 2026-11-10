@@ -85,8 +85,8 @@ export const makeHybridDraftBuilder = (
       return { kind: 'catalog_answer', ...reply }
     }
     if (parsed.intent !== 'sale') return emptyDraft(parsed.intent, sourceText)
-    // Reservations are process 2's job: it recomputes available stock itself.
-    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered })
+    // Stock and reservations are process 2's job: it recomputes available stock itself.
+    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered, checkStock: false })
     return toSaleDraft(proposal, sourceText)
   }
 }

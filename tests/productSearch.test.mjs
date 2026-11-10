@@ -395,3 +395,15 @@ test('explicitChoice: solo números de opción, SKU o una palabra que distinga u
   assert.equal(explicitChoice('la 2, la de artesco', offered), null, 'número y nombre en conflicto')
   assert.equal(explicitChoice(undefined, offered), null)
 })
+
+test('buildDraft: con stock insuficiente un producto bien identificado sigue high y sin duda (el stock lo decide el proceso 2)', async () => {
+  const base = catalogFrom(snapshot)
+  const catalog = { ...base, getProducts: async ids => (await base.getProducts(ids)).map(p => ({ ...p, stock: 1 })) }
+  const draft = await makeHybridDraftBuilder(interpreterReturning(sale('cuaderno markin cuadriculado 100 a4', 5)).interpret, catalog)(['5 cuadernos markin cuadriculado 100 a4 efectivo'], null)
+  assert.equal(draft.items[0].confidence, 'high')
+  assert.deepEqual(draft.items[0].doubts, [])
+  assert.deepEqual(draft.doubts, [])
+  const decision = await makeDraftValidator({ ...catalog, getProduct: async id => ({ ...(await base.getProduct(id)), stock: 1 }) })(draft, new Map())
+  assert.equal(decision.kind, 'review')
+  assert.deepEqual(decision.reasons.map(r => r.code), ['insufficient_stock'], 'un solo motivo, sin duplicados')
+})

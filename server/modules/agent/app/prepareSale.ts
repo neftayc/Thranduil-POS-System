@@ -68,7 +68,7 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
    * an AI-provided product_id is accepted only if the seller's last message chose it explicitly.
    */
   return async (input: Interpretation, previousCandidates: Product[], reserved: Map<string, number> = new Map(),
-    context: { lastMessage?: string; offered?: Product[] } = {}) => {
+    context: { lastMessage?: string; offered?: Product[]; checkStock?: boolean } = {}) => {
     const candidates: Product[] = []
     // Options listed to the seller in THIS answer, numbered in this order.
     const offered: Product[] = []
@@ -194,7 +194,8 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
     for (const line of proposal.items) {
       if (line.product_id && line.qty && line.factor) needed.set(line.product_id, (needed.get(line.product_id) || 0) + line.qty * line.factor)
     }
-    for (const [id, qty] of needed) {
+    // In buildDraft the stock is decided by process 2 (insufficient_stock): not repeated here as a doubt.
+    for (const [id, qty] of context.checkStock === false ? [] : needed) {
       const product = candidates.find(p => p.id === id)!
       const held = reserved.get(id) || 0
       const available = round(product.stock - held, 4)

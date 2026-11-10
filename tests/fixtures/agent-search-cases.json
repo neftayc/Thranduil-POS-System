@@ -1,0 +1,260 @@
+[
+ {
+  "text": "Vender cuaderno markin cuadriculado 100 a4",
+  "expected": [
+   "0b510863-080e-466b-8b49-5e26b13ac315"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno marking cuadriculado de 100 hojas",
+  "expected": [
+   "0b510863-080e-466b-8b49-5e26b13ac315"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno surco rayado 100 hojas",
+  "expected": [
+   "4cea310a-201b-41ce-8e58-40a85a7e0bf6"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno surco cuadriculado grande 50 hojas",
+  "expected": [
+   "f1a53771-7652-400f-914f-07221fe03ac8"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno surco pequeño 100h",
+  "expected": [
+   "ce14b62a-0eb3-4e3b-93f2-08c32075ccea"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno layconsa teens cuadriculado",
+  "expected": [
+   "d4ced4b6-a871-4038-82fd-1a9c98c7ce5f"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno markin triple renglon",
+  "expected": [
+   "9ee19b36-5b3b-4721-8583-3052a9c56d95"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno loro a4 con diseño",
+  "expected": [
+   "f6d071aa-16b9-4b72-8d9b-e6a238bce8d5"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno surco 2x2",
+  "expected": [
+   "29bed073-a217-43ca-a3e0-b979573f8cf7"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno anillado a4",
+  "expected": [
+   "64bb0f27-ab7a-4fad-8d24-fc9ec0e1da14"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "goma en barra faber castell 40 gramos",
+  "expected": [
+   "21dde870-b30c-489f-b9cd-7137bf6b2e3a"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "goma liquida layconsa 250",
+  "expected": [
+   "242186fd-874d-4bf9-8e0e-727ad90a8a0b"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "silicona liquida 100 gr",
+  "expected": [
+   "7c3c9c37-1933-4d0b-9ab1-2113218eedb3"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "caja de colores faber castell grande x12",
+  "expected": [
+   "7a7a4e84-4a25-4d32-80ab-41471c2e08da"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "plumon de pizarra layconsa",
+  "expected": [
+   "b07cc2de-322c-48db-b16a-7641a783eca9"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "lapicero trilux azul",
+  "expected": [
+   "bff9b1bb-44d1-4be5-9486-4ee42417585b"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cinta maskin shurtape 2 pulgadas",
+  "expected": [
+   "237acedf-e63f-449c-b8d6-f3693acd5ac1"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "forro vinifan a4 perufan",
+  "expected": [
+   "5282f6aa-966f-4fc3-a59d-a606c76a2035"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "papel bond 80 gramos",
+  "expected": [
+   "f3804215-866b-409c-bf2d-6e67c1d6dff2"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "regla de 30 cm",
+  "expected": [
+   "f6e3aad0-b14c-4622-9f7c-3a994b63b160"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "corrector faber 9 ml",
+  "expected": [
+   "3fca4025-6da7-45cb-9d8e-9cfcd51f21a7"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "sketchbook de 50 hojas",
+  "expected": [
+   "2a85d4c2-06fe-4de6-8a9b-a8d50b2b5bc4"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "libro de actas de 200 folios",
+  "expected": [
+   "0fe0e12f-3d3a-4e3f-b0d7-09065c185042"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "tajador con deposito oval",
+  "expected": [
+   "42864367-5ca9-4601-af53-89f637a38f28"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "temperas layconsa de 7 colores",
+  "expected": [
+   "9156a8aa-356b-4d27-ad35-d5075fa2e9c4"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "papel cuadriculado 1x1",
+  "expected": [
+   "aebfda99-015c-4d81-9d92-6c1fff565b1b"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "lapiz 2b faber castell",
+  "expected": [
+   "75f4e3c2-9759-4196-b3be-65e55a1eff03"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "resaltador amarillo",
+  "expected": [
+   "b021d07c-3562-488d-8b31-a5977f2bbd81"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "rompecabezas de 50 piezas",
+  "expected": [
+   "0cf04a92-f805-4d6a-baf1-5dbb39dae7d2"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "plastilina ultra suave artesco",
+  "expected": [
+   "7389b1fe-bd2f-450d-8555-0d41b4993775"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno layconsa cuadriculado 100 hojas",
+  "expected": [
+   "0b510863-080e-466b-8b49-5e26b13ac315",
+   "53cb457e-280c-4f8c-a3bd-01af699066f6",
+   "2c422c07-20cc-4634-8839-fb6861da6a24",
+   "d4ced4b6-a871-4038-82fd-1a9c98c7ce5f"
+  ],
+  "expect": "not_high"
+ },
+ {
+  "text": "caja de colores grande x12",
+  "expected": [
+   "246a9658-d70e-4801-ab3f-829a79ec89d3",
+   "7a7a4e84-4a25-4d32-80ab-41471c2e08da",
+   "f7d62e17-2aa9-41c1-b4f2-b705d52d001d"
+  ],
+  "expect": "not_high"
+ },
+ {
+  "text": "forro vinifan a4",
+  "expected": [
+   "3ceaed54-11f8-4e09-bdf2-109fb12b9fa9",
+   "5282f6aa-966f-4fc3-a59d-a606c76a2035",
+   "b4b39bb6-8db1-4d75-8c10-4650a21478f4"
+  ],
+  "expect": "not_high"
+ },
+ {
+  "text": "cuaderno markin cuadriculado 50 hojas",
+  "expected": [],
+  "expect": "not_high"
+ },
+ {
+  "text": "cuaderno surco a5 cuadriculado 200 hojas",
+  "expected": [],
+  "expect": "not_high"
+ },
+ {
+  "text": "calculadora casio cientifica",
+  "expected": [],
+  "expect": "not_high"
+ },
+ {
+  "text": "mochila escolar",
+  "expected": [],
+  "expect": "not_high"
+ }
+]

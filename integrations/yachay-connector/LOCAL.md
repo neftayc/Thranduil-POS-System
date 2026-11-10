@@ -32,8 +32,8 @@ python3.12 -m venv .venv
 ## Proceso del vendedor
 
 1. El propietario da de alta al vendedor en el POS (*Usuarios*, rol `cashier`).
-2. En Claude (Claude Code o Desktop en este equipo) está agregado el MCP `http://127.0.0.1:8000/mcp`.
-3. El vendedor dice «vamos a vender». Claude llama `list_systems` y `select_system("pos")` y muestra un enlace (`http://127.0.0.1:3000/vincular`) y un código como `7RX-PXP9`.
+2. El vendedor abre en Claude Code (app de escritorio) la **carpeta de vendedores**, copia de [`workspace-vendedor/`](workspace-vendedor/README.md) fuera del repositorio (por ejemplo `~/Ventas`). Trae el MCP `yachay-pos` y un `CLAUDE.md` que abre el sistema en cada conversación. No abrir la carpeta del repositorio: expone código y `.env`.
+3. En su primer mensaje («hola», «vamos a vender»), Claude llama `list_systems` y `select_system("pos")` y muestra un enlace (`http://127.0.0.1:3000/vincular`) y un código como `7RX-PXP9`.
 4. El vendedor abre el enlace, escribe el código, su correo y su contraseña **del POS** y aprueba. Nunca escribe la contraseña en el chat.
 5. Dice «listo»; Claude llama `check_identification` y responde «Sesión activa como Ana Pérez (cashier)».
 6. Dicta el pedido. Claude lo envía literal con `send_instruction` y un UUID nuevo.

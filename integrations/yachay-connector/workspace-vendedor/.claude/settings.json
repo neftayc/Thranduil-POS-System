@@ -1,0 +1,19 @@
+{
+  "enabledMcpjsonServers": ["yachay-pos"],
+  "permissions": {
+    "allow": ["mcp__yachay-pos"],
+    "deny": ["Bash", "Edit", "Write", "NotebookEdit", "WebFetch", "WebSearch"]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Conversación de ventas: en tu primera respuesta llama a list_systems y ofrece los sistemas, sin esperar a que el vendedor lo pida (ver CLAUDE.md).'"
+          }
+        ]
+      }
+    ]
+  }
+}

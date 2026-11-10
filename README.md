@@ -140,3 +140,9 @@ pnpm dlx vercel --prod
 - **Ventas** descuentan stock y aplican reglas automaticas (tipo de cliente, presentacion, mayorista y promociones).
 - **Reglas de venta** permite configurar precios por tipo de cliente, presentacion, escalas mayoristas y promociones temporales.
 - **Inventario** muestra stock, costo promedio y valor estimado desde `product_catalog`.
+
+## Integración MCP mediante Yachay
+
+El contrato HTTP del POS, la preparación de ventas, la configuración del vendedor
+y las pruebas se describen en [docs/yachay-agent-api.md](docs/yachay-agent-api.md).
+El conector Python está en `integrations/yachay-connector`.

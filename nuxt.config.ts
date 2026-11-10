@@ -11,9 +11,17 @@ export default defineNuxtConfig({
   experimental: {
     appManifest: false
   },
+  nitro: {
+    // These are application modules, not Nitro startup modules.
+    ignore: ['**/modules/**']
+  },
   modules: ['@nuxtjs/tailwindcss'],
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
+    posAgentToken: process.env.POS_AGENT_TOKEN || '',
+    posAgentSellerAccessToken: process.env.POS_AGENT_SELLER_ACCESS_TOKEN || '',
+    posAgentModel: process.env.POS_AGENT_MODEL || 'gpt-4o-mini',
+    posAgentStorageDir: process.env.POS_AGENT_STORAGE_DIR || '.data/agent',
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
     geminiApiKey: process.env.GEMINI_API_KEY || '',

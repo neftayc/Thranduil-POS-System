@@ -19,6 +19,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .dev.log
+.data/agent/
+integrations/yachay-connector/.venv/
+integrations/yachay-connector/__pycache__/
+integrations/yachay-connector/**/__pycache__/
+integrations/yachay-connector/.pytest_cache/
+integrations/yachay-connector/*.egg-info/
 
 # Editor/IDE
 .vscode

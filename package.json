@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "nuxt dev --host",
     "build": "nuxt build",
-    "preview": "nuxt preview"
+    "preview": "nuxt preview",
+    "test:agent": "node --test tests/agent.test.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

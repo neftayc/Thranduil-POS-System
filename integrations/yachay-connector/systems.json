@@ -1,0 +1,33 @@
+{
+  "systems": [
+    {
+      "id": "pos",
+      "name": "Sistema de ventas",
+      "description": "Catálogo, ventas, inventario y reportes; el POS tiene toda la lógica.",
+      "aliases": [
+        "pos",
+        "ventas",
+        "libreria",
+        "tienda"
+      ],
+      "enabled": true,
+      "context_url": "http://127.0.0.1:3000/api/agent/context",
+      "instruction_url": "http://127.0.0.1:3000/api/agent/instructions",
+      "service_token_env": "POS_AGENT_TOKEN"
+    },
+    {
+      "id": "pms",
+      "name": "Sistema hotelero",
+      "description": "Reservas, huéspedes y habitaciones; integración pendiente.",
+      "aliases": [
+        "pms",
+        "hotel",
+        "reservas"
+      ],
+      "enabled": false,
+      "context_url": "https://hotel.example.com/api/agent/context",
+      "instruction_url": "https://hotel.example.com/api/agent/instructions",
+      "service_token_env": "PMS_AGENT_TOKEN"
+    }
+  ]
+}

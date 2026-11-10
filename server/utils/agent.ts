@@ -9,14 +9,16 @@ import { makeFileAgentStore } from '../modules/agent/infra/fileAgentStore'
 import { makeFileSellerSessionStore } from '../modules/agent/infra/fileSellerSessionStore'
 import { makeOpenAIOrderInterpreter } from '../modules/agent/infra/openaiOrderInterpreter'
 import { embeddingModelName, makeOpenAIEmbedder } from '../modules/agent/infra/openaiEmbeddings'
-import { makeSupabaseAgentCatalog } from '../modules/agent/infra/supabaseAgentCatalog'
+import { makeSupabaseAgentCatalog, searchAutoindexIntervalMs } from '../modules/agent/infra/supabaseAgentCatalog'
 import { makeSupabaseSaleExecutor } from '../modules/agent/infra/supabaseSaleExecutor'
 import { makeSupabaseSellerAuth } from '../modules/agent/infra/supabaseSellerAuth'
 import { getSupabaseUserClient } from './supabase'
 import { SaleNotCommittedError } from '../modules/agent/contracts'
 
+/** Boolean env flag: true, '1' or 'true' (NUXT_* overrides arrive as strings). */
+export const isFlagOn = (value: unknown) => value === true || ['1', 'true'].includes(String(value ?? '').trim().toLowerCase())
 /** POS_AGENT_DRY_RUN=1|true (or NUXT_POS_AGENT_DRY_RUN): validation only, never registers sales. */
-export const isDryRun = (value: unknown) => value === true || ['1', 'true'].includes(String(value ?? '').trim().toLowerCase())
+export const isDryRun = isFlagOn
 
 export const SELLER_SESSION_HEADER = 'x-yachay-session'
 
@@ -69,13 +71,18 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   const key = String(config.openaiApiKey || '').trim()
   if (!key) throw createError({ statusCode: 503, statusMessage: 'Intérprete de ventas no configurado' })
   const embeddingModel = embeddingModelName(String(config.posAgentEmbeddingModel || ''))
-  const catalog = makeSupabaseAgentCatalog({ embed: makeOpenAIEmbedder(key, embeddingModel), embeddingModel })
   const dryRun = isDryRun(config.posAgentDryRun)
+  const catalog = makeSupabaseAgentCatalog({
+    embed: makeOpenAIEmbedder(key, embeddingModel), embeddingModel,
+    // Read-only by default: background indexing only with POS_AGENT_SEARCH_AUTOINDEX=1, never in dry-run.
+    backgroundIndexIntervalMs: searchAutoindexIntervalMs({ autoindex: isFlagOn(config.posAgentSearchAutoindex), dryRun })
+  })
   const agent = makeSalesAgent({
     // Dry-run keeps its own idempotency records and simulated reservations, apart from the real ones.
     store: makeFileAgentStore(dryRun ? join(String(config.posAgentStorageDir), 'dry-run') : String(config.posAgentStorageDir)),
     // Agent 1 (AI): interpretation + hybrid search (vectors + text + exact attributes) → sale-draft/1.
-    buildDraft: makeHybridDraftBuilder(makeOpenAIOrderInterpreter(key, String(config.posAgentModel)), catalog),
+    // Catalog questions are answered by process 2 as information (completed, kind catalog_answer), never as a sale.
+    buildDraft: makeHybridDraftBuilder(makeOpenAIOrderInterpreter(key, String(config.posAgentModel)), catalog, { answerCatalogQuestions: true }),
     // Process 2 (deterministic).
     validate: makeDraftValidator(catalog),
     // Second barrier: in dry-run the executor cannot reach create_sale even if called.

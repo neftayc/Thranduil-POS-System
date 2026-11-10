@@ -51,6 +51,7 @@ POS_AGENT_STORAGE_DIR=.data/agent
 POS_AGENT_PUBLIC_URL=            # origen público del enlace /vincular (fase 2)
 POS_AGENT_REVIEW_TTL_HOURS=48    # vigencia de la reserva de una venta por confirmar
 POS_AGENT_DRY_RUN=               # 1 = solo validación: nunca registra ventas (apagado por defecto)
+POS_AGENT_SEARCH_AUTOINDEX=      # 1 = calcular vectores al buscar (ESCRIBE en la base; apagado por defecto)
 ```
 
 Genera cada secreto con `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
@@ -208,9 +209,10 @@ con campos desconocidos o fuera de rango no se acepta (`invalid_draft`).
 
 También se acepta el `SaleProposal` de la búsqueda híbrida (directo o como
 `{ proposal }`, `app/proposalAdapter.ts`): `qty` → `quantity`, `unit_name` →
-`unit`, `alternatives` → `candidates`; los `reasons` de una línea `medium`/`low`
-pasan a ser dudas (en una línea `high` solo explican la coincidencia) y una
-seguridad general distinta de `high` agrega una duda general. Su `draft`, `total`,
+`unit`, `alternatives` → `candidates`; las `doubts` pasan a ser dudas generales
+(se recortan a 1000 caracteres), los `reasons` de cada línea solo explican la
+coincidencia y no son dudas, y una seguridad general distinta de `high` sin otras
+dudas agrega una. Su `draft`, `total`,
 `factor` y `stock_available` se ignoran: el proceso 2 los recalcula.
 
 El agente 1 es `makeHybridDraftBuilder` (`app/draftBuilder.ts`): intérprete OpenAI
@@ -218,8 +220,18 @@ El agente 1 es `makeHybridDraftBuilder` (`app/draftBuilder.ts`): intérprete Ope
 por atributos exactos, y emite directamente sale-draft/1 con dudas codificadas
 (`ambiguous_product`, `product_not_found`, `missing_quantity`, `unit_unclear`,
 `missing_payment`, `customer_ambiguous`, `other`). Detalle y medición en
-[agent-product-search.md](agent-product-search.md). `legacyDraftBuilder.ts` queda
-como respaldo sin uso.
+[agent-product-search.md](agent-product-search.md).
+
+### Preguntas de catálogo
+
+Si `buildDraft` devuelve `{ kind: 'catalog_answer', message, result }` («¿tenemos
+cuadernos Marking?», «¿cuánto cuesta?», «¿cuántos quedan?»), el proceso 2 responde
+`completed` con `result.kind = "catalog_answer"` y `result.reference = null`: es solo
+información, **no** una venta, y no reserva nada. Una operación nueva queda en estado
+`answered`. Si la pregunta llega como `follow_up` de una venta por confirmar, se
+responde sin modificar esa venta (mensajes, motivos, reservas y vencimiento). En
+dry-run lleva la marca de simulación. Se activa con `answerCatalogQuestions: true`
+en `server/utils/agent.ts`.
 
 ### Regla de decisión (fija y auditable)
 

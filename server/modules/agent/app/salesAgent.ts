@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import {
   AgentBusyError, AgentConflictError, AgentForbiddenError, SaleNotCommittedError, SaleRejectedByPosError,
+  catalogAnswerSchema,
   type AgentResponse, type AgentSeller, type DraftItem, type Instruction, type Operation,
   type Reservation, type ReviewReason, type SaleDraftV1, type SalesAgentDependencies, type StockAlert
 } from '../contracts'
@@ -100,14 +101,15 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         op = { id, state: 'preparing', seller_id: seller.id, messages: [], expires_at: now() + reviewTtl }
       }
       await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id })
-      const finish = async (response: AgentResponse) => {
-        if (deps.dryRun) {
-          response = {
+      const mark = (response: AgentResponse): AgentResponse => deps.dryRun
+        ? {
             ...response,
             message: response.message.startsWith(DRY_RUN_PREFIX) ? response.message : `${DRY_RUN_PREFIX}${response.message}`,
             result: { ...(response.result || {}), dry_run: true }
           }
-        }
+        : response
+      const finish = async (response: AgentResponse) => {
+        response = mark(response)
         op!.response = response
         await deps.store.saveOperation(op!)
         await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id, response })
@@ -140,7 +142,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         })
       }
 
-      if (op.state === 'completed' || op.state === 'cancelled' || op.state === 'simulated') return finish(op.response!)
+      if (op.state === 'completed' || op.state === 'cancelled' || op.state === 'simulated' || op.state === 'answered') return finish(op.response!)
       if (op.state === 'executing') return finish(pending(id))
       if (op.expires_at <= now()) {
         return cancel('La venta por confirmar venció y se liberó su reserva. Envía una nueva instrucción para consultar precios y stock actuales.')
@@ -159,6 +161,23 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         raw = await deps.buildDraft(op.messages, op.proposal || null)
       } catch {
         return finish({ status: 'rejected', operation_id: id, message: 'No se pudo interpretar el pedido. No se registró una venta. Reintenta con otro request_id.' })
+      }
+      const answer = catalogAnswerSchema.safeParse(raw)
+      if (answer.success) {
+        // A catalog question: answered with live data; nothing is sold or reserved.
+        const response: AgentResponse = {
+          status: 'completed', operation_id: id, message: answer.data.message,
+          result: { kind: 'catalog_answer', ...answer.data.result, reference: null }
+        }
+        if (op.state !== 'review') {
+          op.state = 'answered'
+          return finish(response)
+        }
+        // Inside an open venta por confirmar: answer without altering that sale (messages, proposal,
+        // reasons, reservations and expiry stay as they were).
+        const marked = mark(response)
+        await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id, response: marked })
+        return marked
       }
       const parsed = parseAgentDraft(raw, op.messages.join('\n'))
       if (!parsed.success) {

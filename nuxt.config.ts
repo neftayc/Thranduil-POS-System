@@ -28,6 +28,8 @@ export default defineNuxtConfig({
     posAgentEmbeddingModel: process.env.POS_AGENT_EMBEDDING_MODEL || 'text-embedding-3-small',
     // Validation-only mode for tests with real reads: never calls create_sale. Off by default.
     posAgentDryRun: ['1', 'true'].includes(String(process.env.POS_AGENT_DRY_RUN || '').trim().toLowerCase()),
+    // Background vector indexing during searches WRITES to the database. Off unless explicitly enabled.
+    posAgentSearchAutoindex: ['1', 'true'].includes(String(process.env.POS_AGENT_SEARCH_AUTOINDEX || '').trim().toLowerCase()),
     posAgentStorageDir: process.env.POS_AGENT_STORAGE_DIR || '.data/agent',
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',

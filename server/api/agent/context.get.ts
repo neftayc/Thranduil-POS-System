@@ -19,7 +19,8 @@ export default defineEventHandler(async (event) => {
         'Para completar o anular una venta por confirmar desde el chat, envía el dato literal con respond_to_system usando su operation_id y un request_id nuevo; «cancelar» la anula.',
         'Comunica siempre las alertas de stock bajo o agotado que devuelva el POS.',
         'Usa un UUID nuevo por mensaje. En un reintento reutiliza exactamente el mismo request_id y contenido. pending no significa venta realizada.',
-        'Solo completed acredita una venta registrada. Conserva la referencia que devuelve el POS.',
+        'Solo completed con referencia acredita una venta registrada. Conserva la referencia que devuelve el POS.',
+        'Un completed con result.kind = "catalog_answer" solo responde una consulta del catálogo (existencia, precio o stock): NO es una venta.',
         'Si no se indica un cliente específico, se registra una venta al público sin cliente asociado.'
       ],
       capabilities: ['register_sale', 'pending_review_sale', 'cancel_sale', 'stock_alerts'],

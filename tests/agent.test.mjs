@@ -12,7 +12,6 @@ const { createJiti } = requireNuxt('jiti')
 const jiti = createJiti(import.meta.url)
 const { makeSalesAgent } = await jiti.import('../server/modules/agent/app/salesAgent.ts')
 const { makeDraftValidator } = await jiti.import('../server/modules/agent/app/validateDraft.ts')
-const { makeLegacyDraftBuilder } = await jiti.import('../server/modules/agent/app/legacyDraftBuilder.ts')
 const { parseAgentDraft } = await jiti.import('../server/modules/agent/app/proposalAdapter.ts')
 const { makeFileAgentStore } = await jiti.import('../server/modules/agent/infra/fileAgentStore.ts')
 const { makeSupabaseSaleExecutor, isDefinitiveRpcError } = await jiti.import('../server/modules/agent/infra/supabaseSaleExecutor.ts')
@@ -501,33 +500,6 @@ test('ejecutor: error con código = no registrada; sin código = indeterminado; 
   assert.deepEqual(order, []) // never dispatched
 })
 
-// ---------------------------------------------------------------- provisional agent 1
-
-test('constructor provisional: coincidencia única = segura; varias = candidatos y duda; elección posterior válida', async () => {
-  const second = { ...CUADERNO, id: randomUUID(), sku: 'CUA-2', brand: 'Marca B' }
-  const search = {
-    findProducts: async query => (query.includes('marca a') ? [CUADERNO] : [CUADERNO, second]),
-    getProduct: async id => [CUADERNO, second].find(p => p.id === id) || null,
-    findCustomers: async () => []
-  }
-  const interpretation = (product_id = null, query = 'cuaderno A4') => ({
-    intent: 'sale', items: [{ query, sku: null, quantity: 2, unit: null, product_id }], payment_method: 'efectivo', customer_query: null, question: null
-  })
-  const unique = await makeLegacyDraftBuilder(async () => interpretation(null, 'cuaderno marca a'), search)(['x'], null)
-  assert.equal(saleDraftSchema.parse(unique).items[0].confidence, 'high')
-  const ambiguous = await makeLegacyDraftBuilder(async () => interpretation(), search)(['x'], null)
-  assert.equal(ambiguous.items[0].product_id, null)
-  assert.deepEqual(ambiguous.items[0].candidates, [CUADERNO.id, second.id])
-  assert.equal(ambiguous.items[0].doubts[0].code, 'ambiguous_product')
-  let shown
-  const chosen = await makeLegacyDraftBuilder(async (_m, ctx) => { shown = ctx.candidates.map(p => p.id); return interpretation(second.id) }, search)(['x', 'el de marca B'], ambiguous)
-  assert.deepEqual(shown, [CUADERNO.id, second.id])
-  assert.equal(chosen.items[0].product_id, second.id)
-  assert.equal(chosen.items[0].confidence, 'high')
-  const invented = await makeLegacyDraftBuilder(async () => interpretation(randomUUID()), search)(['x'], null)
-  assert.equal(invented.items[0].product_id, null)
-})
-
 // ---------------------------------------------------------------- SaleProposal (agent 1, hybrid search)
 
 const proposal = (overrides = {}, item = {}) => ({
@@ -661,4 +633,101 @@ test('sin dry-run (por defecto o dryRun: false) el comportamiento no cambia: reg
     assert.doesNotMatch(response.message, /SIMULACIÓN/)
     assert.equal(counts.execute, 1)
   }
+})
+
+// ---------------------------------------------------------------- catalog questions (agent 1 → CatalogAnswer)
+
+const catalogAnswer = (message = 'Sí, hay Cuaderno A4 Marking: 20 unidades a S/ 5.00.') => ({ kind: 'catalog_answer', message, result: { answers: [{ product_id: CUADERNO.id, stock: 20 }] } })
+
+test('pregunta de catálogo: completed informativo sin referencia, sin venta ni reserva; idempotente', async t => {
+  const { run, counts, dependencies } = await setup(t, { drafts: [catalogAnswer()] })
+  const request = instruction('¿tenemos cuadernos Marking?')
+  const response = await run(request)
+  assert.equal(response.status, 'completed')
+  assert.equal(response.result.kind, 'catalog_answer')
+  assert.equal(response.result.reference, null)
+  assert.match(response.message, /Marking/)
+  const op = await dependencies.store.getOperation(response.operation_id)
+  assert.equal(op.state, 'answered')
+  assert.equal(op.reservations, undefined)
+  assert.deepEqual(await run(request), response)
+  assert.equal((await run(follow(response.operation_id, 'vende 2'))).result.kind, 'catalog_answer') // terminal
+  assert.equal(counts.execute, 0)
+})
+
+test('pregunta de catálogo dentro de una venta por confirmar no la altera; luego se puede completar', async t => {
+  const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ payment_method: null }), catalogAnswer('Quedan 18.'), draftOf()] })
+  const review = await run(instruction('vende dos cuadernos'))
+  const before = await dependencies.store.getOperation(review.operation_id)
+  const answer = await run(follow(review.operation_id, '¿cuántos quedan?'))
+  assert.equal(answer.result.kind, 'catalog_answer')
+  assert.deepEqual(await dependencies.store.getOperation(review.operation_id), before)
+  const done = await run(follow(review.operation_id, 'efectivo'))
+  assert.equal(done.status, 'completed')
+  assert.equal(done.result.reference, 'sale-1')
+  assert.equal(counts.execute, 1)
+})
+
+test('pregunta de catálogo en dry-run lleva la marca de simulación; una respuesta vacía no se acepta', async t => {
+  const calls = { n: 0 }
+  const dry = await setup(t, { dryRun: true, execute: forbiddenExecute(calls), drafts: [catalogAnswer()] })
+  const response = await dry.run(instruction('¿tenemos cuadernos?'))
+  assert.equal(response.result.dry_run, true)
+  assert.equal(response.result.kind, 'catalog_answer')
+  assert.equal(calls.n, 0)
+  const empty = await setup(t, { drafts: [{ kind: 'catalog_answer', message: '  ', result: {} }] })
+  assert.deepEqual(codes(await empty.run(instruction('¿?'))), ['invalid_draft'])
+})
+
+// ---------------------------------------------------------------- search is read-only by default
+
+const h3Stub = new URL('./stubs/h3.mjs', import.meta.url).pathname
+const jitiStubbed = createJiti(import.meta.url, { alias: { h3: h3Stub } })
+const { makeSupabaseAgentCatalog, searchAutoindexIntervalMs } = await jitiStubbed.import('../server/modules/agent/infra/supabaseAgentCatalog.ts')
+
+/** Fake Supabase client: the hybrid RPC exists (migration applied) and every write is recorded. */
+const recordingDb = () => {
+  const writes = []
+  const rows = { product_catalog: [{ id: CUADERNO.id, name: CUADERNO.name, sku: 'CUA-1', brand: 'Marca A', product_type: null }] }
+  const query = table => {
+    const q = new Proxy({}, {
+      get (_, prop) {
+        if (prop === 'then') return (ok, fail) => Promise.resolve({ data: rows[table] || [{ product_id: CUADERNO.id }], error: null }).then(ok, fail)
+        return (...args) => { if (['update', 'insert', 'upsert', 'delete'].includes(prop)) writes.push([table, prop]); return q }
+      }
+    })
+    return q
+  }
+  return {
+    writes,
+    from: query,
+    rpc: async name => {
+      if (name === 'search_products_hybrid') return { data: [{ product_id: CUADERNO.id, name: CUADERNO.name, sku: 'CUA-1', brand: 'Marca A', category: null, lexical_rank: 1, vector_rank: 1, vector_similarity: 0.9 }], error: null }
+      if (name === 'product_search_pending') return { data: [{ product_id: CUADERNO.id, document: 'cuaderno', content_hash: 'h1' }], error: null }
+      return { data: null, error: null }
+    }
+  }
+}
+const searchWith = async interval => {
+  const db = recordingDb()
+  const catalog = makeSupabaseAgentCatalog({ db, embed: async texts => texts.map(() => [0.1, 0.2]), embeddingModel: 'text-embedding-3-small', ...(interval === undefined ? {} : { backgroundIndexIntervalMs: interval }) })
+  await catalog.searchProducts('cuaderno A4')
+  await catalog.searchProducts('cuaderno marca a')
+  await new Promise(resolve => setTimeout(resolve, 30)) // background work is fire-and-forget
+  return db.writes
+}
+
+test('la búsqueda no escribe en la base por defecto, aunque la migración esté aplicada', async () => {
+  assert.deepEqual(await searchWith(undefined), [])
+  assert.deepEqual(await searchWith(searchAutoindexIntervalMs({ autoindex: false, dryRun: false })), [])
+})
+
+test('en dry-run la búsqueda nunca escribe, aunque POS_AGENT_SEARCH_AUTOINDEX esté encendido', async () => {
+  assert.equal(searchAutoindexIntervalMs({ autoindex: true, dryRun: true }), Number.POSITIVE_INFINITY)
+  assert.deepEqual(await searchWith(searchAutoindexIntervalMs({ autoindex: true, dryRun: true })), [])
+})
+
+test('control: solo con POS_AGENT_SEARCH_AUTOINDEX=1 y fuera de dry-run se indexa (el test detecta escrituras)', async () => {
+  const writes = await searchWith(searchAutoindexIntervalMs({ autoindex: true, dryRun: false }))
+  assert.deepEqual(writes, [['product_search_index', 'update']])
 })

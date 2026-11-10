@@ -1,7 +1,7 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseAdminClient } from '../../../utils/supabase'
 import type { AgentCatalog } from '../app/prepareSale'
 import type { ValidationCatalog } from '../app/validateDraft'
-import type { SearchCatalog } from '../app/legacyDraftBuilder'
 import type { Product, StockLevel } from '../contracts'
 import { brandVocabulary, decideMatch, retrieveLexical, type RetrievedDoc, type SearchDoc } from '../app/productSearch'
 import type { Embedder } from './openaiEmbeddings'
@@ -18,17 +18,27 @@ export type HybridSearchOptions = {
   /** Query/catalog embeddings. Without it the search is lexical only (still attribute-aware). */
   embed?: Embedder
   embeddingModel?: string
-  /** Computes stale product vectors in the background, at most once per interval. */
+  /**
+   * Computes stale product vectors in the background (WRITES product_search_index), at most once per
+   * interval. OFF by default (Infinity): searches are read-only unless POS_AGENT_SEARCH_AUTOINDEX=1,
+   * and never in dry-run. See searchAutoindexIntervalMs.
+   */
   backgroundIndexIntervalMs?: number
+  /** Injected client (tests). Defaults to the service client. */
+  db?: SupabaseClient
 }
+
+/** Background indexing interval: only with an explicit opt-in, and never in dry-run (read-only). */
+export const searchAutoindexIntervalMs = ({ autoindex, dryRun }: { autoindex: boolean; dryRun: boolean }) =>
+  autoindex && !dryRun ? 60_000 : Number.POSITIVE_INFINITY
 const CACHE_MS = 60_000
 const isMissingFunction = (error: any) => ['PGRST202', '42883', '42P01'].includes(String(error?.code || ''))
 
-export const makeSupabaseAgentCatalog = (options: HybridSearchOptions = {}): AgentCatalog & ValidationCatalog & SearchCatalog & {
+export const makeSupabaseAgentCatalog = (options: HybridSearchOptions = {}): AgentCatalog & ValidationCatalog & {
   stockLevels(ids: string[]): Promise<StockLevel[]>
   reindex(all?: boolean): Promise<{ embedded: number; skipped: number }>
 } => {
-  const db = getSupabaseAdminClient()
+  const db = options.db ?? getSupabaseAdminClient()
   let docsCache: { at: number; docs: SearchDoc[]; brands: Set<string> } | null = null
   let hybridAvailable = true
   let lastBackgroundIndex = 0
@@ -48,8 +58,8 @@ export const makeSupabaseAgentCatalog = (options: HybridSearchOptions = {}): Age
     return docsCache
   }
   const backgroundIndex = () => {
-    const interval = options.backgroundIndexIntervalMs ?? 60_000
-    if (!indexer || !hybridAvailable || Date.now() - lastBackgroundIndex < interval) return
+    const interval = options.backgroundIndexIntervalMs ?? Number.POSITIVE_INFINITY
+    if (!Number.isFinite(interval) || !indexer || !hybridAvailable || Date.now() - lastBackgroundIndex < interval) return
     lastBackgroundIndex = Date.now()
     indexer({ limit: 200 }).catch(() => { /* retried on the next search; the script reports errors */ })
   }

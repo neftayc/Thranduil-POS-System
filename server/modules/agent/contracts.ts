@@ -12,21 +12,6 @@ export const instructionSchema = z.object({
   }
 })
 
-/** Interpretation produced by the legacy OpenAI interpreter (used only by the legacy draft builder). */
-export const interpretationSchema = z.object({
-  intent: z.enum(['sale', 'cancel', 'unsupported']),
-  items: z.array(z.object({
-    query: z.string(),
-    sku: z.string().nullable(),
-    quantity: z.number().nullable(),
-    unit: z.string().nullable(),
-    product_id: z.string().nullable()
-  })),
-  payment_method: z.string().nullable(),
-  customer_query: z.string().nullable(),
-  question: z.string().nullable()
-})
-
 // ---------------------------------------------------------------------------
 // Contract between AGENT 1 (AI: interprets + searches) and PROCESS 2 (deterministic:
 // validates + registers). Agent 1 only proposes; process 2 trusts nothing it sends.
@@ -81,7 +66,6 @@ export type ReviewReasonCode = typeof REVIEW_REASONS[number]
 export type ReviewReason = { code: ReviewReasonCode; line?: number; message: string; detail?: Record<string, unknown> }
 
 export type Instruction = z.infer<typeof instructionSchema>
-export type Interpretation = z.infer<typeof interpretationSchema>
 export type AgentResponse = {
   status: 'completed' | 'pending_review' | 'rejected' | 'pending'
   operation_id: string
@@ -108,7 +92,8 @@ export type Operation = {
   id: string
   // review = "venta por confirmar": saved for later validation in the POS, reserves stock.
   // simulated = dry-run: would have been registered directly; nothing was sent to create_sale.
-  state: 'preparing' | 'review' | 'executing' | 'completed' | 'cancelled' | 'simulated'
+  // answered = only answered a catalog question (no sale, no reservation).
+  state: 'preparing' | 'review' | 'executing' | 'completed' | 'cancelled' | 'simulated' | 'answered'
   seller_id: string
   messages: string[]
   /** Last draft received from agent 1 (kept for the batch-validation screen and audit). */
@@ -120,6 +105,12 @@ export type Operation = {
   reservations?: Reservation[]
   expires_at: number
 }
+/** Agent 1's answer to a catalog question: informational, never a sale. */
+export const catalogAnswerSchema = z.object({
+  kind: z.literal('catalog_answer'),
+  message: z.string().trim().min(1).transform(value => value.slice(0, 4000)),
+  result: z.record(z.string(), z.unknown()).default({})
+})
 export type RequestRecord = { fingerprint: string; operation_id: string; seller_id: string; response?: AgentResponse }
 
 export interface AgentStore {
@@ -136,7 +127,10 @@ export class AgentForbiddenError extends Error {}
 export type AgentSeller = { id: string }
 export interface SalesAgentDependencies {
   store: AgentStore
-  /** AGENT 1 (AI): turns the conversation into a draft with product IDs. */
+  /**
+   * AGENT 1 (AI): turns the conversation into a draft with product IDs (sale-draft/1 or SaleProposal),
+   * or into a CatalogAnswer for questions such as «¿tenemos cuadernos Marking?».
+   */
   buildDraft(messages: string[], previous: SaleDraftV1 | null): Promise<unknown>
   /** PROCESS 2 (deterministic): re-verifies the draft and decides direct vs review. */
   validate(draft: SaleDraftV1, reserved: Map<string, number>): Promise<DraftDecision>

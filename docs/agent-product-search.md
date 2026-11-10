@@ -40,8 +40,8 @@ está **seguro** (registra sin preguntar) y cuándo no (queda por confirmar).
 
 Preguntas de catálogo (`intent: catalog_query`): `makeCatalogAnswerer` responde con
 precio y stock en vivo. `buildDraft` las devuelve como `{ kind: 'catalog_answer' }` solo
-con `answerCatalogQuestions: true` (requiere que el proceso 2 las atienda sin vender);
-si no, como `intent: 'unsupported'`.
+con `answerCatalogQuestions: true`; si no, como `intent: 'unsupported'`. El proceso 2
+las atiende sin vender ni reservar (ver yachay-agent-api.md).
 
 ## Índice y sinónimos (`supabase/migrations/20261110_product_hybrid_search.sql`)
 
@@ -50,8 +50,11 @@ si no, como `intent: 'unsupported'`.
 - Triggers en `products`, `product_categories` y `product_search_synonyms` mantienen
   el texto al crear/editar y marcan el vector como pendiente.
 - Vectores: `npm run index:products` (pendientes) o `node scripts/index-product-search.mjs --all`
-  (todos, p. ej. al cambiar de modelo). El POS también calcula en segundo plano los
-  pendientes (máx. 200 por minuto) cuando el agente busca.
+  (todos, p. ej. al cambiar de modelo). Ambos ESCRIBEN en la base: solo con
+  permiso del usuario. Calcular los pendientes en segundo plano durante las búsquedas
+  (máx. 200 por minuto) está **apagado por defecto**; se enciende con
+  `POS_AGENT_SEARCH_AUTOINDEX=1` y nunca corre con `POS_AGENT_DRY_RUN=1`. Sin esa
+  variable, buscar es de solo lectura.
 - `product_search_synonyms` (`phrase` → `product_id`, `source` = `manual` |
   `sale_review` | `import`): la etapa 2 la alimentará al validar ventas por
   confirmar. Una frase aprendida que coincide con el pedido decide por sí sola.

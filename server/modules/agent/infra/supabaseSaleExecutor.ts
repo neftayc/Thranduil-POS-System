@@ -1,14 +1,19 @@
-import { getSupabaseAnonClient, getSupabaseUserClient } from '../../../utils/supabase'
 import { makeSupabaseSalesRepository } from '../../sales/infra/supabaseSalesRepository'
 import { SaleNotCommittedError, type SaleDraft } from '../contracts'
 
-export const makeSupabaseSaleExecutor = (getToken: () => string) => async (draft: SaleDraft, beforeCommit: () => Promise<void>) => {
-  const token = getToken().trim()
-  if (!token) throw new SaleNotCommittedError('La venta está preparada, pero falta configurar un vendedor autorizado (POS_AGENT_SELLER_ACCESS_TOKEN). La identificación por conversación se implementará después. No se registró una venta.')
-  const { data, error } = await getSupabaseAnonClient().auth.getUser(token)
-  if (error || !data.user) throw new SaleNotCommittedError('La sesión del vendedor no es válida o venció. Actualiza la sesión autorizada. No se registró una venta.')
-  const { data: role, error: roleError } = await getSupabaseUserClient(token).rpc('user_role')
-  if (roleError || !['owner', 'manager', 'cashier'].includes(String(role))) throw new SaleNotCommittedError('El usuario configurado no tiene un rol de vendedor válido. No se registró una venta.')
+/**
+ * Registers the sale AS the identified seller: `authorize` re-validates the seller session
+ * (not revoked, user active, valid role) and returns that seller's own access token, so the
+ * create_sale RPC records auth.uid() = seller. No service key, no shared seller token.
+ */
+export const makeSupabaseSaleExecutor = (authorize: () => Promise<string>) => async (draft: SaleDraft, beforeCommit: () => Promise<void>) => {
+  let token: string
+  try {
+    token = await authorize()
+  } catch (error) {
+    const reason = error instanceof Error && error.message ? error.message : 'La sesión del vendedor no es válida.'
+    throw new SaleNotCommittedError(`${reason} No se registró una venta.`)
+  }
   await beforeCommit()
   // A transport error after this point is indeterminate. The orchestrator does not retry this RPC.
   const result = await makeSupabaseSalesRepository(token).createSale({

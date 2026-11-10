@@ -1,5 +1,6 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (to.path === '/login') {
+  // /vincular authenticates with its own form (seller identification for Claude).
+  if (to.path === '/login' || to.path === '/vincular') {
     return
   }
 

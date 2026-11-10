@@ -19,7 +19,11 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     posAgentToken: process.env.POS_AGENT_TOKEN || '',
-    posAgentSellerAccessToken: process.env.POS_AGENT_SELLER_ACCESS_TOKEN || '',
+    // Encrypts the per-seller Supabase sessions opened from /vincular (min. 32 chars).
+    posAgentSessionKey: process.env.POS_AGENT_SESSION_KEY || '',
+    // Optional public origin for the /vincular link; defaults to the request origin.
+    posAgentPublicUrl: process.env.POS_AGENT_PUBLIC_URL || '',
+    posAgentReviewTtlHours: Number(process.env.POS_AGENT_REVIEW_TTL_HOURS || 48),
     posAgentModel: process.env.POS_AGENT_MODEL || 'gpt-4o-mini',
     posAgentStorageDir: process.env.POS_AGENT_STORAGE_DIR || '.data/agent',
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE || '',

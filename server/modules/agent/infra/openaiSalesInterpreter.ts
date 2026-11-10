@@ -15,7 +15,7 @@ sku copia el SKU literal si el usuario lo indica, o null. Un SKU NO es product_i
 Si el usuario elige una opción numerada, usa el orden de candidatos del borrador. Nunca elijas por tu cuenta entre varias marcas o productos.
 payment_method es la forma de pago indicada por el usuario, o null. customer_query es nombre del cliente si se indicó; null para venta al público sin cliente específico.
 Una aclaración modifica solamente los datos indicados y conserva el resto. Incluye TODOS los artículos vigentes.
-No conviertas una respuesta ambigua en confirmación; la confirmación se controla fuera del modelo.
+El POS registra la venta SIN confirmación cuando todos los datos están resueltos: ante cualquier duda deja el campo en null y pregunta; el pedido quedará como venta por confirmar.
 Ejemplo: "vender cuader a4 100 cuadriculado" => intent=sale, query="cuaderno A4 100 cuadriculado", quantity=null, payment_method=null. Pregunta cuántos cuadernos se venden y si 100 se refiere a hojas. NUNCA unsupported por faltar datos.
 No preguntes por marca si no se indicó: el backend consultará las coincidencias reales antes de pedir elegir.
 question solo pregunta por ambigüedades del mensaje; no afirmes nada sobre disponibilidad o precios. Usa question=null cuando las respuestas del usuario hayan resuelto la ambigüedad.`

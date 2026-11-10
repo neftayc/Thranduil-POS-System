@@ -13,6 +13,7 @@
       "enabled": true,
       "context_url": "http://127.0.0.1:3000/api/agent/context",
       "instruction_url": "http://127.0.0.1:3000/api/agent/instructions",
+      "identification_url": "http://127.0.0.1:3000/api/agent/identification",
       "service_token_env": "POS_AGENT_TOKEN"
     },
     {

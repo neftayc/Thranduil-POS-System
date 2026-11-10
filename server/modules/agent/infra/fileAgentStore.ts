@@ -1,4 +1,4 @@
-import { mkdir, open, readFile, rename, unlink } from 'node:fs/promises'
+import { mkdir, open, readFile, readdir, rename, unlink } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { AgentBusyError, type AgentStore, type Operation, type RequestRecord } from '../contracts'
@@ -34,6 +34,12 @@ export const makeFileAgentStore = (directory: string): AgentStore => {
     saveRequest: (id, value) => save('request', id, value),
     getOperation: (id) => read<Operation>('operation', id),
     saveOperation: (value) => save('operation', value.id, value),
+    async listOperations() {
+      await init()
+      const ids = (await readdir(root)).flatMap(name => /^operation-([0-9a-f-]{36})\.json$/i.exec(name)?.[1] || [])
+      const ops = await Promise.all(ids.map(id => read<Operation>('operation', id)))
+      return ops.filter((op): op is Operation => Boolean(op))
+    },
     async exclusive(work) {
       await init()
       const lockPath = join(root, 'processing.lock')

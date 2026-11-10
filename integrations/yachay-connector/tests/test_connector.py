@@ -56,7 +56,7 @@ async def test_tokens_are_distinct_and_conversation_independent(connector):
     a = await service.select_system("pos")
     b = await service.select_system("pos")
     assert a["selection_token"] != b["selection_token"]
-    assert service.signer.verify(a["selection_token"]) == "pos"
+    assert service.signer.verify(a["selection_token"]).system == "pos"
 
 
 @pytest.mark.asyncio

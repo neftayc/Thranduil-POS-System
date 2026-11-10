@@ -20,6 +20,11 @@ class System:
     context_url: str
     instruction_url: str
     service_token_env: str
+    identification_url: str | None = None
+
+    @property
+    def requires_identification(self) -> bool:
+        return self.identification_url is not None
 
     def public(self) -> dict:
         return {
@@ -27,6 +32,7 @@ class System:
             "name": self.name,
             "description": self.description,
             "aliases": list(self.aliases),
+            "requires_identification": self.requires_identification,
         }
 
 
@@ -58,6 +64,9 @@ def load_registry(path: str | Path) -> dict[str, System]:
         cu, iu = str(item.get("context_url", "")), str(item.get("instruction_url", ""))
         if not _valid_url(cu) or not _valid_url(iu):
             raise ValueError(f"URL insegura o inválida para {sid} (HTTPS externo obligatorio)")
+        ident = item.get("identification_url")
+        if ident is not None and (not isinstance(ident, str) or not _valid_url(ident)):
+            raise ValueError(f"URL de identificación insegura o inválida para {sid}")
         env = str(item.get("service_token_env", ""))
         if not ENV_NAME.fullmatch(env):
             raise ValueError(f"Nombre de variable de credencial inválido para {sid}")
@@ -66,6 +75,6 @@ def load_registry(path: str | Path) -> dict[str, System]:
             raise ValueError(f"Aliases inválidos para {sid}")
         systems[sid] = System(
             sid, str(item.get("name", sid)), str(item.get("description", "")),
-            tuple(aliases), cu, iu, env,
+            tuple(aliases), cu, iu, env, ident,
         )
     return systems

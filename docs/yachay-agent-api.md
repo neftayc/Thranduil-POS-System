@@ -275,8 +275,9 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 
 ### Reservas de ventas por confirmar
 
-- Se reserva por producto `mín(lo pedido, lo disponible)`; una línea sin producto
-  resuelto no reserva. La reserva **no** descuenta el inventario.
+- Se reserva por producto `mín(lo pedido, lo disponible)`. No reservan: una línea sin
+  producto resuelto, ni una línea cuyo producto solo fue propuesto por el agente 1
+  (duda `ambiguous_product` o `product_not_found`), porque nadie lo eligió. La reserva **no** descuenta el inventario.
 - Se libera al completarse, al anularse («cancelar») o al vencer: 48 h
   (`POS_AGENT_REVIEW_TTL_HOURS`). Una reserva vencida deja de contar de inmediato y
   un seguimiento posterior responde que la venta venció.
@@ -288,7 +289,9 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 - `completed`: `result.reference` (id de la venta), `total`, `currency`, `items`
   (precio oficial), `alerts`.
 - `pending_review`: `result.reference` (id de la operación), `reasons`
-  (`[{ code, line?, message }]`), `pending` (texto), `items`, `reservations`,
+  (`[{ code, line?, message, doubt?, ungrounded? }]`: `doubt` es el código de duda del
+  agente 1, p. ej. `ambiguous_product`; `ungrounded` indica que el vendedor no escribió
+  la cantidad o la forma de pago), `pending` (texto), `items`, `reservations`,
   `review_expires_at`, `alerts`.
 
 Alertas: tras `completed` o `pending_review`, para cada producto afectado

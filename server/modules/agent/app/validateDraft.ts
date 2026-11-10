@@ -15,6 +15,10 @@ export interface ValidationCatalog {
 
 const normalize = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 const round = (value: number, places = 4) => Number(value.toFixed(places))
+/** Ends a sentence with one period (notes from agent 1 may already end with punctuation). */
+const sentence = (text: string) => /[.!?…]$/.test(text.trim()) ? text.trim() : `${text.trim()}.`
+/** A line with these doubts has no product chosen by anyone: its proposed product is NOT reserved. */
+const NO_RESERVATION_DOUBTS = new Set(['ambiguous_product', 'product_not_found'])
 export const PRICE_TOLERANCE = 0.005
 const EPSILON = 0.000001
 const MAX_QTY = 1000000
@@ -40,7 +44,8 @@ const doubtText: Record<string, string> = {
  *             other pending sales); plus a valid payment method, a valid customer (or none) and
  *             no general doubts.
  *   REVIEW  ⇔ anything else. Each failed check adds one coded reason. Stock is reserved for
- *             resolved lines: min(requested, available) per product.
+ *             resolved lines: min(requested, available) per product. A line whose product was only
+ *             proposed (doubt ambiguous_product / product_not_found) is checked but NOT reserved.
  *
  * `reserved` = base units already held by OTHER pending sales (never including this one).
  */
@@ -50,13 +55,15 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
 ): Promise<DraftDecision> => {
   const reasons: ReviewReason[] = []
   const items: DraftItem[] = []
+  /** Items whose product was only proposed (ambiguous / not found): checked, but never reserved. */
+  const unreservable = new Set<DraftItem>()
   const products = new Map<string, Product>()
 
   if (!draft.items.length) {
     reasons.push({ code: 'invalid_draft', message: 'El pedido no tiene artículos identificables.' })
   }
   for (const doubt of draft.doubts) {
-    reasons.push({ code: 'agent_doubt', message: `Duda del pedido: ${doubt.note || doubtText[doubt.code]}.`, detail: { doubt: doubt.code } })
+    reasons.push({ code: 'agent_doubt', message: sentence(`Duda del pedido: ${doubt.note || doubtText[doubt.code]}`), detail: { doubt: doubt.code } })
   }
 
   let paymentCode = ''
@@ -83,7 +90,7 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
     const n = index + 1
     const label = `Artículo ${n}${line.query ? ` («${line.query.slice(0, 80)}»)` : ''}`
     for (const doubt of line.doubts) {
-      reasons.push({ code: 'agent_doubt', line: n, message: `${label}: ${doubt.note || doubtText[doubt.code]}.`, detail: { doubt: doubt.code } })
+      reasons.push({ code: 'agent_doubt', line: n, message: sentence(`${label}: ${doubt.note || doubtText[doubt.code]}`), detail: { doubt: doubt.code } })
     }
     if (line.confidence !== 'high') {
       reasons.push({ code: 'low_confidence', line: n, message: `${label}: identificación con seguridad ${line.confidence === 'medium' ? 'media' : 'baja'}.`, detail: { confidence: line.confidence } })
@@ -126,15 +133,21 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
         detail: { draft_price: line.price_unit, official_price: official }
       })
     }
-    items.push({
+    const item: DraftItem = {
       product_id: product.id, name: product.name, qty: line.quantity, unit_name: quote.unit_name,
       price_unit: official, factor: quote.factor, total: round(line.quantity * official)
-    })
+    }
+    items.push(item)
+    if (line.doubts.some(doubt => NO_RESERVATION_DOUBTS.has(doubt.code))) unreservable.add(item)
   }
 
   // Stock: aggregate repeated lines in base units before comparing.
   const needed = new Map<string, number>()
-  for (const item of items) needed.set(item.product_id, (needed.get(item.product_id) || 0) + item.qty * item.factor)
+  const reservable = new Map<string, number>()
+  for (const item of items) {
+    needed.set(item.product_id, (needed.get(item.product_id) || 0) + item.qty * item.factor)
+    if (!unreservable.has(item)) reservable.set(item.product_id, (reservable.get(item.product_id) || 0) + item.qty * item.factor)
+  }
   const reservations: Reservation[] = []
   for (const [id, qty] of needed) {
     const product = products.get(id)!
@@ -147,7 +160,7 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
         detail: { product_id: id, requested: round(qty), available, reserved_by_others: round(held) }
       })
     }
-    const hold = round(Math.min(qty, Math.max(available, 0)))
+    const hold = round(Math.min(reservable.get(id) || 0, Math.max(available, 0)))
     if (hold > 0) reservations.push({ product_id: id, qty: hold })
   }
 

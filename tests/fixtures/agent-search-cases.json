@@ -135,9 +135,11 @@
  {
   "text": "regla de 30 cm",
   "expected": [
-   "f6e3aad0-b14c-4622-9f7c-3a994b63b160"
+   "f6e3aad0-b14c-4622-9f7c-3a994b63b160",
+   "4e3322a8-244c-4f70-89d8-a0145201261b"
   ],
-  "expect": "high"
+  "expect": "not_high",
+  "note": "Política del supervisor (2026-11-10): «Reglas de 30 cm» y «Juego de reglas 30 cm» coinciden; no es inequívoco."
  },
  {
   "text": "corrector faber 9 ml",

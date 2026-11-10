@@ -72,9 +72,11 @@
  {
   "text": "barra de silicona",
   "expected": [
-   "32eb31b2-1a46-483e-8bf4-b58086d71f02"
+   "32eb31b2-1a46-483e-8bf4-b58086d71f02",
+   "acf621c7-9e9b-4d44-b886-02d28928442a"
   ],
-  "expect": "high"
+  "expect": "not_high",
+  "note": "Política del supervisor (2026-11-10): «Silicona en barrra» y «Silicona delgada en barra» coinciden."
  },
  {
   "text": "tomatodo grande artesco",
@@ -164,7 +166,8 @@
    "5bb4a6ea-01fb-49b0-82d3-358a7dfc88a4",
    "b52f303f-8756-4952-9cfc-d28f2bae33bb"
   ],
-  "expect": "not_high"
+  "expect": "not_high",
+  "note": "Política del supervisor (2026-11-10): ambiguo aunque un nombre coincida exacto."
  },
  {
   "text": "cinta de embalaje grande",
@@ -195,6 +198,7 @@
    "bd2ff394-e021-4d77-abde-a7288ab73a70",
    "f31f0a7a-88a5-4ef3-b066-d90c6c929e44"
   ],
-  "expect": "not_high"
+  "expect": "not_high",
+  "note": "Política del supervisor (2026-11-10): ambiguo aunque un nombre coincida exacto."
  }
 ]

@@ -27,7 +27,7 @@ def test_no_arbitrary_target_url(tmp_path):
 def test_selection_rejects_tampering():
     signer=SelectionSigner("a"*48)
     token,_=signer.issue("pos")
-    assert signer.verify(token)=="pos"
+    assert signer.verify(token).system=="pos"
     with pytest.raises(SelectionError):
         signer.verify(token[:-2]+"11")
 

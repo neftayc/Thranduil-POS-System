@@ -16,7 +16,8 @@ create extension if not exists vector with schema extensions;
 create extension if not exists pg_trgm with schema extensions;
 create extension if not exists unaccent with schema extensions;
 -- Las extensiones pueden estar en `extensions` (Supabase) o en `public` (instalaciones antiguas).
-set search_path = public, extensions;
+-- `extensions` va primero para que nadie pueda suplantar sus funciones/operadores creando objetos en `public`.
+set search_path = extensions, public;
 
 -- Normalización inmutable (minúsculas, sin tildes, «#» = cuadriculado) usable en índices.
 create or replace function public.search_normalize(p_value text)
@@ -24,7 +25,7 @@ returns text
 language sql
 immutable
 parallel safe
-set search_path = public, extensions
+set search_path = extensions, public, pg_temp
 as $$
   select trim(regexp_replace(
     regexp_replace(
@@ -72,7 +73,7 @@ create or replace function public.refresh_product_search_index(p_product_id uuid
 returns void
 language plpgsql
 security definer
-set search_path = public, extensions
+set search_path = extensions, public, pg_temp
 as $$
 declare
   v_doc text;
@@ -112,7 +113,7 @@ create or replace function public.trg_products_search_index()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
   perform public.refresh_product_search_index(new.id);
@@ -128,7 +129,7 @@ create or replace function public.trg_synonyms_search_index()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
   if tg_op in ('UPDATE', 'DELETE') then perform public.refresh_product_search_index(old.product_id); end if;
@@ -145,7 +146,7 @@ create or replace function public.trg_categories_search_index()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
   perform public.refresh_product_search_index(p.id) from public.products p where p.category_id = new.id;
@@ -163,7 +164,7 @@ returns table (product_id uuid, document text, content_hash text)
 language sql
 stable
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
   select i.product_id, i.document, i.content_hash
     from public.product_search_index i
@@ -195,10 +196,10 @@ returns table (
 language sql
 stable
 security definer
-set search_path = public, extensions
+set search_path = extensions, public, pg_temp
 as $$
   with q as (
-    select public.search_normalize(p_query) as text,
+    select public.search_normalize(left(coalesce(p_query, ''), 500)) as text,
            least(greatest(coalesce(p_match_count, 40), 1), 100) as n
   ),
   terms as (
@@ -253,10 +254,11 @@ as $$
    limit (select n from q)
 $$;
 
-revoke all on function public.search_products_hybrid(text, vector, integer) from public, anon;
+revoke all on function public.search_products_hybrid(text, vector, integer) from public, anon, authenticated;
 revoke all on function public.product_search_pending(text, integer, boolean) from public, anon, authenticated;
 revoke all on function public.refresh_product_search_index(uuid) from public, anon, authenticated;
-grant execute on function public.search_products_hybrid(text, vector, integer) to authenticated, service_role;
+-- Solo el backend del POS (service role) consulta la búsqueda; no se expone a usuarios autenticados.
+grant execute on function public.search_products_hybrid(text, vector, integer) to service_role;
 grant execute on function public.product_search_pending(text, integer, boolean) to service_role;
 grant execute on function public.refresh_product_search_index(uuid) to service_role;
 

@@ -59,14 +59,26 @@ export const makeHybridDraftBuilder = (
   const answer = makeCatalogAnswerer(catalog)
   return async (messages: string[], previous: SaleDraftV1 | null): Promise<SaleDraftV1 | CatalogAnswer> => {
     const sourceText = messages.join('\n')
-    // Real candidates offered before (numbered options): the only IDs a follow-up may pick.
-    const previousIds = [...new Set((previous?.items || []).flatMap(i => [...(i.product_id ? [i.product_id] : []), ...i.candidates]))]
-    const candidates = (catalog.getProducts
+    const previousItems = previous?.items || []
+    // Lines where options were listed to the seller; their preselected product is only a proposal.
+    const choosing = (line: SaleDraftV1['items'][number]) => line.doubts.some(d => d.code === 'ambiguous_product' || d.code === 'product_not_found')
+    // Options in the order they were numbered for the seller.
+    const offeredIds = [...new Set(previousItems.filter(choosing).flatMap(i => [...(i.product_id ? [i.product_id] : []), ...i.candidates]))]
+    // Every real product of the previous draft: the only IDs a follow-up may refer to.
+    const previousIds = [...new Set([...offeredIds, ...previousItems.flatMap(i => [...(i.product_id ? [i.product_id] : []), ...i.candidates])])]
+    const products = (catalog.getProducts
       ? await catalog.getProducts(previousIds)
       : (await Promise.all(previousIds.map(id => catalog.getProduct(id)))).filter((p): p is Product => Boolean(p)))
-    // Keep the order in which they were shown.
-    candidates.sort((a, b) => previousIds.indexOf(a.id) - previousIds.indexOf(b.id))
-    const parsed = await interpret(messages, { previous, candidates })
+    products.sort((a, b) => previousIds.indexOf(a.id) - previousIds.indexOf(b.id))
+    const offered = products.filter(p => offeredIds.includes(p.id))
+    // The interpreter never sees a preselection as if it were the seller's choice (finding A2).
+    const shown: SaleDraftV1 | null = previous && {
+      ...previous,
+      items: previous.items.map(line => choosing(line)
+        ? { ...line, product_id: null, candidates: [...(line.product_id ? [line.product_id] : []), ...line.candidates] }
+        : line)
+    }
+    const parsed = await interpret(messages, { previous: shown, candidates: offered.length ? offered : products })
     if (parsed.intent === 'catalog_query') {
       if (!options.answerCatalogQuestions) return emptyDraft('unsupported', sourceText)
       const reply = await answer(parsed)
@@ -74,7 +86,7 @@ export const makeHybridDraftBuilder = (
     }
     if (parsed.intent !== 'sale') return emptyDraft(parsed.intent, sourceText)
     // Reservations are process 2's job: it recomputes available stock itself.
-    const { proposal } = await prepare(parsed, candidates, new Map())
+    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered })
     return toSaleDraft(proposal, sourceText)
   }
 }

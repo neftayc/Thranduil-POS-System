@@ -13,6 +13,7 @@ const jiti = createJiti(import.meta.url)
 const { makeSalesAgent } = await jiti.import('../server/modules/agent/app/salesAgent.ts')
 const { makeDraftValidator } = await jiti.import('../server/modules/agent/app/validateDraft.ts')
 const { makeLegacyDraftBuilder } = await jiti.import('../server/modules/agent/app/legacyDraftBuilder.ts')
+const { parseAgentDraft } = await jiti.import('../server/modules/agent/app/proposalAdapter.ts')
 const { makeFileAgentStore } = await jiti.import('../server/modules/agent/infra/fileAgentStore.ts')
 const { makeSupabaseSaleExecutor, isDefinitiveRpcError } = await jiti.import('../server/modules/agent/infra/supabaseSaleExecutor.ts')
 const {
@@ -31,7 +32,7 @@ const makeCatalog = () => {
     products: new Map([[CUADERNO.id, { ...CUADERNO }], [LAPICERO.id, { ...LAPICERO }]]),
     prices: new Map([[CUADERNO.id, 5], [LAPICERO.id, 1.5]]),
     minStock: new Map([[CUADERNO.id, 0], [LAPICERO.id, 0]]),
-    units: { docena: 12 },
+    units: { unidad: 1, docena: 12 },
     quotes: 0
   }
   const catalog = {
@@ -525,4 +526,51 @@ test('constructor provisional: coincidencia única = segura; varias = candidatos
   assert.equal(chosen.items[0].confidence, 'high')
   const invented = await makeLegacyDraftBuilder(async () => interpretation(randomUUID()), search)(['x'], null)
   assert.equal(invented.items[0].product_id, null)
+})
+
+// ---------------------------------------------------------------- SaleProposal (agent 1, hybrid search)
+
+const proposal = (overrides = {}, item = {}) => ({
+  confidence: 'high', customer_id: null, payment_method: 'efectivo', total: 10, currency: 'PEN', doubts: [],
+  items: [{
+    line: 1, query: '2 cuadernos A4', product_id: CUADERNO.id, name: CUADERNO.name, sku: 'CUA-1', brand: 'Marca A',
+    qty: 2, unit_name: 'unidad', factor: 1, price_unit: 5, total: 10, stock_available: 20, confidence: 'high',
+    match_score: 0.97, reasons: ['coinciden hojas, tamaño y marca'], alternatives: [], ...item
+  }],
+  ...overrides
+})
+
+test('SaleProposal segura se convierte a sale-draft/1 y se registra directo; sus motivos de una línea segura no son dudas', async t => {
+  const parsed = parseAgentDraft({ proposal: proposal() }, 'vende 2 cuadernos')
+  assert.equal(parsed.success, true)
+  assert.equal(parsed.data.items[0].quantity, 2)
+  assert.deepEqual(parsed.data.items[0].doubts, [])
+  const { run, counts } = await setup(t, { drafts: [{ draft: {}, candidates: [], proposal: proposal() }] })
+  assert.equal((await run(instruction())).status, 'completed')
+  assert.equal(counts.execute, 1)
+})
+
+test('SaleProposal media: por confirmar con sus motivos y alternativas como candidatos', async t => {
+  const alt = randomUUID()
+  const medium = proposal({ confidence: 'medium' }, { confidence: 'medium', reasons: ['no se indicó el rayado'], alternatives: [{ product_id: alt, name: 'Otro', sku: 'X', brand: null, score: 0.8 }] })
+  const parsed = parseAgentDraft(medium)
+  assert.deepEqual(parsed.data.items[0].candidates, [alt])
+  assert.deepEqual(parsed.data.items[0].doubts, [{ code: 'other', note: 'no se indicó el rayado' }])
+  const { run, counts } = await setup(t, { drafts: [medium] })
+  const response = await run(instruction())
+  assert.equal(response.status, 'pending_review')
+  assert.ok(codes(response).includes('low_confidence'))
+  assert.match(response.message, /no se indicó el rayado/)
+  assert.equal(counts.execute, 0)
+})
+
+test('SaleProposal con precio distinto al oficial o sin forma de pago queda por confirmar', async t => {
+  const { run } = await setup(t, { drafts: [proposal({}, { price_unit: 4 }), proposal({ payment_method: null })] })
+  assert.deepEqual(codes(await run(instruction('a'))), ['price_changed'])
+  assert.deepEqual(codes(await run(instruction('b'))), ['missing_payment'])
+})
+
+test('un objeto que no es sale-draft/1 ni SaleProposal no se acepta', () => {
+  assert.equal(parseAgentDraft({ foo: 1 }).success, false)
+  assert.equal(parseAgentDraft(proposal({ confidence: 'total' })).success, false)
 })

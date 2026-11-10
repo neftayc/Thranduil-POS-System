@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto'
 import {
   AgentBusyError, AgentConflictError, AgentForbiddenError, SaleNotCommittedError, SaleRejectedByPosError,
-  saleDraftSchema,
   type AgentResponse, type AgentSeller, type DraftItem, type Instruction, type Operation,
   type Reservation, type ReviewReason, type SaleDraftV1, type SalesAgentDependencies, type StockAlert
 } from '../contracts'
+import { parseAgentDraft } from './proposalAdapter'
 
 const normalize = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.,!¡¿?]/g, '').trim().replace(/\s+/g, ' ')
 const cancellations = new Set(['no', 'cancelar', 'cancela', 'cancelar venta', 'cancela la venta', 'anular', 'anula la venta'])
@@ -151,9 +151,9 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       } catch {
         return finish({ status: 'rejected', operation_id: id, message: 'No se pudo interpretar el pedido. No se registró una venta. Reintenta con otro request_id.' })
       }
-      const parsed = saleDraftSchema.safeParse(raw)
+      const parsed = parseAgentDraft(raw, op.messages.join('\n'))
       if (!parsed.success) {
-        return review([{ code: 'invalid_draft', message: 'El borrador del agente no respeta el contrato sale-draft/1.' }], [], [])
+        return review([{ code: 'invalid_draft', message: 'El borrador del agente no respeta el contrato (sale-draft/1 o SaleProposal).' }], [], [])
       }
       const proposal: SaleDraftV1 = parsed.data
       op.proposal = proposal

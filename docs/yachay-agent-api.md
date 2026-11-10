@@ -205,6 +205,13 @@ Códigos de duda: `ambiguous_product`, `product_not_found`, `missing_quantity`,
 `unit_unclear`, `missing_payment`, `customer_ambiguous`, `other`. Un borrador
 con campos desconocidos o fuera de rango no se acepta (`invalid_draft`).
 
+También se acepta el `SaleProposal` de la búsqueda híbrida (directo o como
+`{ proposal }`, `app/proposalAdapter.ts`): `qty` → `quantity`, `unit_name` →
+`unit`, `alternatives` → `candidates`; los `reasons` de una línea `medium`/`low`
+pasan a ser dudas (en una línea `high` solo explican la coincidencia) y una
+seguridad general distinta de `high` agrega una duda general. Su `draft`, `total`,
+`factor` y `stock_available` se ignoran: el proceso 2 los recalcula.
+
 Mientras no llegue la búsqueda híbrida, el agente 1 provisional es el intérprete
 OpenAI con búsqueda por texto (`legacyDraftBuilder.ts`).
 

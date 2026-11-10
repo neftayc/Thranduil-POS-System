@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { saleDraftSchema, type SaleDraftV1 } from '../contracts'
+import { DOUBT_NOTE_MAX, saleDraftSchema, type SaleDraftV1 } from '../contracts'
 
 /**
  * Agent 1 (hybrid search) emits a `SaleProposal`. Process 2 accepts it and converts it to
@@ -8,22 +8,24 @@ import { saleDraftSchema, type SaleDraftV1 } from '../contracts'
  */
 const confidence = z.enum(['high', 'medium', 'low'])
 const id = z.string().trim().min(1).max(64)
+// Free text from agent 1 (doubts list the options and can be long): truncated, never a reason to reject.
+const note = z.string().transform(value => value.trim().slice(0, DOUBT_NOTE_MAX))
 export const saleProposalSchema = z.object({
   intent: z.enum(['sale', 'cancel', 'unsupported']).optional(),
   confidence,
   customer_id: id.nullable(),
   payment_method: z.string().trim().min(1).max(60).nullable(),
   items: z.array(z.object({
-    query: z.string().max(500).default(''),
+    query: z.string().transform(value => value.slice(0, 500)).default(''),
     product_id: id.nullable(),
     qty: z.number().nullable(),
     unit_name: z.string().trim().min(1).max(60).nullable(),
     price_unit: z.number().nullable(),
     confidence,
-    reasons: z.array(z.string().max(300)).max(10).default([]),
-    alternatives: z.array(z.object({ product_id: id }).passthrough()).max(8).default([])
+    reasons: z.array(note).transform(list => list.slice(0, 10)).default([]),
+    alternatives: z.array(z.object({ product_id: id }).passthrough()).transform(list => list.slice(0, 8)).default([])
   }).passthrough()).max(20),
-  doubts: z.array(z.string().max(300)).max(10).default([])
+  doubts: z.array(note).transform(list => list.slice(0, 10)).default([])
 }).passthrough()
 export type SaleProposal = z.infer<typeof saleProposalSchema>
 
@@ -37,15 +39,19 @@ export const proposalToDraft = (proposal: SaleProposal, sourceText = ''): SaleDr
     unit: item.unit_name,
     price_unit: item.price_unit,
     confidence: item.confidence,
-    // On a "high" line the reasons explain the match; on medium/low they are the doubts.
-    doubts: item.confidence === 'high' ? [] : item.reasons.map(note => ({ code: 'other', note })),
+    // `reasons` explain the match ("100 hojas coincide"); they are not doubts. Agent 1 writes the
+    // real doubts in `proposal.doubts`, and a non-high line already yields low_confidence.
+    doubts: [],
     query: item.query
   })),
   payment_method: proposal.payment_method,
   customer_id: proposal.customer_id,
   doubts: [
     ...proposal.doubts.map(note => ({ code: 'other' as const, note })),
-    ...(proposal.confidence === 'high' ? [] : [{ code: 'other' as const, note: `Seguridad general ${proposal.confidence === 'medium' ? 'media' : 'baja'} del agente 1` }])
+    // A non-high proposal whose lines are all high and without doubts still must not go direct.
+    ...(proposal.confidence !== 'high' && !proposal.doubts.length && proposal.items.every(i => i.confidence === 'high')
+      ? [{ code: 'other' as const, note: `Seguridad general ${proposal.confidence === 'medium' ? 'media' : 'baja'} del agente 1` }]
+      : [])
   ],
   source_text: sourceText.slice(0, 5000)
 })

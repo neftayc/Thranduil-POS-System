@@ -36,7 +36,8 @@ export const DRAFT_DOUBTS = [
   'ambiguous_product', 'product_not_found', 'missing_quantity', 'unit_unclear',
   'missing_payment', 'customer_ambiguous', 'other'
 ] as const
-const doubtSchema = z.object({ code: z.enum(DRAFT_DOUBTS), note: z.string().trim().max(300).optional() }).strict()
+export const DOUBT_NOTE_MAX = 1000
+const doubtSchema = z.object({ code: z.enum(DRAFT_DOUBTS), note: z.string().trim().max(DOUBT_NOTE_MAX).optional() }).strict()
 
 export const saleDraftSchema = z.object({
   version: z.literal('sale-draft/1'),

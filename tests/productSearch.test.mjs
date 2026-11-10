@@ -333,3 +333,65 @@ test('política: un nombre exacto no basta si otro producto activo también coin
   // Still high when a single product matches what the order says.
   assert.equal(decide('diccionario bruno de ingles').confidence, 'high')
 })
+
+// ---- Finding A2: a preselected product must never become a sale without the seller choosing it ----
+const { explicitChoice } = await jiti.import('../server/modules/agent/app/sellerChoice.ts')
+
+test('A2: «con yape» con el id preseleccionado copiado por el LLM → sigue ambiguo y el proceso 2 lo deja por confirmar', async () => {
+  const catalog = catalogFrom(snapshot)
+  const order = { ...sale('cuaderno rayado a4 100 hojas', 2), payment_method: null }
+  const first = await makeHybridDraftBuilder(interpreterReturning(order).interpret, catalog)(['2 cuadernos rayados A4 100 hojas'], null)
+  const [line] = first.items
+  assert.equal(line.confidence, 'medium')
+  assert.equal(line.doubts[0].code, 'ambiguous_product')
+  assert.ok(line.product_id, 'hay un producto preseleccionado')
+  // Simulated LLM: copies the preselected id and adds the payment method.
+  const copying = interpreterReturning({ ...order, payment_method: 'yape', items: [{ ...order.items[0], product_id: line.product_id }] })
+  const second = await makeHybridDraftBuilder(copying.interpret, catalogFrom(snapshot, {
+    paymentMethods: async () => [{ code: 'yape', label: 'Yape' }, { code: 'efectivo', label: 'Efectivo' }]
+  }))(['2 cuadernos rayados A4 100 hojas', 'con yape'], first)
+  // The interpreter does not see the preselection as a choice.
+  const shownLine = copying.calls[0].context.previous.items[0]
+  assert.equal(shownLine.product_id, null)
+  assert.equal(shownLine.candidates[0], line.product_id)
+  assert.equal(second.payment_method, 'yape')
+  assert.notEqual(second.items[0].confidence, 'high')
+  assert.equal(second.items[0].doubts[0].code, 'ambiguous_product')
+  const decision = await makeDraftValidator(catalogFrom(snapshot, { paymentMethods: async () => [{ code: 'yape', label: 'Yape' }] }))(second, new Map())
+  assert.equal(decision.kind, 'review')
+})
+
+test('A2: una elección explícita (número de opción) sí resuelve la línea', async () => {
+  const catalog = catalogFrom(snapshot)
+  const order = sale('cuaderno rayado a4 100 hojas', 2)
+  const first = await makeHybridDraftBuilder(interpreterReturning(order).interpret, catalog)(['2 cuadernos rayados A4 100 hojas efectivo'], null)
+  const options = [first.items[0].product_id, ...first.items[0].candidates]
+  const surco = snapshot.find(p => p.name === 'cuaderno surco rayado 100 h')
+  const n = options.indexOf(surco.id) + 1
+  assert.ok(n > 0)
+  const picking = interpreterReturning({ ...order, items: [{ ...order.items[0], product_id: surco.id }] })
+  const second = await makeHybridDraftBuilder(picking.interpret, catalog)(['2 cuadernos rayados A4 100 hojas efectivo', `la ${n}`], first)
+  assert.equal(second.items[0].product_id, surco.id)
+  assert.equal(second.items[0].confidence, 'high')
+  assert.deepEqual(second.items[0].doubts, [])
+})
+
+test('explicitChoice: solo números de opción, SKU o una palabra que distinga una sola opción', () => {
+  const offered = [
+    { id: 'a', name: 'Caja de Colores Grande x12', brand: 'Artesco', sku: 'SKU-AAA1', unit: 'unidad', stock: 1 },
+    { id: 'f', name: 'Caja de Colores Grande x12', brand: 'Faber Castell', sku: 'SKU-FFF2', unit: 'unidad', stock: 1 },
+    { id: 'l', name: 'Caja de Colores Grande x12', brand: 'Layconsa', sku: 'SKU-LLL3', unit: 'unidad', stock: 1 }
+  ]
+  assert.equal(explicitChoice('la 2', offered), 'f')
+  assert.equal(explicitChoice('opción 3, con yape', offered), 'l')
+  assert.equal(explicitChoice('#1', offered), 'a')
+  assert.equal(explicitChoice('el sku-fff2 por favor', offered), 'f')
+  assert.equal(explicitChoice('la de faber', offered), 'f')
+  assert.equal(explicitChoice('con yape', offered), null)
+  assert.equal(explicitChoice('2', offered), null, 'un número suelto puede ser una cantidad')
+  assert.equal(explicitChoice('son 2 cajas', offered), null)
+  assert.equal(explicitChoice('caja de colores grande', offered), null, 'palabras comunes a todas no eligen')
+  assert.equal(explicitChoice('la de faber o la layconsa', offered), null, 'elecciones contradictorias')
+  assert.equal(explicitChoice('la 2, la de artesco', offered), null, 'número y nombre en conflicto')
+  assert.equal(explicitChoice(undefined, offered), null)
+})

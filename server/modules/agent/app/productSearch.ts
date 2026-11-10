@@ -123,7 +123,7 @@ const editDistance = (a: string, b: string) => {
 }
 const singular = (word: string) => word.length > 4 && word.endsWith('es') && !word.endsWith('ces') ? word.slice(0, -2)
   : word.length > 3 && word.endsWith('s') ? word.slice(0, -1) : word
-const similarWord = (a: string, b: string) => {
+export const similarWord = (a: string, b: string) => {
   if (a === b) return true
   const sa = singular(a), sb = singular(b)
   if (sa === sb) return true
@@ -207,6 +207,10 @@ const wordPresent = (word: string, candidateWords: string[]) => {
   }
   return false
 }
+
+/** Content words of a text (no stopwords, no pure numbers), for the seller-choice check. */
+export const contentWords = (text: string) => normalizeText(text).split(' ')
+  .filter(word => word.length >= 3 && !STOPWORDS.has(word) && !/^\d+(\.\d+)?$/.test(word))
 
 export const brandVocabulary = (docs: SearchDoc[]) => {
   const brands = new Set<string>()

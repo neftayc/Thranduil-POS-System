@@ -2,6 +2,7 @@ import type { DraftDoubt, DraftItem, Product, SaleDraft } from '../contracts'
 import type {
   Confidence, OrderInterpretation as Interpretation, ProposalAlternative, ProposalItem, SaleProposal
 } from './agent1Contracts'
+import { explicitChoice } from './sellerChoice'
 import { brandVocabulary, closestCandidates, decideMatch, reasonsFor, tiedWithBest, type MatchDecision, type RetrievedDoc } from './productSearch'
 
 export interface AgentCatalog {
@@ -62,8 +63,20 @@ const describe = (p: Product) => `${p.name}${p.brand ? ` / ${p.brand}` : ''}${p.
  */
 export const makeSalePreparer = (catalog: AgentCatalog) => {
   const match = makeProductMatcher(catalog)
-  return async (input: Interpretation, previousCandidates: Product[], reserved: Map<string, number> = new Map()) => {
+  /**
+   * `context.lastMessage` + `context.offered` (options shown before, in their numbered order):
+   * an AI-provided product_id is accepted only if the seller's last message chose it explicitly.
+   */
+  return async (input: Interpretation, previousCandidates: Product[], reserved: Map<string, number> = new Map(),
+    context: { lastMessage?: string; offered?: Product[] } = {}) => {
     const candidates: Product[] = []
+    // Options listed to the seller in THIS answer, numbered in this order.
+    const offered: Product[] = []
+    const offer = (products: Product[]) => {
+      for (const p of products) if (!offered.some(o => o.id === p.id)) offered.push(p)
+      for (const p of products) if (!candidates.some(c => c.id === p.id)) candidates.push(p)
+      return products.map(p => `${offered.findIndex(o => o.id === p.id) + 1}) ${describe(p)}`).join('; ')
+    }
     const questions: string[] = input.question?.trim() ? [input.question.trim().slice(0, 500)] : []
     const doubts: string[] = [...questions]
     const draft: SaleDraft = { customer_id: null, payment_method: '', items: [], total: 0, currency: 'PEN' }
@@ -105,19 +118,24 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
         line.confidence = lowest(line.confidence, level)
       }
       let product: Product | null = null
-      if (item.product_id) {
-        // An LLM-provided ID is valid only when it came from a previous real candidate.
-        if (previousCandidates.some(p => p.id === item.product_id)) product = await catalog.getProduct(item.product_id)
+      // An AI-provided ID counts only if it was a real candidate offered before AND the seller's
+      // last message picked it deterministically (option number, SKU or a distinctive word).
+      // Otherwise the line is searched again (a preselection never becomes a sale by itself).
+      const known = item.product_id ? previousCandidates.find(p => p.id === item.product_id) : undefined
+      const chosen = known && explicitChoice(context.lastMessage, context.offered?.length ? context.offered : previousCandidates) === known.id
+      if (item.product_id && !known) {
+        lineDoubt('la selección no corresponde a una opción disponible. Indica nuevamente el producto.', 'low', 'product_not_found')
+      } else if (chosen) {
+        product = await catalog.getProduct(item.product_id!)
         if (product) Object.assign(line, { confidence: 'high', match_score: 1, reasons: ['elegido por el vendedor entre las opciones'] })
-        else lineDoubt('la selección no corresponde a una opción disponible. Indica nuevamente el producto.', 'low', 'product_not_found')
+        else lineDoubt('la opción elegida ya no está disponible. Indica nuevamente el producto.', 'low', 'product_not_found')
       } else if (item.sku?.trim()) {
         const matches = await catalog.findProducts(item.query, item.sku)
         if (matches.length === 1) { product = matches[0]; Object.assign(line, { confidence: 'high', match_score: 1, reasons: ['SKU exacto'] }) }
         else if (!matches.length) lineDoubt(`no existe el SKU «${item.sku}». Especifica producto, marca o SKU.`, 'low', 'product_not_found')
         else {
-          const start = candidates.length
-          candidates.push(...matches)
-          lineDoubt(`el SKU «${item.sku}» corresponde a varios productos: ${matches.map((p, i) => `${start + i + 1}) ${describe(p)}`).join('; ')}.`, 'medium', 'ambiguous_product')
+          line.alternatives = matches.slice(0, 5).map(p => ({ product_id: p.id, name: p.name, sku: p.sku, brand: p.brand, score: 1 }))
+          lineDoubt(`el SKU «${item.sku}» corresponde a varios productos: ${offer(matches.slice(0, 5))}.`, 'medium', 'ambiguous_product')
         }
       } else {
         const { decision, products } = await match(matchQuery(item))
@@ -140,8 +158,7 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
           // Offer only real candidates: the best one first, then the closest alternatives.
           const options = [best, ...line.alternatives.map(a => products.get(a.product_id))]
             .filter((p): p is Product => Boolean(p)).slice(0, 6)
-          candidates.push(...options.filter(p => !candidates.some(c => c.id === p.id)))
-          const list = options.map(p => `${candidates.findIndex(c => c.id === p.id) + 1}) ${describe(p)}`).join('; ')
+          const list = offer(options)
           const reason = decision.doubts.join(' ') || 'la coincidencia no es exacta.'
           if (best) lineDoubt(`${reason} Propuesta: ${describe(best)}.${options.length > 1 ? ` Opciones: ${list}.` : ''}`, decision.confidence, 'ambiguous_product')
           else lineDoubt(`no encontré «${item.query}» con esas características. ${reason}${options.length ? ` Parecidos: ${list}.` : ''} Especifica producto, marca o SKU.`, 'low', 'product_not_found')

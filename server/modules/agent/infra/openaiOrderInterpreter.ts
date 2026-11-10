@@ -35,7 +35,7 @@ quantity es la cantidad a vender; 100 hojas NO son 100 cuadernos. Si es ambiguo,
 unit es la presentación pedida (unidad, caja, docena, paquete...), o null si no se indicó.
 product_id solo puede copiar un id de candidatos reales del borrador previo cuando el usuario haya elegido explícitamente ese producto.
 sku copia el SKU literal si el usuario lo indica, o null. Un SKU NO es product_id. Si no hay candidatos previos, product_id SIEMPRE es null.
-Si el usuario elige una opción numerada, usa el orden de candidatos del borrador. Nunca elijas por tu cuenta entre varias marcas o productos.
+Si el usuario elige una opción numerada, usa el campo n de candidates. Nunca elijas por tu cuenta entre varias marcas o productos: si el último mensaje no nombra la opción (número, SKU o nombre/marca que la distinga), product_id=null.
 payment_method es la forma de pago indicada por el usuario, o null. customer_query es nombre del cliente si se indicó; null para venta al público sin cliente específico.
 Una aclaración modifica solamente los datos indicados y conserva el resto. Incluye TODOS los artículos vigentes.
 El POS registra la venta SIN confirmación cuando todos los datos están resueltos: ante cualquier duda deja el campo en null y pregunta; el pedido quedará como venta por confirmar.
@@ -57,7 +57,7 @@ export const makeOpenAIOrderInterpreter = (apiKey: string, model: string): Order
           messages,
           previous_draft: previous,
           // Numbered options shown to the seller, in this order.
-          candidates: candidates.map(p => ({ id: p.id, name: p.name, brand: p.brand, sku: p.sku, unit: p.unit }))
+          candidates: candidates.map((p, i) => ({ n: i + 1, id: p.id, name: p.name, brand: p.brand, sku: p.sku, unit: p.unit }))
         }) }
       ],
       response_format: zodResponseFormat(llmSchema, 'pos_sale_request')

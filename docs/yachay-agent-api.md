@@ -50,6 +50,7 @@ POS_AGENT_STORAGE_DIR=.data/agent
 # Opcionales
 POS_AGENT_PUBLIC_URL=            # origen público del enlace /vincular (fase 2)
 POS_AGENT_REVIEW_TTL_HOURS=48    # vigencia de la reserva de una venta por confirmar
+POS_AGENT_DRY_RUN=               # 1 = solo validación: nunca registra ventas (apagado por defecto)
 ```
 
 Genera cada secreto con `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
@@ -269,6 +270,28 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 Alertas: tras `completed` o `pending_review`, para cada producto afectado
 `disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`
 (de `product_catalog`). Un fallo al calcularlas nunca altera la venta.
+
+## Modo de solo validación (`POS_AGENT_DRY_RUN=1`)
+
+Sirve para probar con lecturas reales sin registrar ventas. Está apagado por defecto;
+se activa con `POS_AGENT_DRY_RUN=1` o `true` (`NUXT_POS_AGENT_DRY_RUN` en producción)
+y `GET /api/agent/context` lo indica en `dry_run`.
+
+- Hace todas las lecturas reales (producto activo, `resolve_sale_item_pricing`,
+  stock, forma de pago, cliente) y aplica la misma regla de decisión, motivos y alertas.
+- **Nunca llama a `create_sale`**: el orquestador no ejecuta y, como segunda barrera,
+  el ejecutor cableado lanza un error.
+- Usa un almacén aparte, `.data/agent/dry-run`: la idempotencia por `request_id`
+  funciona igual y las reservas son simuladas (solo afectan a otros pedidos en
+  dry-run, nunca a los reales).
+- Toda respuesta trae `result.dry_run: true` y el mensaje empieza con
+  «SIMULACIÓN (dry-run), NO se registró ninguna venta.»
+- `result.would_be: "completed"` → con datos reales se habría registrado directo.
+  Se responde con `status: "rejected"` (estado terminal), **nunca `completed`**, porque
+  el conector solo admite los estados conocidos y `completed` acredita una venta.
+  Las alertas se calculan como si la venta hubiera ocurrido.
+- `result.would_be: "pending_review"` → se responde `pending_review` con sus motivos,
+  y se pueden probar aclaraciones, «cancelar» y el vencimiento.
 
 ## Reintentos y estado local
 

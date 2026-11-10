@@ -12,6 +12,10 @@ import { makeSupabaseAgentCatalog } from '../modules/agent/infra/supabaseAgentCa
 import { makeSupabaseSaleExecutor } from '../modules/agent/infra/supabaseSaleExecutor'
 import { makeSupabaseSellerAuth } from '../modules/agent/infra/supabaseSellerAuth'
 import { getSupabaseUserClient } from './supabase'
+import { SaleNotCommittedError } from '../modules/agent/contracts'
+
+/** POS_AGENT_DRY_RUN=1|true (or NUXT_POS_AGENT_DRY_RUN): validation only, never registers sales. */
+export const isDryRun = (value: unknown) => value === true || ['1', 'true'].includes(String(value ?? '').trim().toLowerCase())
 
 export const SELLER_SESSION_HEADER = 'x-yachay-session'
 
@@ -64,13 +68,19 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   const key = String(config.openaiApiKey || '').trim()
   if (!key) throw createError({ statusCode: 503, statusMessage: 'Intérprete de ventas no configurado' })
   const catalog = makeSupabaseAgentCatalog()
+  const dryRun = isDryRun(config.posAgentDryRun)
   const agent = makeSalesAgent({
-    store: makeFileAgentStore(String(config.posAgentStorageDir)),
+    // Dry-run keeps its own idempotency records and simulated reservations, apart from the real ones.
+    store: makeFileAgentStore(dryRun ? join(String(config.posAgentStorageDir), 'dry-run') : String(config.posAgentStorageDir)),
     // Agent 1 (AI). Provisional builder until the hybrid search lands.
     buildDraft: makeLegacyDraftBuilder(makeOpenAISalesInterpreter(key, String(config.posAgentModel)), catalog),
     // Process 2 (deterministic).
     validate: makeDraftValidator(catalog),
-    execute: makeSupabaseSaleExecutor(seller.authorize, (token, args) => getSupabaseUserClient(token).rpc('create_sale', args) as any),
+    // Second barrier: in dry-run the executor cannot reach create_sale even if called.
+    execute: dryRun
+      ? async () => { throw new SaleNotCommittedError('Modo de solo validación (POS_AGENT_DRY_RUN): no se registran ventas.') }
+      : makeSupabaseSaleExecutor(seller.authorize, (token, args) => getSupabaseUserClient(token).rpc('create_sale', args) as any),
+    dryRun,
     stockLevels: ids => catalog.stockLevels(ids),
     reviewTtlMs: Number(config.posAgentReviewTtlHours || 48) * 60 * 60 * 1000
   })

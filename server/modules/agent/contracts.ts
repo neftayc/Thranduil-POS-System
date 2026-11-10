@@ -106,7 +106,8 @@ export type DraftDecision =
 export type Operation = {
   id: string
   // review = "venta por confirmar": saved for later validation in the POS, reserves stock.
-  state: 'preparing' | 'review' | 'executing' | 'completed' | 'cancelled'
+  // simulated = dry-run: would have been registered directly; nothing was sent to create_sale.
+  state: 'preparing' | 'review' | 'executing' | 'completed' | 'cancelled' | 'simulated'
   seller_id: string
   messages: string[]
   /** Last draft received from agent 1 (kept for the batch-validation screen and audit). */
@@ -143,6 +144,11 @@ export interface SalesAgentDependencies {
   /** How long a "venta por confirmar" keeps its stock reservation (default 48 h). */
   reviewTtlMs?: number
   now?(): number
+  /**
+   * Validation-only mode (POS_AGENT_DRY_RUN=1): real reads and the real decision, but execute() is
+   * NEVER called. Use it with a separate store: its reservations are simulated.
+   */
+  dryRun?: boolean
 }
 
 /** The sale was certainly NOT registered and should not be retried (e.g. the seller is no longer authorized). */

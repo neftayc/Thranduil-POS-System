@@ -25,6 +25,8 @@ export default defineNuxtConfig({
     posAgentPublicUrl: process.env.POS_AGENT_PUBLIC_URL || '',
     posAgentReviewTtlHours: Number(process.env.POS_AGENT_REVIEW_TTL_HOURS || 48),
     posAgentModel: process.env.POS_AGENT_MODEL || 'gpt-4o-mini',
+    // Validation-only mode for tests with real reads: never calls create_sale. Off by default.
+    posAgentDryRun: ['1', 'true'].includes(String(process.env.POS_AGENT_DRY_RUN || '').trim().toLowerCase()),
     posAgentStorageDir: process.env.POS_AGENT_STORAGE_DIR || '.data/agent',
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',

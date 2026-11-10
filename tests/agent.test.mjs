@@ -574,3 +574,83 @@ test('un objeto que no es sale-draft/1 ni SaleProposal no se acepta', () => {
   assert.equal(parseAgentDraft({ foo: 1 }).success, false)
   assert.equal(parseAgentDraft(proposal({ confidence: 'total' })).success, false)
 })
+
+// ---------------------------------------------------------------- dry-run (POS_AGENT_DRY_RUN)
+
+const forbiddenExecute = calls => async () => { calls.n++; throw new Error('create_sale NO debe llamarse en dry-run') }
+
+test('dry-run: pedido inequívoco no llama a create_sale, informa would_be completed y nunca responde completed', async t => {
+  const calls = { n: 0 }
+  const { run, dependencies, state } = await setup(t, { dryRun: true, execute: forbiddenExecute(calls) })
+  state.minStock.set(CUADERNO.id, 18)
+  const request = instruction()
+  const response = await run(request)
+  assert.equal(calls.n, 0)
+  assert.notEqual(response.status, 'completed')
+  assert.equal(response.status, 'rejected')
+  assert.equal(response.result.dry_run, true)
+  assert.equal(response.result.would_be, 'completed')
+  assert.equal(response.result.reference, null)
+  assert.equal(response.result.total, 10)
+  assert.match(response.message, /^SIMULACIÓN \(dry-run\), NO se registró ninguna venta\. Con datos reales se habría registrado directamente por S\/ 10\.00/)
+  // Alerts computed as if the sale had happened (20 − 2 = 18 ≤ min 18), without touching stock.
+  assert.equal(response.result.alerts[0].level, 'low')
+  assert.equal(state.products.get(CUADERNO.id).stock, 20)
+  assert.equal((await dependencies.store.getOperation(response.operation_id)).state, 'simulated')
+  // Same idempotency: a retry returns the same simulated answer, still without create_sale.
+  assert.deepEqual(await run(request), response)
+  await assert.rejects(run({ ...request, input: { text: 'otra' } }), AgentConflictError)
+  assert.equal((await run(follow(response.operation_id, 'pago efectivo'))).result.would_be, 'completed')
+  assert.equal(calls.n, 0)
+})
+
+test('dry-run: por confirmar con motivos y reserva simulada; aclaración, cancelación y vencimiento sin create_sale', async t => {
+  const calls = { n: 0 }
+  const { run, dependencies, clock } = await setup(t, {
+    dryRun: true, execute: forbiddenExecute(calls),
+    drafts: [draftOf({ payment_method: null }), draftOf(), draftOf({ payment_method: null })]
+  })
+  const review = await run(instruction('vende dos cuadernos'))
+  assert.equal(review.status, 'pending_review')
+  assert.equal(review.result.dry_run, true)
+  assert.equal(review.result.would_be, 'pending_review')
+  assert.deepEqual(codes(review), ['missing_payment'])
+  assert.match(review.message, /^SIMULACIÓN/)
+  assert.deepEqual((await dependencies.store.getOperation(review.operation_id)).reservations, [{ product_id: CUADERNO.id, qty: 2 }])
+  const completed = await run(follow(review.operation_id, 'efectivo'))
+  assert.equal(completed.result.would_be, 'completed')
+  assert.notEqual(completed.status, 'completed')
+
+  const second = await run(instruction('vende dos cuadernos otra vez'))
+  assert.equal((await run(follow(second.operation_id, 'cancelar'))).result.dry_run, true)
+  const third = await run(instruction('y otros dos'))
+  clock.now += 49 * 3600e3
+  assert.match((await run(follow(third.operation_id, 'efectivo'))).message, /venció/)
+  assert.equal(calls.n, 0)
+})
+
+test('dry-run: precio cambiado, stock insuficiente y borrador inválido tampoco llaman a create_sale', async t => {
+  const calls = { n: 0 }
+  const { run } = await setup(t, {
+    dryRun: true, execute: forbiddenExecute(calls),
+    drafts: [draftOf({ items: [line({ price_unit: 4 })] }), draftOf({ items: [line({ quantity: 99 })] }), { nada: true }, draftOf()]
+  })
+  assert.deepEqual(codes(await run(instruction('a'))), ['price_changed'])
+  assert.deepEqual(codes(await run(instruction('b'))), ['insufficient_stock'])
+  assert.deepEqual(codes(await run(instruction('c'))), ['invalid_draft'])
+  // The simulated reservations of a (2) and b (18) hold the 20 units inside the dry-run store.
+  assert.deepEqual(codes(await run(instruction('d'))), ['insufficient_stock'])
+  assert.equal(calls.n, 0)
+})
+
+test('sin dry-run (por defecto o dryRun: false) el comportamiento no cambia: registra y no marca simulación', async t => {
+  for (const dryRun of [undefined, false]) {
+    const { run, counts } = await setup(t, { dryRun })
+    const response = await run(instruction())
+    assert.equal(response.status, 'completed')
+    assert.equal(response.result.dry_run, undefined)
+    assert.equal(response.result.would_be, undefined)
+    assert.doesNotMatch(response.message, /SIMULACIÓN/)
+    assert.equal(counts.execute, 1)
+  }
+})

@@ -10,6 +10,7 @@ const normalize = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, ''
 const cancellations = new Set(['no', 'cancelar', 'cancela', 'cancelar venta', 'cancela la venta', 'anular', 'anula la venta'])
 const round = (value: number) => Number(value.toFixed(4))
 const DEFAULT_REVIEW_TTL_MS = 48 * 60 * 60 * 1000
+const DRY_RUN_PREFIX = 'SIMULACIÓN (dry-run), NO se registró ninguna venta. '
 const OTHER_SELLER = 'Esta operación pertenece a otro vendedor.'
 const pending = (id: string): AgentResponse => ({
   status: 'pending', operation_id: id,
@@ -100,6 +101,13 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       }
       await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id })
       const finish = async (response: AgentResponse) => {
+        if (deps.dryRun) {
+          response = {
+            ...response,
+            message: response.message.startsWith(DRY_RUN_PREFIX) ? response.message : `${DRY_RUN_PREFIX}${response.message}`,
+            result: { ...(response.result || {}), dry_run: true }
+          }
+        }
         op!.response = response
         await deps.store.saveOperation(op!)
         await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id, response })
@@ -126,12 +134,13 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
             pending: pendingText,
             items, reservations,
             review_expires_at: new Date(op!.expires_at).toISOString(),
-            alerts
+            alerts,
+            ...(deps.dryRun ? { would_be: 'pending_review' } : {})
           }
         })
       }
 
-      if (op.state === 'completed' || op.state === 'cancelled') return finish(op.response!)
+      if (op.state === 'completed' || op.state === 'cancelled' || op.state === 'simulated') return finish(op.response!)
       if (op.state === 'executing') return finish(pending(id))
       if (op.expires_at <= now()) {
         return cancel('La venta por confirmar venció y se liberó su reserva. Envía una nueva instrucción para consultar precios y stock actuales.')
@@ -174,6 +183,16 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       op.draft = decision.sale
       delete op.reasons
       delete op.reservations
+      if (deps.dryRun) {
+        // Validation only: create_sale is never called. Alerts are computed as if the sale had happened.
+        op.state = 'simulated'
+        const alerts = await alertsFor(op.draft.items.map(i => i.product_id), holdAll(op.draft.items), op.id)
+        return finish({
+          status: 'rejected', operation_id: id,
+          message: `Con datos reales se habría registrado directamente por S/ ${op.draft.total.toFixed(2)}.${alertText(alerts)}`,
+          result: { would_be: 'completed', reference: null, total: op.draft.total, currency: op.draft.currency, items: op.draft.items, alerts }
+        })
+      }
       try {
         const result = await deps.execute(op.draft, async () => {
           op!.state = 'executing'

@@ -3,53 +3,138 @@
 La aplicación Nuxt expone HTTP al conector Python. El servidor MCP vive en
 `integrations/yachay-connector`; Nuxt no requiere otro servidor MCP.
 
+## Proceso del vendedor
+
+1. **Alta en el POS.** El propietario crea al vendedor en *Usuarios* con rol
+   `cashier` (o `manager`/`owner`). Ese es el único usuario que usará.
+2. **Agregar el conector en Claude.** Hoy, en modo local: Claude Code o Claude
+   Desktop en el mismo equipo, con el MCP `http://127.0.0.1:8000/mcp` (ver
+   `integrations/yachay-connector/LOCAL.md`). Claude web/celular requiere la fase 2
+   (HTTPS público).
+3. **«Vamos a vender».** Claude llama `list_systems` y `select_system("pos")`.
+   El POS responde con un enlace propio (`/vincular`) y un código corto, por
+   ejemplo `7RX-PXP9`, válido 10 minutos.
+4. **Iniciar sesión en el POS.** El vendedor abre el enlace, escribe el código, su
+   correo y su contraseña **en la página del POS** (nunca en el chat) y aprueba.
+5. Le dice a Claude «listo»; Claude llama `check_identification` y recibe
+   «Sesión activa como Ana Pérez (cashier)». La sesión dura hasta las 23:59 (hora de
+   Lima) y el propietario puede revocarla en *Usuarios → Sesiones de Claude*.
+6. **Dictar el pedido**: «2 cuadernos A4 de 100 hojas cuadriculados Marca A, pago
+   efectivo».
+7. **Resultado**:
+   - Pedido inequívoco → el POS **registra la venta a nombre del vendedor** y
+     responde `completed` con `result.reference`. No hay paso de confirmación.
+   - No decidible (varias coincidencias, falta cantidad o forma de pago, stock
+     insuficiente) → `pending_review`: **venta por confirmar** con su referencia.
+     NO está registrada; reserva el stock identificado y se valida después en el
+     POS. Desde el chat se puede completar con el dato faltante o anular con
+     «cancelar».
+   - Si queda stock bajo o agotado, la respuesta trae `result.alerts` y Claude
+     lo comunica al momento.
+
+Solo `completed` con referencia acredita una venta registrada.
+
+> Etapa 2 (pendiente): pantalla del POS para validar en lote las ventas por
+> confirmar al mediodía y al cierre, y lista de alertas. Etapa 3: avisos por
+> WhatsApp o correo.
+
 ## Configuración local
 
-El POS se inicia como siempre, en `http://127.0.0.1:3000`.
-Configura en `.env`:
+El POS se inicia como siempre, en `http://127.0.0.1:3000`. Configura en `.env`:
 
 ```dotenv
 POS_AGENT_TOKEN=<secreto independiente de al menos 32 caracteres>
+POS_AGENT_SESSION_KEY=<otro secreto de al menos 32 caracteres>
 POS_AGENT_MODEL=gpt-4o-mini
 POS_AGENT_STORAGE_DIR=.data/agent
+# Opcionales
+POS_AGENT_PUBLIC_URL=            # origen público del enlace /vincular (fase 2)
+POS_AGENT_REVIEW_TTL_HOURS=48    # vigencia de la reserva de una venta por confirmar
 ```
 
-También utiliza `OPENAI_API_KEY` y las credenciales Supabase ya existentes.
-`POS_AGENT_TOKEN` es la credencial **conector -> POS** y debe coincidir en ambos
-procesos. No es una clave de Supabase, una sesión de vendedor ni la clave MCP
-`YACHAY_MCP_KEY`. Nunca enviar secretos al modelo o al contexto público.
+Genera cada secreto con `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
+En `nuxt build` + `node .output/server/index.mjs` las variables se leen en
+ejecución con prefijo `NUXT_` (`NUXT_POS_AGENT_TOKEN`, `NUXT_POS_AGENT_SESSION_KEY`, …);
+`nuxt dev` las toma del `.env`.
 
-El intérprete usa el SDK OpenAI instalado, con `chat.completions.parse` y
-`zodResponseFormat`, siguiendo la [documentación oficial de salida estructurada](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat).
-El modelo extrae datos; el backend consulta productos, valida cantidades y calcula
-los precios mediante `resolve_sale_item_pricing`. Los nombres y opciones vienen
-del catálogo real. El modelo solo puede seleccionar IDs previamente ofrecidos.
+- `POS_AGENT_TOKEN`: credencial **conector → POS** (servicio). Debe coincidir en
+  ambos procesos. No identifica a ningún vendedor.
+- `POS_AGENT_SESSION_KEY`: cifra (AES-256-GCM) las sesiones Supabase que abre cada
+  vendedor en `/vincular`. Cambiarla invalida todas las sesiones vigentes.
+- `POS_AGENT_SELLER_ACCESS_TOKEN` **ya no existe**: cada venta se registra con la
+  sesión del vendedor que aprobó el código.
 
-## Autorización y alcance actual
+También se usan `OPENAI_API_KEY` y las credenciales Supabase existentes. Nunca
+enviar secretos al modelo ni al contexto.
 
-Ambas rutas requieren `Authorization: Bearer <POS_AGENT_TOKEN>` y no publican
-claves en su respuesta. Una credencial ausente o incorrecta devuelve HTTP 401;
-sin configuración del servicio se devuelve 503.
+> Seguridad: `/login` permite crear cuentas y toda cuenta nueva recibe el rol
+> `cashier`. Si el registro público está abierto en Supabase, cualquiera podría
+> vincularse como cajero. Cierra el registro (Supabase → Authentication →
+> Sign In / Providers) o crea los vendedores solo desde *Usuarios*.
 
-La identificación individual por conversación se implementará después. Por ahora
-la API prepara ventas y, solo si se configura explícitamente
-`POS_AGENT_SELLER_ACCESS_TOKEN` con una sesión **vigente de un usuario existente**,
-puede registrarlas tras confirmar. Antes de ejecutar verifica el usuario con
-Supabase Auth y su rol `owner`, `manager` o `cashier`. No se crean vendedores ni se
-suplantan usuarios con la clave de servicio. Una sesión vencida o ausente rechaza
-la ejecución sin enviar una venta. El contexto informa `execution_configured`
-(presencia de la configuración, no garantía de que la sesión siga vigente).
+## Identidad del vendedor
+
+- El conector nunca ve contraseñas ni decide quién es el vendedor. Solo guarda,
+  dentro de su `selection_token` cifrado, la referencia opaca que emite el POS y la
+  envía en `X-Yachay-Session` junto con `Authorization: Bearer <POS_AGENT_TOKEN>`.
+- En `/vincular` el POS abre una sesión **propia del vendedor** con
+  `signInWithPassword`. Se guardan solo hashes y tokens cifrados en
+  `.data/agent/sessions` (archivos 0600). No se usa la clave de servicio para
+  actuar como el vendedor; solo para cerrar su sesión al revocarla.
+- En **cada** contexto con sesión e instrucción, el POS comprueba que la sesión no
+  esté vencida ni revocada, renueva el token si hace falta, y verifica con Supabase
+  Auth que el usuario no esté desactivado (`banned_until`) y que su rol (`user_role`)
+  sea `owner`, `manager` o `cashier`. Se repite justo antes de registrar.
+- La RPC `create_sale` se llama con el token del vendedor: `sales.created_by` es
+  ese vendedor.
+- Una operación pertenece al vendedor que la creó: otro vendedor recibe 403
+  («Esta operación pertenece a otro vendedor.»).
+- El código admite 5 intentos fallidos y luego se anula; `/vincular` limita a 10
+  intentos por IP cada 10 minutos. La referencia de sesión se entrega una sola vez.
+
+Errores (español, sin secretos): 401 credencial del conector; 403 vendedor sin
+identificar, sesión vencida/revocada, usuario desactivado o sin rol; 503 servicio
+sin configurar.
+
+## POST /api/agent/identification (`yachay-identification/1`)
+
+Solo para el conector (`Authorization: Bearer <POS_AGENT_TOKEN>`).
+
+```json
+{ "protocol": "yachay-identification/1", "action": "start" }
+```
+→ `{ "status": "requires_identification", "identification_id": "<opaco>", "user_code": "7RX-PXP9", "verification_url": "http://127.0.0.1:3000/vincular", "expires_in": 600 }`
+
+```json
+{ "protocol": "yachay-identification/1", "action": "status", "identification_id": "<opaco>" }
+```
+→ `pending` | `denied` | `expired` | `{ "status": "approved", "session": "<opaco>", "seller": { "name": "Ana Pérez", "role": "cashier" }, "expires_at": 1762920000 }`
+
+El conector exige que `verification_url` tenga el mismo origen que su
+`identification_url` configurada.
+
+## POST /api/agent/identification/approve
+
+Usado por la página pública `/vincular`: `{ "user_code", "email", "password" }`
+(JSON). Devuelve el nombre, el rol y el vencimiento; 400 con mensaje en español si
+el código venció, la contraseña es incorrecta o el usuario no tiene rol válido.
+
+## GET /api/agent/sessions y POST /api/agent/sessions/revoke
+
+Con la sesión normal del POS, rol `owner` o `manager`. Lista las sesiones de
+Claude y revoca una (`{ "id": "<uuid>" }`); la revocación es inmediata.
 
 ## GET /api/agent/context
 
-Devuelve `system_id: "pos"`, `version: "1.0"` y `context`, compatible con
-`select_system("pos")`: descripción, instrucciones, capacidades, idioma y moneda.
-Es un resumen sin catálogo completo ni datos de autenticación.
+Devuelve `system_id: "pos"`, `version: "2.0"` y `context` (descripción,
+instrucciones, capacidades, `identification: "required"`, `seller` si llega una
+sesión válida, `execution_configured`, `review_ttl_hours`). Sin catálogo ni datos
+de autenticación.
 
 ## POST /api/agent/instructions
 
-Requiere `Content-Type: application/json`. Cuerpo máximo 16.000 bytes,
-texto máximo 2.500 caracteres, protocolo `yachay-agent/1`.
+Requiere `X-Yachay-Session` válida, `Content-Type: application/json`, cuerpo
+máximo 16.000 bytes, texto máximo 2.500 caracteres, protocolo `yachay-agent/1`.
 
 ```json
 {
@@ -60,8 +145,8 @@ texto máximo 2.500 caracteres, protocolo `yachay-agent/1`.
 }
 ```
 
-Para contestar una pregunta o confirmar se usa el `operation_id` devuelto por el
-POS y un `request_id` nuevo:
+Para completar o anular una venta por confirmar se usa su `operation_id` y un
+`request_id` nuevo:
 
 ```json
 {
@@ -69,60 +154,49 @@ POS y un `request_id` nuevo:
   "type": "follow_up",
   "request_id": "50621fd7-c523-45cf-ae16-af2f34df7459",
   "operation_id": "8cb47727-c3a8-4a68-8610-b383398bd53f",
-  "input": { "text": "sí, confirmo", "locale": "es-PE" }
+  "input": { "text": "el de Marca A", "locale": "es-PE" }
 }
 ```
 
-Los identificadores son UUID. Las respuestas utilizan los estados del conector:
-
 | Estado | Significado |
 | --- | --- |
-| `needs_clarification` | Faltan cantidades, producto exacto, presentación, forma de pago o stock suficiente. |
-| `requires_confirmation` | `result.draft` incluye productos, cantidades, precios, forma de pago y total. |
-| `completed` | Se registró la venta; `result.reference` contiene su identificador. |
-| `rejected` | Cancelación, petición no soportada, borrador vencido o ejecución no autorizada. Leer `message`. |
-| `pending` | Trabajo concurrente o resultado de ejecución indeterminado; no afirmar éxito. |
+| `completed` | Venta registrada a nombre del vendedor; `result.reference`, `total`, `items`, `alerts`. |
+| `pending_review` | Venta por confirmar, NO registrada. `result.reference`, `pending` (lo que falta), `items` entendidos, `candidates`, `review_expires_at`, `alerts`. |
+| `rejected` | Cancelación, petición no soportada, venta por confirmar vencida o vendedor no autorizado al registrar. Leer `message`. |
+| `pending` | Trabajo concurrente o resultado indeterminado; reintentar el mismo `request_id`, no afirmar éxito. |
 
-Una petición inicial siempre prepara; nunca registra una venta. Se admite hasta
-20 líneas. La cantidad omitida se pregunta; `100 hojas` no se toma como cantidad.
-Si se omite presentación se usa la unidad base; sin cliente específico se prepara
-venta al público con `customer_id: null`. La forma de pago se pide si falta.
-Varias coincidencias requieren elegir un producto. Cada cambio del borrador
-requiere otra confirmación. Precio y stock se consultan nuevamente al confirmar.
+Reglas: hasta 20 líneas; la cantidad no se inventa (`100 hojas` no es cantidad);
+sin presentación se usa la unidad base; sin cliente es venta al público. Para
+registrar directamente deben resolverse producto único, cantidad, precio
+(`resolve_sale_item_pricing`), stock disponible (stock menos reservas de otras
+ventas por confirmar) y una forma de pago existente; si no, `pending_review`.
+Si solo falta la forma de pago, queda por confirmar (no se asume efectivo).
+
+Las ventas por confirmar reservan el stock de los artículos identificados (no lo
+descuentan del inventario) durante 48 h o hasta completarse o anularse.
+
+Alertas: tras `completed` o `pending_review`, por cada producto afectado
+`disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`.
 
 ## Reintentos y estado local
 
 Reintentar **el mismo mensaje** exige el mismo UUID y contenido. Se conserva su
-respuesta; cambiar contenido con ese UUID devuelve HTTP 409. Cada aclaración o
-confirmación usa un UUID nuevo, asociado al mismo `operation_id`.
+respuesta; cambiar contenido con ese UUID devuelve 409. La API devuelve `pending`
+a los 8 segundos si sigue trabajando; reintenta el mismo UUID.
 
-La interpretación puede superar los 12 segundos del timeout del conector. La API
-devuelve `pending` a los 8 segundos si sigue trabajando en la instancia local;
-reintenta el mismo UUID para obtener su respuesta almacenada al finalizar.
-Si Yachay pierde una respuesta de red, también debe conservar el mismo UUID.
-
-Los borradores vencen a la hora, y los resultados de peticiones se conservan.
-El almacenamiento en `.data/agent` es privado, local y para una sola instalación.
-Un bloqueo exclusivo impide ejecuciones concurrentes. La marca `executing` se
-guarda antes de llamar a la RPC; un timeout posterior se considera indeterminado
-y nunca provoca una segunda llamada automática.
-
-Si el proceso muere puede quedar `processing.lock`: primero revisar el UUID y
-las ventas existentes. No borrar registros de ejecución ni cambiar el request_id
-para forzar un reintento, porque la primera venta podría haberse registrado.
-Tras conciliar, el operador puede resolver el bloqueo. Una implementación con
-varias réplicas o Vercel necesita sustituir este almacenamiento por persistencia
-transaccional compartida; no usar un directorio efímero ni desplegar así.
+`.data/agent` es privado, local y para una sola instalación. Un bloqueo
+exclusivo impide ejecuciones concurrentes. La marca `executing` se guarda antes de
+llamar a la RPC; un timeout posterior es indeterminado y nunca provoca una segunda
+llamada. Si el proceso muere puede quedar `processing.lock`: conciliar antes de
+borrarlo. Varias réplicas o Vercel necesitan almacenamiento transaccional
+compartido (sesiones incluidas); no desplegar así.
 
 ## Validación
 
 ```bash
-node --test tests/agent.test.mjs
-node scripts/check-agent.mjs
-# Consulta OpenAI y Supabase; solo prepara, nunca confirma una venta:
-node scripts/check-agent.mjs --prepare
+pnpm test:agent              # agente + sesiones de vendedor, con dobles; sin ventas reales
+node scripts/check-agent.mjs # POS en marcha: credencial, rechazo sin vendedor, inicio de vinculación
 ```
 
-Las pruebas automatizadas de ejecución utilizan dobles del repositorio, sin
-registrar ventas reales. El smoke test verifica credencial, contrato y contexto;
-`--prepare` añade interpretación real, reintento idéntico y conflicto de UUID.
+`check-agent.mjs` nunca envía pedidos: con un vendedor identificado el POS
+registraría la venta directamente.

@@ -143,6 +143,8 @@ pnpm dlx vercel --prod
 
 ## Integración MCP mediante Yachay
 
-El contrato HTTP del POS, la preparación de ventas, la configuración del vendedor
-y las pruebas se describen en [docs/yachay-agent-api.md](docs/yachay-agent-api.md).
+Los vendedores registran ventas por voz o texto desde Claude con su propio usuario
+del POS: eligen el sistema, aprueban un código en `/vincular` y dictan el pedido.
+El contrato HTTP, la identificación del vendedor, las ventas por confirmar y las
+pruebas se describen en [docs/yachay-agent-api.md](docs/yachay-agent-api.md).
 El conector Python está en `integrations/yachay-connector`.

@@ -317,3 +317,19 @@ test('toSaleDraft: una línea "high" con dudas no se entrega como high', () => {
     items: [{ line: 1, query: 'q', product_id: 'p1', name: 'n', sku: null, brand: null, qty: 1, unit: null, unit_name: 'unidad', factor: 1, price_unit: 1, total: 1, stock_available: 1, confidence: 'high', match_score: 1, reasons: [], doubts: [{ code: 'other', note: 'x' }], alternatives: [] }] }, 'q')
   assert.equal(draft.items[0].confidence, 'medium')
 })
+
+test('política: un nombre exacto no basta si otro producto activo también coincide (diccionario bruno, papel lustre)', async () => {
+  for (const [text, preferred] of [['diccionario bruno', 'Diccionario Bruno'], ['papel lustre', 'Papel Lustre'], ['regla de 30 cm', 'Reglas de 30 cm']]) {
+    const d = decide(text)
+    assert.equal(d.confidence, 'medium', text)
+    assert.equal(d.best.doc.name, preferred, `${text}: se preselecciona el nombre exacto`)
+    assert.match(d.doubts.join(' '), /varios productos igual de compatibles/)
+  }
+  const { interpret } = interpreterReturning(sale('diccionario bruno', 1))
+  const draft = await makeHybridDraftBuilder(interpret, catalogFrom(snapshot))(['vende un diccionario bruno efectivo'], null)
+  assert.equal(draft.items[0].confidence, 'medium')
+  assert.equal(draft.items[0].doubts[0].code, 'ambiguous_product')
+  assert.ok(draft.items[0].candidates.length >= 2)
+  // Still high when a single product matches what the order says.
+  assert.equal(decide('diccionario bruno de ingles').confidence, 'high')
+})

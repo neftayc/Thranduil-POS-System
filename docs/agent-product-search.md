@@ -27,7 +27,10 @@ está **seguro** (registra sin preguntar) y cuándo no (queda por confirmar).
    - cobertura de las palabras del pedido (con sinónimos del rubro: tajador =
      sacapuntas, bond = boom, crayolas = crayones…).
    - `high` solo si hay **un único** candidato sin conflictos, que cubre todas las
-     palabras, sin medidas faltantes y sin empate con otro; si hay empate o duda,
+     palabras, sin medidas faltantes y sin empate con otro. Un nombre exacto no desempata:
+     si otro producto activo también coincide con lo pedido («diccionario bruno», «papel
+     lustre»), la línea es `medium` con el nombre exacto preseleccionado. A4 frente a
+     «grande» es compatible pero queda «no confirmado»; si hay empate o duda,
      `medium` con el mejor preseleccionado y las alternativas; si nada es
      compatible, `low` y se dice que no se encontró.
 4. **Precio y stock en vivo**: `resolve_sale_item_pricing` y `product_catalog`.

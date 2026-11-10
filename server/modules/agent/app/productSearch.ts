@@ -277,14 +277,20 @@ export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<st
   }
   if (query.size) {
     if (!own.size) unknown.push(`${query.size.label.toUpperCase()} no confirmado`)
-    else if (own.size.group === query.size.group) matched.push(query.size.label)
+    else if (own.size.label === query.size.label) matched.push(query.size.label)
+    // Same group but different words (A4 vs «grande»): compatible, not confirmed.
+    else if (own.size.group === query.size.group) unknown.push(`${query.size.label.toUpperCase()} ≈ ${own.size.label} no confirmado`)
     else conflicts.push(`pide ${query.size.label} y el producto es ${own.size.label}`)
   }
   return { doc, coverage, matched, unknown, conflicts, extra, learned }
 }
 
 const RRF_K = 60
-const tupleOf = (c: RankedCandidate) => [c.learned ? 1 : 0, c.conflicts.length ? 0 : 1, Number(c.coverage.toFixed(3)), c.matched.length, -c.unknown.length, c.extra === 0 ? 1 : 0]
+// Exact-signal tuple used to detect ties. An exact product name is NOT a tie-breaker: if two active
+// products match what the order says, the line is ambiguous (policy: register only what is unequivocal).
+const tupleOf = (c: RankedCandidate) => [c.learned ? 1 : 0, c.conflicts.length ? 0 : 1, Number(c.coverage.toFixed(3)), c.matched.length, -c.unknown.length]
+// Ordering only: prefer the exact name as the preselected option.
+const orderOf = (c: RankedCandidate) => [...tupleOf(c), c.extra === 0 ? 1 : 0]
 const compareTuples = (a: number[], b: number[]) => {
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return b[i] - a[i]
   return 0
@@ -308,7 +314,7 @@ export const decideMatch = (queryText: string, retrieved: RetrievedDoc[], brands
     const attrScore = attrTotal ? scored.matched.length / attrTotal : 1
     const score = (0.5 * scored.coverage + 0.3 * attrScore + 0.2 * Math.min(1, retrieval * RRF_K / 1.2)) * (scored.conflicts.length ? 0.4 : 1)
     return { ...scored, retrieval, score: Number(score.toFixed(4)) }
-  }).sort((a, b) => compareTuples(tupleOf(a), tupleOf(b)) || b.score - a.score)
+  }).sort((a, b) => compareTuples(orderOf(a), orderOf(b)) || b.score - a.score)
 
   const eligible = ranked.filter(c => !c.conflicts.length && (c.coverage >= 0.6 || c.learned))
   const doubts: string[] = []

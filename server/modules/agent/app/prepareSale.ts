@@ -1,6 +1,7 @@
+import type { DraftDoubt, DraftItem, Product, SaleDraft } from '../contracts'
 import type {
-  Confidence, DraftItem, Interpretation, Product, ProposalAlternative, ProposalItem, SaleDraft, SaleProposal
-} from '../contracts'
+  Confidence, OrderInterpretation as Interpretation, ProposalAlternative, ProposalItem, SaleProposal
+} from './agent1Contracts'
 import { brandVocabulary, closestCandidates, decideMatch, reasonsFor, tiedWithBest, type MatchDecision, type RetrievedDoc } from './productSearch'
 
 export interface AgentCatalog {
@@ -66,37 +67,41 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
     const questions: string[] = input.question?.trim() ? [input.question.trim().slice(0, 500)] : []
     const doubts: string[] = [...questions]
     const draft: SaleDraft = { customer_id: null, payment_method: '', items: [], total: 0, currency: 'PEN' }
-    const proposal: SaleProposal = { confidence: 'high', customer_id: null, payment_method: null, items: [], total: null, currency: 'PEN', doubts }
+    const orderDoubts: DraftDoubt[] = input.question?.trim() ? [{ code: 'other', note: input.question.trim().slice(0, 300) }] : []
+    const proposal: SaleProposal = { confidence: 'high', customer_id: null, payment_method: null, items: [], total: null, currency: 'PEN', doubts, order_doubts: orderDoubts }
     let headConfidence: Confidence = input.question?.trim() ? 'medium' : 'high'
-    const ask = (text: string, level: Confidence = 'medium') => {
+    const note = (text: string) => text.length > 300 ? `${text.slice(0, 297)}...` : text
+    const ask = (text: string, level: Confidence = 'medium', code: DraftDoubt['code'] | null = 'other') => {
       questions.push(text)
       doubts.push(text)
+      if (code) orderDoubts.push({ code, note: note(text) })
       headConfidence = lowest(headConfidence, level)
     }
     if (!input.items.length || input.items.length > 20) {
       const question = 'Indica entre 1 y 20 artículos, con su cantidad, presentación y forma de pago.'
-      return { candidates, items: [], question, proposal: { ...proposal, confidence: 'low' as Confidence, doubts: [question] } }
+      return { candidates, items: [], question, proposal: { ...proposal, confidence: 'low' as Confidence, doubts: [question], order_doubts: [{ code: 'other' as const, note: question }] } }
     }
     if (input.customer_query) {
       const customers = await catalog.findCustomers(input.customer_query)
-      if (customers.length !== 1) ask(customers.length ? `Especifica el cliente: ${customers.map(c => c.name).join('; ')}.` : 'No encontré ese cliente. Indica su nombre completo o pide una venta al público.')
+      if (customers.length !== 1) ask(customers.length ? `Especifica el cliente: ${customers.map(c => c.name).join('; ')}.` : 'No encontré ese cliente. Indica su nombre completo o pide una venta al público.', 'medium', 'customer_ambiguous')
       else draft.customer_id = proposal.customer_id = customers[0].id
     }
     const methods = await catalog.paymentMethods()
     const payment = methods.find(p => input.payment_method && [p.code, p.label].some(value => normalize(value) === normalize(input.payment_method!)))
-    if (!payment) ask(`Indica una forma de pago disponible: ${methods.map(p => p.label).join(', ')}.`)
+    if (!payment) ask(`Indica una forma de pago disponible: ${methods.map(p => p.label).join(', ')}.`, 'medium', 'missing_payment')
     else draft.payment_method = proposal.payment_method = payment.code
 
     for (const [index, item] of input.items.entries()) {
       const label = `Artículo ${index + 1}`
       const line: ProposalItem = {
         line: index + 1, query: item.query, product_id: null, name: null, sku: null, brand: null,
-        qty: item.quantity, unit_name: null, factor: null, price_unit: null, total: null, stock_available: null,
-        confidence: 'low', match_score: 0, reasons: [], alternatives: []
+        qty: item.quantity, unit: item.unit?.trim() || null, unit_name: null, factor: null, price_unit: null, total: null, stock_available: null,
+        confidence: 'low', match_score: 0, reasons: [], doubts: [], alternatives: []
       }
       proposal.items.push(line)
-      const lineDoubt = (text: string, level: Confidence = 'medium') => {
-        ask(`${label}: ${text}`, level)
+      const lineDoubt = (text: string, level: Confidence = 'medium', code: DraftDoubt['code'] = 'other') => {
+        ask(`${label}: ${text}`, level, null)
+        line.doubts.push({ code, note: note(text) })
         line.confidence = lowest(line.confidence, level)
       }
       let product: Product | null = null
@@ -104,15 +109,15 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
         // An LLM-provided ID is valid only when it came from a previous real candidate.
         if (previousCandidates.some(p => p.id === item.product_id)) product = await catalog.getProduct(item.product_id)
         if (product) Object.assign(line, { confidence: 'high', match_score: 1, reasons: ['elegido por el vendedor entre las opciones'] })
-        else lineDoubt('la selección no corresponde a una opción disponible. Indica nuevamente el producto.', 'low')
+        else lineDoubt('la selección no corresponde a una opción disponible. Indica nuevamente el producto.', 'low', 'product_not_found')
       } else if (item.sku?.trim()) {
         const matches = await catalog.findProducts(item.query, item.sku)
         if (matches.length === 1) { product = matches[0]; Object.assign(line, { confidence: 'high', match_score: 1, reasons: ['SKU exacto'] }) }
-        else if (!matches.length) lineDoubt(`no existe el SKU «${item.sku}». Especifica producto, marca o SKU.`, 'low')
+        else if (!matches.length) lineDoubt(`no existe el SKU «${item.sku}». Especifica producto, marca o SKU.`, 'low', 'product_not_found')
         else {
           const start = candidates.length
           candidates.push(...matches)
-          lineDoubt(`el SKU «${item.sku}» corresponde a varios productos: ${matches.map((p, i) => `${start + i + 1}) ${describe(p)}`).join('; ')}.`)
+          lineDoubt(`el SKU «${item.sku}» corresponde a varios productos: ${matches.map((p, i) => `${start + i + 1}) ${describe(p)}`).join('; ')}.`, 'medium', 'ambiguous_product')
         }
       } else {
         const { decision, products } = await match(matchQuery(item))
@@ -138,8 +143,8 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
           candidates.push(...options.filter(p => !candidates.some(c => c.id === p.id)))
           const list = options.map(p => `${candidates.findIndex(c => c.id === p.id) + 1}) ${describe(p)}`).join('; ')
           const reason = decision.doubts.join(' ') || 'la coincidencia no es exacta.'
-          if (best) lineDoubt(`${reason} Propuesta: ${describe(best)}.${options.length > 1 ? ` Opciones: ${list}.` : ''}`, decision.confidence)
-          else lineDoubt(`no encontré «${item.query}» con esas características. ${reason}${options.length ? ` Parecidos: ${list}.` : ''} Especifica producto, marca o SKU.`, 'low')
+          if (best) lineDoubt(`${reason} Propuesta: ${describe(best)}.${options.length > 1 ? ` Opciones: ${list}.` : ''}`, decision.confidence, 'ambiguous_product')
+          else lineDoubt(`no encontré «${item.query}» con esas características. ${reason}${options.length ? ` Parecidos: ${list}.` : ''} Especifica producto, marca o SKU.`, 'low', 'product_not_found')
         }
       }
       if (product) {
@@ -149,7 +154,7 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
       }
       if (item.quantity === null || !Number.isFinite(item.quantity) || item.quantity <= 0 || item.quantity > 1000000) {
         line.qty = null
-        lineDoubt('¿cuántas unidades o presentaciones deseas vender? Separa la cantidad del número de hojas u otros atributos.', product ? 'medium' : 'low')
+        lineDoubt('¿cuántas unidades o presentaciones deseas vender? Separa la cantidad del número de hojas u otros atributos.', product ? 'medium' : 'low', 'missing_quantity')
         continue
       }
       if (!product) continue
@@ -163,7 +168,7 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
           draft.items.push({ product_id: product.id, name: product.name, qty: item.quantity, unit_name: quote.unit_name, price_unit: quote.price, factor: quote.factor, total: line.total! })
         }
       } catch {
-        lineDoubt(`no pude cotizar la presentación solicitada para ${product.name}. Indica una presentación válida.`)
+        lineDoubt(`no pude cotizar la presentación solicitada para ${product.name}. Indica una presentación válida.`, 'medium', 'unit_unclear')
       }
     }
 
@@ -177,8 +182,13 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
       const held = reserved.get(id) || 0
       const available = round(product.stock - held, 4)
       if (!Number.isFinite(product.stock) || qty > available + 0.000001) {
-        ask(`Stock insuficiente de ${product.name}: hay ${available} ${product.unit} disponibles${held ? ` (${round(held, 4)} reservadas en ventas por confirmar)` : ''}, y el pedido necesita ${round(qty, 4)}.`)
-        for (const line of proposal.items) if (line.product_id === id) line.confidence = lowest(line.confidence, 'medium')
+        const text = `Stock insuficiente de ${product.name}: hay ${available} ${product.unit} disponibles${held ? ` (${round(held, 4)} reservadas en ventas por confirmar)` : ''}, y el pedido necesita ${round(qty, 4)}.`
+        ask(text, 'medium', null)
+        for (const line of proposal.items) {
+          if (line.product_id !== id) continue
+          line.confidence = lowest(line.confidence, 'medium')
+          line.doubts.push({ code: 'other', note: note(text) })
+        }
       }
     }
     // Lines with a single exact product and a price (stock may still be short): what process 2 can reserve.

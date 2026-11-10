@@ -1,4 +1,5 @@
-import type { Interpretation, Product } from '../contracts'
+import type { Product } from '../contracts'
+import type { OrderInterpretation as Interpretation } from './agent1Contracts'
 import { makeProductMatcher, matchQuery, type AgentCatalog } from './prepareSale'
 import { closestCandidates } from './productSearch'
 

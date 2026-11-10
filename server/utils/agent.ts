@@ -2,16 +2,21 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { join } from 'node:path'
 import { createError, getHeader, getRequestURL, setHeader, type H3Event } from 'h3'
 import { makeSalesAgent } from '../modules/agent/app/salesAgent'
-import { makeSalePreparer } from '../modules/agent/app/prepareSale'
-import { makeCatalogAnswerer } from '../modules/agent/app/catalogAnswers'
-import { embeddingModelName, makeOpenAIEmbedder } from '../modules/agent/infra/openaiEmbeddings'
+import { makeDraftValidator } from '../modules/agent/app/validateDraft'
+import { makeHybridDraftBuilder } from '../modules/agent/app/draftBuilder'
 import { makeSealer, makeSellerSessions, SellerRejectedError, type ActiveSeller, type SellerSessions } from '../modules/agent/app/sellerSessions'
 import { makeFileAgentStore } from '../modules/agent/infra/fileAgentStore'
 import { makeFileSellerSessionStore } from '../modules/agent/infra/fileSellerSessionStore'
-import { makeOpenAISalesInterpreter } from '../modules/agent/infra/openaiSalesInterpreter'
+import { makeOpenAIOrderInterpreter } from '../modules/agent/infra/openaiOrderInterpreter'
+import { embeddingModelName, makeOpenAIEmbedder } from '../modules/agent/infra/openaiEmbeddings'
 import { makeSupabaseAgentCatalog } from '../modules/agent/infra/supabaseAgentCatalog'
 import { makeSupabaseSaleExecutor } from '../modules/agent/infra/supabaseSaleExecutor'
 import { makeSupabaseSellerAuth } from '../modules/agent/infra/supabaseSellerAuth'
+import { getSupabaseUserClient } from './supabase'
+import { SaleNotCommittedError } from '../modules/agent/contracts'
+
+/** POS_AGENT_DRY_RUN=1|true (or NUXT_POS_AGENT_DRY_RUN): validation only, never registers sales. */
+export const isDryRun = (value: unknown) => value === true || ['1', 'true'].includes(String(value ?? '').trim().toLowerCase())
 
 export const SELLER_SESSION_HEADER = 'x-yachay-session'
 
@@ -65,12 +70,19 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   if (!key) throw createError({ statusCode: 503, statusMessage: 'Intérprete de ventas no configurado' })
   const embeddingModel = embeddingModelName(String(config.posAgentEmbeddingModel || ''))
   const catalog = makeSupabaseAgentCatalog({ embed: makeOpenAIEmbedder(key, embeddingModel), embeddingModel })
+  const dryRun = isDryRun(config.posAgentDryRun)
   const agent = makeSalesAgent({
-    store: makeFileAgentStore(String(config.posAgentStorageDir)),
-    interpret: makeOpenAISalesInterpreter(key, String(config.posAgentModel)),
-    prepare: makeSalePreparer(catalog),
-    answer: makeCatalogAnswerer(catalog),
-    execute: makeSupabaseSaleExecutor(seller.authorize),
+    // Dry-run keeps its own idempotency records and simulated reservations, apart from the real ones.
+    store: makeFileAgentStore(dryRun ? join(String(config.posAgentStorageDir), 'dry-run') : String(config.posAgentStorageDir)),
+    // Agent 1 (AI): interpretation + hybrid search (vectors + text + exact attributes) → sale-draft/1.
+    buildDraft: makeHybridDraftBuilder(makeOpenAIOrderInterpreter(key, String(config.posAgentModel)), catalog),
+    // Process 2 (deterministic).
+    validate: makeDraftValidator(catalog),
+    // Second barrier: in dry-run the executor cannot reach create_sale even if called.
+    execute: dryRun
+      ? async () => { throw new SaleNotCommittedError('Modo de solo validación (POS_AGENT_DRY_RUN): no se registran ventas.') }
+      : makeSupabaseSaleExecutor(seller.authorize, (token, args) => getSupabaseUserClient(token).rpc('create_sale', args) as any),
+    dryRun,
     stockLevels: ids => catalog.stockLevels(ids),
     reviewTtlMs: Number(config.posAgentReviewTtlHours || 48) * 60 * 60 * 1000
   })

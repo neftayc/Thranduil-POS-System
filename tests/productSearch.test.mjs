@@ -25,6 +25,7 @@ const catalogFrom = (docs, overrides = {}) => {
     getProduct: async id => products.get(id) || null,
     findProducts: async (_q, sku) => [...products.values()].filter(p => p.sku === sku),
     findCustomers: async () => [],
+    customerExists: async () => false,
     paymentMethods: async () => [{ code: 'efectivo', label: 'Efectivo' }, { code: 'yape', label: 'Yape' }],
     quote: async (p, qty, unit) => ({ unit_name: unit || p.unit, price: 4.5, factor: 1, currency: 'PEN' }),
     ...overrides
@@ -200,47 +201,6 @@ test('preguntas de catálogo: si el precio no está disponible no se inventa', a
   assert.match(result.message, /precio no disponible/)
 })
 
-test('el agente responde preguntas de catálogo sin vender ni reservar, y una pregunta no altera una venta por confirmar', async (t) => {
-  const { mkdtemp, rm } = await import('node:fs/promises')
-  const { tmpdir } = await import('node:os')
-  const { join } = await import('node:path')
-  const { randomUUID } = await import('node:crypto')
-  const { makeSalesAgent } = await jiti.import('../server/modules/agent/app/salesAgent.ts')
-  const { makeFileAgentStore } = await jiti.import('../server/modules/agent/infra/fileAgentStore.ts')
-  const dir = await mkdtemp(join(tmpdir(), 'papeleria-agent1-test-'))
-  t.after(() => rm(dir, { recursive: true, force: true }))
-  const catalog = catalogFrom(snapshot)
-  const question = { intent: 'catalog_query', items: [{ query: 'cuaderno markin cuadriculado', sku: null, quantity: null, unit: null, product_id: null }], payment_method: null, customer_query: null, question: null }
-  let next = question
-  let executed = 0
-  const agent = makeSalesAgent({
-    store: makeFileAgentStore(dir),
-    interpret: async () => next,
-    prepare: makeSalePreparer(catalog),
-    answer: makeCatalogAnswerer(catalog),
-    execute: async () => { executed++; return { saleId: 's', total: 0 } }
-  })
-  const seller = { id: 'user-ana' }
-  const msg = (text, extra = {}) => ({ protocol: 'yachay-agent/1', type: 'instruction', request_id: randomUUID(), input: { text }, ...extra })
-  const answered = await agent(msg('¿tenemos cuadernos markin cuadriculados?'), seller)
-  assert.equal(answered.status, 'completed')
-  assert.equal(answered.result.kind, 'catalog_answer')
-  assert.match(answered.message, /Cuaderno Markin # 100 h/)
-  assert.equal(executed, 0)
-
-  next = sale('caja de colores grande x12', 1)
-  const review = await agent(msg('vende una caja de colores grande x12 efectivo'), seller)
-  assert.equal(review.status, 'pending_review')
-  assert.equal(review.result.proposal.confidence, 'medium')
-  next = question
-  const inside = await agent(msg('¿y cuadernos markin?', { type: 'follow_up', operation_id: review.operation_id }), seller)
-  assert.equal(inside.result.kind, 'catalog_answer')
-  const op = await makeFileAgentStore(dir).getOperation(review.operation_id)
-  assert.equal(op.state, 'review')
-  assert.equal(op.interpretation.intent, 'sale')
-  assert.equal(executed, 0)
-})
-
 test('agente 1: un precio S/ 0 en el catálogo nunca se registra sin confirmar', async () => {
   const prepare = makeSalePreparer(catalogFrom(snapshot, { quote: async (p, qty, unit) => ({ unit_name: unit || p.unit, price: 0, factor: 1, currency: 'PEN' }) }))
   const result = await prepare(sale('cuaderno markin cuadriculado 100 a4', 1), [], new Map())
@@ -266,4 +226,94 @@ test('ante un empate preselecciona el producto con stock disponible', async () =
   const result = await prepare(sale('caja de colores grande x12', 1), [], new Map())
   assert.equal(result.proposal.confidence, 'medium')
   assert.equal(result.proposal.items[0].brand, 'Layconsa')
+})
+
+// ---- Contract with process 2: buildDraft → sale-draft/1 ----
+const { makeHybridDraftBuilder, toSaleDraft } = await jiti.import('../server/modules/agent/app/draftBuilder.ts')
+const { parseAgentDraft } = await jiti.import('../server/modules/agent/app/proposalAdapter.ts')
+const { makeDraftValidator } = await jiti.import('../server/modules/agent/app/validateDraft.ts')
+const interpreterReturning = (...results) => {
+  const calls = []
+  return { calls, interpret: async (messages, context) => { calls.push({ messages, context }); return results[Math.min(calls.length - 1, results.length - 1)] } }
+}
+
+test('buildDraft (caso Markin): sale-draft/1 válido para el proceso 2, que decide registro directo', async () => {
+  const catalog = catalogFrom(snapshot)
+  const { interpret } = interpreterReturning(sale('cuaderno markin cuadriculado 100 a4', 2))
+  const draft = await makeHybridDraftBuilder(interpret, catalog)(['Vender 2 cuaderno markin cuadriculado 100 a4, efectivo'], null)
+  const parsed = parseAgentDraft(draft, 'x')
+  assert.equal(parsed.success, true)
+  const markin = byName('Cuaderno Markin # 100 h')
+  assert.deepEqual(parsed.data.items, [{ product_id: markin.id, candidates: parsed.data.items[0].candidates, quantity: 2, unit: null, price_unit: 4.5, confidence: 'high', doubts: [], query: 'cuaderno markin cuadriculado 100 a4' }])
+  assert.equal(parsed.data.payment_method, 'efectivo')
+  assert.deepEqual(parsed.data.doubts, [])
+  const decision = await makeDraftValidator(catalog)(parsed.data, new Map())
+  assert.equal(decision.kind, 'direct')
+  assert.equal(decision.sale.total, 9)
+})
+
+test('buildDraft: empate → ambiguous_product con candidatos reales; el proceso 2 lo deja por confirmar', async () => {
+  const catalog = catalogFrom(snapshot)
+  const { interpret } = interpreterReturning(sale('caja de colores grande x12', 1))
+  const draft = await makeHybridDraftBuilder(interpret, catalog)(['vende una caja de colores grande x12 efectivo'], null)
+  assert.equal(parseAgentDraft(draft).success, true)
+  const [line] = draft.items
+  assert.equal(line.confidence, 'medium')
+  assert.equal(line.doubts[0].code, 'ambiguous_product')
+  assert.ok(line.doubts[0].note.length <= 300)
+  assert.ok(line.candidates.length >= 2)
+  const ids = new Set(snapshot.map(d => d.id))
+  assert.ok([line.product_id, ...line.candidates].every(id => ids.has(id)))
+  const decision = await makeDraftValidator(catalog)(draft, new Map())
+  assert.equal(decision.kind, 'review')
+})
+
+test('buildDraft: códigos de duda (no encontrado, sin cantidad, sin forma de pago)', async () => {
+  const catalog = catalogFrom(snapshot)
+  const order = { intent: 'sale', items: [
+    { query: 'calculadora casio', sku: null, quantity: 1, unit: null, product_id: null },
+    { query: 'cuaderno markin cuadriculado 100', sku: null, quantity: null, unit: null, product_id: null }
+  ], payment_method: null, customer_query: null, question: null }
+  const { interpret } = interpreterReturning(order)
+  const draft = await makeHybridDraftBuilder(interpret, catalog)(['...'], null)
+  assert.equal(parseAgentDraft(draft).success, true)
+  assert.equal(draft.items[0].product_id, null)
+  assert.equal(draft.items[0].doubts[0].code, 'product_not_found')
+  assert.ok(draft.items[1].product_id)
+  assert.equal(draft.items[1].quantity, null)
+  assert.deepEqual(draft.items[1].doubts.map(d => d.code), ['missing_quantity'])
+  assert.equal(draft.payment_method, null)
+  assert.deepEqual(draft.doubts.map(d => d.code), ['missing_payment'])
+})
+
+test('buildDraft: en la aclaración solo acepta IDs de candidatos ofrecidos antes', async () => {
+  const catalog = catalogFrom(snapshot)
+  const first = await makeHybridDraftBuilder(interpreterReturning(sale('caja de colores grande x12', 1)).interpret, catalog)(['caja de colores grande x12 efectivo'], null)
+  const faber = snapshot.find(p => p.name === 'Caja de Colores Grande x12' && p.brand === 'Faber Castell')
+  const pick = interpreterReturning({ ...sale('caja de colores grande x12', 1), items: [{ query: 'caja de colores grande x12', sku: null, quantity: 1, unit: null, product_id: faber.id }] })
+  const second = await makeHybridDraftBuilder(pick.interpret, catalog)(['caja de colores grande x12 efectivo', 'la de faber'], first)
+  assert.ok(pick.calls[0].context.candidates.some(p => p.id === faber.id), 'el intérprete recibe las opciones reales')
+  assert.equal(second.items[0].product_id, faber.id)
+  assert.equal(second.items[0].confidence, 'high')
+  const forged = interpreterReturning({ ...sale('x', 1), items: [{ query: 'x', sku: null, quantity: 1, unit: null, product_id: byName('Cuaderno Markin # 100 h').id }] })
+  const third = await makeHybridDraftBuilder(forged.interpret, catalog)(['x'], first)
+  assert.equal(third.items[0].product_id, null)
+  assert.equal(third.items[0].doubts[0].code, 'product_not_found')
+})
+
+test('buildDraft: preguntas de catálogo → respuesta con datos reales (o unsupported si el proceso 2 no las atiende)', async () => {
+  const catalog = catalogFrom(snapshot)
+  const question = { intent: 'catalog_query', items: [{ query: 'cuadernos markin cuadriculados', sku: null, quantity: null, unit: null, product_id: null }], payment_method: null, customer_query: null, question: null }
+  const off = await makeHybridDraftBuilder(interpreterReturning(question).interpret, catalog)(['¿tenemos cuadernos markin?'], null)
+  assert.equal(off.intent, 'unsupported')
+  assert.equal(parseAgentDraft(off).success, true)
+  const on = await makeHybridDraftBuilder(interpreterReturning(question).interpret, catalog, { answerCatalogQuestions: true })(['¿tenemos cuadernos markin?'], null)
+  assert.equal(on.kind, 'catalog_answer')
+  assert.match(on.message, /Cuaderno Markin # 100 h/)
+})
+
+test('toSaleDraft: una línea "high" con dudas no se entrega como high', () => {
+  const draft = toSaleDraft({ confidence: 'high', customer_id: null, payment_method: 'efectivo', total: 1, currency: 'PEN', doubts: [], order_doubts: [],
+    items: [{ line: 1, query: 'q', product_id: 'p1', name: 'n', sku: null, brand: null, qty: 1, unit: null, unit_name: 'unidad', factor: 1, price_unit: 1, total: 1, stock_available: 1, confidence: 'high', match_score: 1, reasons: [], doubts: [{ code: 'other', note: 'x' }], alternatives: [] }] }, 'q')
+  assert.equal(draft.items[0].confidence, 'medium')
 })

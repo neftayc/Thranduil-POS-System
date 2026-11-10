@@ -1,5 +1,5 @@
 import { defineEventHandler, getHeader } from 'h3'
-import { requireAgentCredential, requireSeller, SELLER_SESSION_HEADER } from '../../utils/agent'
+import { isDryRun, requireAgentCredential, requireSeller, SELLER_SESSION_HEADER } from '../../utils/agent'
 
 export default defineEventHandler(async (event) => {
   requireAgentCredential(event)
@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
       seller: seller ? { name: seller.name, role: seller.role } : null,
       execution_configured: String(config.posAgentSessionKey || '').length >= 32,
       interpretation_configured: Boolean(config.openaiApiKey),
+      dry_run: isDryRun(config.posAgentDryRun),
       review_ttl_hours: Number(config.posAgentReviewTtlHours || 48)
     }
   }

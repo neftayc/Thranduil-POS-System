@@ -30,9 +30,18 @@ está **seguro** (registra sin preguntar) y cuándo no (queda por confirmar).
      palabras, sin medidas faltantes y sin empate con otro; si hay empate o duda,
      `medium` con el mejor preseleccionado y las alternativas; si nada es
      compatible, `low` y se dice que no se encontró.
-4. **Precio y stock en vivo**: `resolve_sale_item_pricing` y `product_catalog`
-   (menos lo reservado por ventas por confirmar). Se arma `proposal` y, si todo es
-   `high`, `draft`.
+4. **Precio y stock en vivo**: `resolve_sale_item_pricing` y `product_catalog`.
+   Precio S/ 0, presentación sin precio o stock insuficiente bajan la línea a `medium`.
+5. **Borrador para el proceso 2** (`app/draftBuilder.ts`, `buildDraft(messages, previous)`):
+   sale-draft/1 con `product_id` (solo de candidatos reales), `candidates`, `quantity`,
+   `unit` pedida, `price_unit` visto, `confidence` y dudas codificadas. En una
+   aclaración, el intérprete solo puede elegir IDs de los candidatos del borrador previo.
+   El proceso 2 vuelve a verificar todo y decide registrar o dejar por confirmar.
+
+Preguntas de catálogo (`intent: catalog_query`): `makeCatalogAnswerer` responde con
+precio y stock en vivo. `buildDraft` las devuelve como `{ kind: 'catalog_answer' }` solo
+con `answerCatalogQuestions: true` (requiere que el proceso 2 las atienda sin vender);
+si no, como `intent: 'unsupported'`.
 
 ## Índice y sinónimos (`supabase/migrations/20261110_product_hybrid_search.sql`)
 

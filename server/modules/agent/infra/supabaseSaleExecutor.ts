@@ -1,12 +1,22 @@
-import { makeSupabaseSalesRepository } from '../../sales/infra/supabaseSalesRepository'
-import { SaleNotCommittedError, type SaleDraft } from '../contracts'
+import { SaleNotCommittedError, SaleRejectedByPosError, type SaleDraft } from '../contracts'
+
+type RpcError = { message?: string; code?: string } | null
+/** Calls create_sale with the seller's own token (wired in server/utils/agent.ts). */
+export type RpcCall = (token: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: RpcError }>
+
+/**
+ * An error WITH a code is an answer from PostgREST/Postgres (SQLSTATE such as P0001, or PGRSTxxx):
+ * create_sale runs in one transaction, so nothing was registered. An error WITHOUT a code is a
+ * transport failure (fetch failed, timeout): the sale may or may not exist → indeterminate.
+ */
+export const isDefinitiveRpcError = (error: RpcError) => Boolean(error && typeof error.code === 'string' && error.code.trim())
 
 /**
  * Registers the sale AS the identified seller: `authorize` re-validates the seller session
  * (not revoked, user active, valid role) and returns that seller's own access token, so the
  * create_sale RPC records auth.uid() = seller. No service key, no shared seller token.
  */
-export const makeSupabaseSaleExecutor = (authorize: () => Promise<string>) => async (draft: SaleDraft, beforeCommit: () => Promise<void>) => {
+export const makeSupabaseSaleExecutor = (authorize: () => Promise<string>, rpc: RpcCall) => async (draft: SaleDraft, beforeCommit: () => Promise<void>) => {
   let token: string
   try {
     token = await authorize()
@@ -15,12 +25,17 @@ export const makeSupabaseSaleExecutor = (authorize: () => Promise<string>) => as
     throw new SaleNotCommittedError(`${reason} No se registró una venta.`)
   }
   await beforeCommit()
-  // A transport error after this point is indeterminate. The orchestrator does not retry this RPC.
-  const result = await makeSupabaseSalesRepository(token).createSale({
-    customer_id: draft.customer_id,
-    payment_method: draft.payment_method,
-    items: draft.items.map(item => ({ product_id: item.product_id, qty: item.qty, unit_name: item.unit_name, price_unit: item.price_unit }))
+  // From here on, only a definitive database answer may be reported as "not registered".
+  // The orchestrator never retries this call.
+  const { data, error } = await rpc(token, {
+    p_customer_id: draft.customer_id,
+    p_payment_method: draft.payment_method,
+    p_items: draft.items.map(item => ({ product_id: item.product_id, qty: item.qty, unit_name: item.unit_name, price_unit: item.price_unit }))
   })
-  if (!result.saleId) throw new Error('La base de datos no devolvió el identificador de venta')
-  return { saleId: String(result.saleId), total: draft.total }
+  if (error) {
+    if (isDefinitiveRpcError(error)) throw new SaleRejectedByPosError(String(error.message || 'error de base de datos').slice(0, 300))
+    throw new Error('Respuesta de create_sale perdida')
+  }
+  if (!data) throw new Error('La base de datos no devolvió el identificador de venta')
+  return { saleId: String(data), total: draft.total }
 }

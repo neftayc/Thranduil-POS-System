@@ -20,24 +20,16 @@ assert.equal(context.data.system_id, 'pos')
 assert.ok(JSON.stringify(context.data).length < 16000)
 console.log(JSON.stringify({ check: 'context', status: 200, system_id: context.data.system_id, execution_configured: context.data.context.execution_configured }))
 
-const malformed = await call('/api/agent/instructions', { protocol: 'incorrecto' })
-assert.equal(malformed.response.status, 400)
-console.log('Credencial y validación del contrato: OK')
-
-if (process.argv.includes('--prepare')) {
-  // Prepares an intentionally incomplete order. This script NEVER sends a confirmation.
-  const body = { protocol: 'yachay-agent/1', type: 'instruction', request_id: randomUUID(), input: { text: 'vender cuader a4 100 cuadriculado', locale: 'es-PE' } }
-  let prepared = await call('/api/agent/instructions', body)
-  for (let attempt = 0; prepared.data.status === 'pending' && attempt < 15; attempt++) {
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    prepared = await call('/api/agent/instructions', body)
-  }
-  assert.equal(prepared.response.status, 200)
-  console.log(JSON.stringify({ check: 'prepare', ...prepared.data }))
-  assert.ok(['needs_clarification', 'requires_confirmation'].includes(prepared.data.status), 'El intérprete no pudo preparar el pedido')
-  const retry = await call('/api/agent/instructions', body)
-  assert.deepEqual(retry.data, prepared.data)
-  const conflict = await call('/api/agent/instructions', { ...body, input: { text: 'otro pedido', locale: 'es-PE' } })
-  assert.equal(conflict.response.status, 409)
-  console.log('Preparación real, reintento idéntico y conflicto de request_id: OK. No se solicitó registrar ninguna venta.')
-}
+// Without a seller session the POS refuses any instruction (before reading the body).
+const noSeller = await call('/api/agent/instructions', { protocol: 'incorrecto' })
+assert.equal(noSeller.response.status, 403)
+const forged = await fetch(base + '/api/agent/instructions', {
+  method: 'POST', headers: { ...headers, 'X-Yachay-Session': `${randomUUID()}.${'a'.repeat(43)}` }, body: '{}', signal: AbortSignal.timeout(60000)
+})
+assert.equal(forged.status, 403)
+// Identification can start (needs POS_AGENT_SESSION_KEY); the handle is never printed.
+const started = await call('/api/agent/identification', { protocol: 'yachay-identification/1', action: 'start' })
+assert.equal(started.response.status, 200)
+assert.equal(started.data.status, 'requires_identification')
+console.log(JSON.stringify({ check: 'identification', user_code: started.data.user_code, verification_url: started.data.verification_url }))
+console.log('Credencial, rechazo sin vendedor y vinculación: OK. Este script nunca envía pedidos: con un vendedor identificado el POS registraría la venta.')

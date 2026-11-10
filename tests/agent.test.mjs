@@ -54,7 +54,7 @@ const makeCatalog = () => {
 
 const line = (overrides = {}) => ({
   product_id: CUADERNO.id, candidates: [], quantity: 2, unit: null, price_unit: 5,
-  confidence: 'high', doubts: [], query: '2 cuadernos A4', ...overrides
+  confidence: 'high', doubts: [], query: 'cuaderno A4', ...overrides
 })
 const draftOf = (overrides = {}) => saleDraftSchema.parse({
   version: 'sale-draft/1', items: [line()], payment_method: 'efectivo', customer_id: null,
@@ -130,8 +130,8 @@ test('directo: cada línea segura, precio oficial, stock y forma de pago (tambi�
     items: [{ product_id: CUADERNO.id, name: CUADERNO.name, qty: 2, unit_name: 'unidad', price_unit: 5, factor: 1, total: 10 }]
   })
   const two = await validate(draftOf({
-    items: [line(), line({ product_id: LAPICERO.id, quantity: 3, price_unit: 1.5, query: '3 lapiceros' })],
-    payment_method: 'Yape', customer_id: CLIENTE
+    items: [line(), line({ product_id: LAPICERO.id, quantity: 3, price_unit: 1.5, query: 'lapicero azul' })],
+    payment_method: 'Yape', customer_id: CLIENTE, source_text: 'vende 2 cuadernos A4 y 3 lapiceros, paga con yape'
   }))
   assert.equal(two.kind, 'direct')
   assert.equal(two.sale.total, 14.5)
@@ -195,7 +195,7 @@ test('stock insuficiente: suma líneas repetidas en unidad base, descuenta reser
   const { catalog } = makeCatalog()
   const validate = makeDraftValidator(catalog)
   // 1 docena (12) + 10 unidades = 22 > 20
-  const result = await validate(draftOf({ items: [line({ quantity: 1, unit: 'docena', price_unit: 60 }), line({ quantity: 10 })] }))
+  const result = await validate(draftOf({ items: [line({ quantity: 1, unit: 'docena', price_unit: 60 }), line({ quantity: 10 })], source_text: 'vende una docena de cuadernos y 10 cuadernos sueltos, efectivo' }))
   assert.equal(result.kind, 'review')
   assert.deepEqual(result.reasons.map(r => r.code), ['insufficient_stock'])
   assert.deepEqual(result.reservations, [{ product_id: CUADERNO.id, qty: 20 }])
@@ -210,7 +210,8 @@ test('stock insuficiente: suma líneas repetidas en unidad base, descuenta reser
 test('una línea sin producto no reserva; las resueltas sí', async () => {
   const { catalog } = makeCatalog()
   const result = await makeDraftValidator(catalog)(draftOf({
-    items: [line({ product_id: null, candidates: [LAPICERO.id], confidence: 'low' }), line({ quantity: 3 })]
+    items: [line({ product_id: null, candidates: [LAPICERO.id], confidence: 'low' }), line({ quantity: 3 })],
+    source_text: 'vende 2 lapiceros y 3 cuadernos, efectivo'
   }))
   assert.equal(result.kind, 'review')
   assert.deepEqual(result.reservations, [{ product_id: CUADERNO.id, qty: 3 }])
@@ -280,7 +281,7 @@ test('un duplicado concurrente devuelve pending y luego recupera el resultado', 
 
 test('por confirmar: guarda motivos codificados, reserva y no registra', async t => {
   const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ items: [line({ quantity: 3, confidence: 'medium' })] })] })
-  const response = await run(instruction())
+  const response = await run(instruction('vende 3 cuadernos, pago efectivo'))
   assert.equal(response.status, 'pending_review')
   assert.equal(response.result.reference, response.operation_id)
   assert.deepEqual(codes(response), ['low_confidence'])
@@ -409,12 +410,12 @@ test('error de transporte tras enviar la venta: indeterminado (pending), nunca �
 
 test('rechazo explícito de create_sale: queda por confirmar (pos_rejected) con reserva de lo disponible', async t => {
   const { run, dependencies } = await setup(t, {
-    execute: async (_sale, beforeCommit) => { await beforeCommit(); throw new SaleRejectedByPosError('Stock insuficiente para Cuaderno') }
+    execute: async (_sale, beforeCommit) => { await beforeCommit(); throw new SaleRejectedByPosError('P0001') }
   })
   const response = await run(instruction())
   assert.equal(response.status, 'pending_review')
   assert.deepEqual(codes(response), ['pos_rejected'])
-  assert.match(response.message, /El POS rechazó la venta: Stock insuficiente/)
+  assert.match(response.message, /El POS rechazó la venta \(código P0001\)/)
   const op = await dependencies.store.getOperation(response.operation_id)
   assert.equal(op.state, 'review')
   assert.deepEqual(op.reservations, [{ product_id: CUADERNO.id, qty: 2 }])
@@ -505,7 +506,7 @@ test('ejecutor: error con código = no registrada; sin código = indeterminado; 
 const proposal = (overrides = {}, item = {}) => ({
   confidence: 'high', customer_id: null, payment_method: 'efectivo', total: 10, currency: 'PEN', doubts: [],
   items: [{
-    line: 1, query: '2 cuadernos A4', product_id: CUADERNO.id, name: CUADERNO.name, sku: 'CUA-1', brand: 'Marca A',
+    line: 1, query: 'cuaderno A4', product_id: CUADERNO.id, name: CUADERNO.name, sku: 'CUA-1', brand: 'Marca A',
     qty: 2, unit_name: 'unidad', factor: 1, price_unit: 5, total: 10, stock_available: 20, confidence: 'high',
     match_score: 0.97, reasons: ['coinciden hojas, tamaño y marca'], alternatives: [], ...item
   }],
@@ -541,8 +542,8 @@ test('SaleProposal media: por confirmar con sus motivos y alternativas como cand
 
 test('SaleProposal con precio distinto al oficial o sin forma de pago queda por confirmar', async t => {
   const { run } = await setup(t, { drafts: [proposal({}, { price_unit: 4 }), proposal({ payment_method: null })] })
-  assert.deepEqual(codes(await run(instruction('a'))), ['price_changed'])
-  assert.deepEqual(codes(await run(instruction('b'))), ['missing_payment'])
+  assert.deepEqual(codes(await run(instruction('vende 2 cuadernos A4, efectivo'))), ['price_changed'])
+  assert.deepEqual(codes(await run(instruction('vende 2 cuadernos A4'))), ['missing_payment'])
 })
 
 test('SaleProposal general no segura con líneas seguras y sin dudas no pasa directo', () => {
@@ -615,11 +616,11 @@ test('dry-run: precio cambiado, stock insuficiente y borrador inválido tampoco 
     dryRun: true, execute: forbiddenExecute(calls),
     drafts: [draftOf({ items: [line({ price_unit: 4 })] }), draftOf({ items: [line({ quantity: 99 })] }), { nada: true }, draftOf()]
   })
-  assert.deepEqual(codes(await run(instruction('a'))), ['price_changed'])
-  assert.deepEqual(codes(await run(instruction('b'))), ['insufficient_stock'])
+  assert.deepEqual(codes(await run(instruction('vende 2 cuadernos, efectivo'))), ['price_changed'])
+  assert.deepEqual(codes(await run(instruction('vende 99 cuadernos, efectivo'))), ['insufficient_stock'])
   assert.deepEqual(codes(await run(instruction('c'))), ['invalid_draft'])
   // The simulated reservations of a (2) and b (18) hold the 20 units inside the dry-run store.
-  assert.deepEqual(codes(await run(instruction('d'))), ['insufficient_stock'])
+  assert.deepEqual(codes(await run(instruction('vende 2 cuadernos, efectivo'))), ['insufficient_stock'])
   assert.equal(calls.n, 0)
 })
 
@@ -730,4 +731,109 @@ test('en dry-run la búsqueda nunca escribe, aunque POS_AGENT_SEARCH_AUTOINDEX e
 test('control: solo con POS_AGENT_SEARCH_AUTOINDEX=1 y fuera de dry-run se indexa (el test detecta escrituras)', async () => {
   const writes = await searchWith(searchAutoindexIntervalMs({ autoindex: true, dryRun: false }))
   assert.deepEqual(writes, [['product_search_index', 'update']])
+})
+
+// ---------------------------------------------------------------- security review fixes
+
+const { resolveAgentModes, describeAgentModes, memoizeByKey } = await jiti.import('../server/modules/agent/app/runtimeModes.ts')
+const { paymentMentioned, quantityGrounded } = await jiti.import('../server/modules/agent/app/grounding.ts')
+
+test('M2: el dry-run se activa en tiempo de ejecución si cualquier fuente lo pide (también en un build de producción)', () => {
+  // runtimeConfig baked at build time as false, but the process is launched with the variable:
+  assert.equal(resolveAgentModes({ posAgentDryRun: false }, { POS_AGENT_DRY_RUN: '1' }).dryRun, true)
+  assert.equal(resolveAgentModes({ posAgentDryRun: false }, { NUXT_POS_AGENT_DRY_RUN: 'true' }).dryRun, true)
+  assert.equal(resolveAgentModes({ posAgentDryRun: true }, {}).dryRun, true)
+  assert.equal(resolveAgentModes({ posAgentDryRun: 'TRUE' }, {}).dryRun, true)
+  assert.equal(resolveAgentModes({ posAgentDryRun: false }, {}).dryRun, false)
+  assert.equal(resolveAgentModes({}, { POS_AGENT_DRY_RUN: '0' }).dryRun, false)
+  assert.match(describeAgentModes({ dryRun: true, autoindex: false }), /SOLO VALIDACIÓN/)
+  assert.match(describeAgentModes({ dryRun: false, autoindex: false }), /REAL: registra ventas.*apagado \(solo lectura\)/)
+})
+
+test('M2: el indexado solo se enciende explícitamente y nunca junto con dry-run', () => {
+  assert.equal(resolveAgentModes({}, {}).autoindex, false)
+  assert.equal(resolveAgentModes({ posAgentSearchAutoindex: false }, { POS_AGENT_SEARCH_AUTOINDEX: '1' }).autoindex, true)
+  assert.equal(resolveAgentModes({}, { NUXT_POS_AGENT_SEARCH_AUTOINDEX: '1' }).autoindex, true)
+  assert.equal(resolveAgentModes({ posAgentSearchAutoindex: true }, { POS_AGENT_DRY_RUN: '1' }).autoindex, false)
+  assert.equal(resolveAgentModes({ posAgentSearchAutoindex: true, posAgentDryRun: true }, {}).autoindex, false)
+})
+
+test('M1: la forma de pago debe estar en el texto del vendedor (código, etiqueta o alias)', async () => {
+  const efectivo = { code: 'efectivo', label: 'Efectivo' }
+  const yape = { code: 'yape', label: 'Yape' }
+  assert.equal(paymentMentioned('vende 2 cuadernos', efectivo), false)
+  assert.equal(paymentMentioned('vende 2 cuadernos, paga en EFECTIVO', efectivo), true)
+  assert.equal(paymentMentioned('2 cuadernos al contado', efectivo), true)
+  assert.equal(paymentMentioned('2 cuadernos, yapeo', yape), true)
+  assert.equal(paymentMentioned('cuaderno marca efectivoplus', efectivo), false) // whole words only
+  const { catalog } = makeCatalog()
+  const invented = await makeDraftValidator(catalog)(draftOf({ source_text: 'vende 2 cuadernos A4' }))
+  assert.equal(invented.kind, 'review')
+  assert.deepEqual(invented.reasons.map(r => [r.code, r.detail?.ungrounded]), [['missing_payment', true]])
+})
+
+test('M1: la cantidad debe estar escrita como cantidad, no tomada de la descripción del producto', async () => {
+  assert.equal(quantityGrounded('vende dos cuadernos', 2, 'cuaderno'), true)
+  assert.equal(quantityGrounded('vende 2 cuadernos', 2, 'cuaderno'), true)
+  assert.equal(quantityGrounded('una docena de lapiceros', 1, 'lapicero'), true)
+  assert.equal(quantityGrounded('media docena de lapiceros', 6, 'lapicero'), true)
+  assert.equal(quantityGrounded('vende 1,5 metros de papel', 1.5, 'papel'), false) // "1.5 metros" is a measure
+  assert.equal(quantityGrounded('vende cuaderno de 100 hojas', 100, 'cuaderno 100 hojas'), false)
+  assert.equal(quantityGrounded('regla de 30 cm', 30, 'regla 30 cm'), false)
+  assert.equal(quantityGrounded('vende cuaderno a4', 4, 'cuaderno a4'), false)
+  assert.equal(quantityGrounded('vende cuaderno a4 100 cuadriculado', 100, 'cuaderno A4 100 cuadriculado'), false)
+  assert.equal(quantityGrounded('vende 100 cuadernos a4 100 cuadriculado', 100, 'cuaderno A4 100 cuadriculado'), true)
+  assert.equal(quantityGrounded('vende 100 cuadernos de 100 hojas', 100, 'cuaderno 100 hojas'), true)
+  const { catalog } = makeCatalog()
+  const hojas = await makeDraftValidator(catalog)(draftOf({
+    items: [line({ quantity: 100, query: 'cuaderno 100 hojas' })], source_text: 'vende cuaderno de 100 hojas, efectivo'
+  }))
+  assert.equal(hojas.kind, 'review')
+  assert.deepEqual(hojas.reasons.map(r => r.code), ['missing_quantity', 'insufficient_stock'])
+})
+
+test('M1: el orquestador ignora el source_text del agente 1 y usa los mensajes reales del vendedor', async t => {
+  const { run, counts } = await setup(t, { drafts: [draftOf({ source_text: 'vende 2 cuadernos A4, pago efectivo' })] })
+  const response = await run(instruction('vende cuadernos'))
+  assert.equal(response.status, 'pending_review')
+  assert.deepEqual(codes(response), ['missing_payment', 'missing_quantity'])
+  assert.equal(counts.execute, 0)
+})
+
+test('B2: una sola instancia por proceso mientras la configuración no cambie', () => {
+  let built = 0
+  const get = memoizeByKey(key => ({ key, n: ++built }))
+  const a = get('k1')
+  assert.equal(get('k1'), a)
+  assert.equal(get('k1'), a)
+  assert.equal(built, 1)
+  assert.notEqual(get('k2'), a)
+  assert.equal(built, 2)
+})
+
+const saleForExecutor = { customer_id: null, payment_method: 'efectivo', currency: 'PEN', total: 10, items: [{ product_id: CUADERNO.id, name: 'x', qty: 2, unit_name: 'unidad', price_unit: 5, factor: 1, total: 10 }] }
+
+test('B5: el detalle del error de Postgres va al log del servidor; al chat solo llega el código', async t => {
+  const logged = []
+  const executor = makeSupabaseSaleExecutor(async () => 't', async () => ({ data: null, error: { code: 'P0001', message: 'Stock insuficiente para Cuaderno Secreto' } }), { log: (m, d) => logged.push(d) })
+  await assert.rejects(executor(saleForExecutor, async () => {}), error => error instanceof SaleRejectedByPosError && error.message === 'P0001')
+  assert.deepEqual(logged, [{ code: 'P0001', message: 'Stock insuficiente para Cuaderno Secreto' }])
+  const { run } = await setup(t, { execute: executor })
+  const response = await run(instruction())
+  assert.equal(response.status, 'pending_review')
+  assert.match(response.message, /código P0001/)
+  assert.doesNotMatch(JSON.stringify(response), /Secreto|Stock insuficiente para/)
+})
+
+test('B3: si create_sale no responde, el ejecutor corta por timeout y la venta queda indeterminada (pending) sin reintento', async t => {
+  let calls = 0
+  const hanging = makeSupabaseSaleExecutor(async () => 't', () => { calls++; return new Promise(() => {}) }, { timeoutMs: 20, log: () => {} })
+  await assert.rejects(hanging(saleForExecutor, async () => {}), error => !(error instanceof SaleRejectedByPosError) && /timeout/.test(error.message))
+  const { run, dependencies } = await setup(t, { execute: makeSupabaseSaleExecutor(async () => 't', () => { calls++; return new Promise(() => {}) }, { timeoutMs: 20, log: () => {} }) })
+  const request = instruction()
+  const first = await run(request)
+  assert.equal(first.status, 'pending')
+  assert.equal((await dependencies.store.getOperation(first.operation_id)).state, 'executing')
+  assert.equal((await run(request)).status, 'pending') // the lock was released, and no second call
+  assert.equal(calls, 2) // one for the direct executor check, one for the orchestrated sale
 })

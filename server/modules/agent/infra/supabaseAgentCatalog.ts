@@ -1,13 +1,13 @@
 import { getSupabaseAdminClient } from '../../../utils/supabase'
 import type { AgentCatalog } from '../app/prepareSale'
-import type { Product } from '../contracts'
+import type { Product, StockLevel } from '../contracts'
 
 const columns = 'id, name, sku, brand, unit, stock_on_hand'
 const product = (row: any): Product => ({ id: row.id, name: row.name, sku: row.sku, brand: row.brand, unit: row.unit, stock: Number(row.stock_on_hand) })
 const stopwords = new Set(['de', 'del', 'el', 'la', 'los', 'las', 'un', 'una', 'con', 'para', 'hoja', 'hojas'])
 const tokens = (text: string) => text.match(/[\p{L}\p{N}]+/gu)?.filter(term => !stopwords.has(term.toLowerCase())).slice(0, 16) || []
 
-export const makeSupabaseAgentCatalog = (): AgentCatalog => {
+export const makeSupabaseAgentCatalog = (): AgentCatalog & { stockLevels(ids: string[]): Promise<StockLevel[]> } => {
   const db = getSupabaseAdminClient()
   return {
     async findProducts(text, sku) {
@@ -42,6 +42,11 @@ export const makeSupabaseAgentCatalog = (): AgentCatalog => {
       const { data, error } = await db.from('payment_method_catalog').select('code, label').eq('active', true).order('sort_order')
       if (error) throw error
       return data || []
+    },
+    async stockLevels(ids) {
+      const { data, error } = await db.from('product_catalog').select('id, name, unit, stock_on_hand, min_stock').in('id', ids)
+      if (error) throw error
+      return (data || []).map((row: any) => ({ id: row.id, name: row.name, unit: row.unit, stock: Number(row.stock_on_hand), min_stock: Number(row.min_stock || 0) }))
     },
     async quote(item, qty, unit, customerId) {
       const { data, error } = await db.rpc('resolve_sale_item_pricing', {

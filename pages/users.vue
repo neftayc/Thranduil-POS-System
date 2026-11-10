@@ -78,7 +78,33 @@ const onRoleChange = (event: Event, userId: string) => {
   updateRole(userId, target.value)
 }
 
-onMounted(loadUsers)
+// Sessions opened from /vincular so Claude can sell as a given seller.
+const claudeSessions = ref<any[]>([])
+const sessionsMessage = ref('')
+const loadClaudeSessions = async () => {
+  try {
+    const data = await $fetch<{ sessions: any[] }>('/api/agent/sessions')
+    claudeSessions.value = data.sessions || []
+    sessionsMessage.value = ''
+  } catch (err: any) {
+    sessionsMessage.value = err?.data?.statusMessage || 'No se pudieron cargar las sesiones de Claude.'
+  }
+}
+const revokeClaudeSession = async (id: string) => {
+  try {
+    await $fetch('/api/agent/sessions/revoke', { method: 'POST', body: { id } })
+    sessionsMessage.value = 'Sesión revocada. Claude ya no puede vender con ella.'
+    await loadClaudeSessions()
+  } catch (err: any) {
+    sessionsMessage.value = err?.data?.statusMessage || 'No se pudo revocar la sesión.'
+  }
+}
+const formatDate = (ms: number) => new Date(ms).toLocaleString('es-PE', { timeZone: 'America/Lima' })
+
+onMounted(() => {
+  loadUsers()
+  loadClaudeSessions()
+})
 </script>
 
 <template>
@@ -162,6 +188,39 @@ onMounted(loadUsers)
       </div>
 
       <p v-if="!users.length" class="ui-empty-state mt-4">Sin usuarios aún.</p>
+    </section>
+
+    <section class="ui-card">
+      <h2 class="ui-heading">Sesiones de Claude (ventas por voz)</h2>
+      <p class="ui-subtitle">Vinculaciones aprobadas por cada vendedor en /vincular. Vencen al final de la jornada.</p>
+      <div class="ui-table-wrap mt-5">
+        <table class="ui-table">
+          <thead>
+            <tr>
+              <th>Vendedor</th>
+              <th>Rol</th>
+              <th>Inicio</th>
+              <th>Vence</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="session in claudeSessions" :key="session.id">
+              <td class="font-semibold text-slate-800">{{ session.name }}</td>
+              <td>{{ session.role }}</td>
+              <td>{{ formatDate(session.created_at) }}</td>
+              <td>{{ formatDate(session.expires_at) }}</td>
+              <td>{{ session.active ? 'Activa' : session.revoked_at ? 'Revocada' : 'Vencida' }}</td>
+              <td>
+                <button v-if="session.active" class="ui-btn-secondary" @click="revokeClaudeSession(session.id)">Revocar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p v-if="!claudeSessions.length" class="ui-empty-state mt-4">Sin sesiones de Claude.</p>
+      <div v-if="sessionsMessage" class="ui-alert mt-4">{{ sessionsMessage }}</div>
     </section>
   </div>
 </template>

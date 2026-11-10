@@ -179,7 +179,9 @@ const userInitials = computed(() => {
   return username.slice(0, 2).toUpperCase() || "US";
 });
 
-const isLoginPage = computed(() => route.path === "/login");
+// Public pages without the app shell: login and seller identification for Claude.
+const PUBLIC_PAGES = new Set(["/login", "/vincular"]);
+const isLoginPage = computed(() => PUBLIC_PAGES.has(route.path));
 const isSalesPage = computed(() => route.path === "/sales");
 const salesView = computed(() => {
   const raw = String(route.query.view || "")
@@ -302,7 +304,7 @@ watch(sidebarCollapsed, (collapsed) => {
 watch(
   () => route.path,
   (path) => {
-    if (path === "/login") return;
+    if (PUBLIC_PAGES.has(path)) return;
     loadSession();
   },
   { immediate: true },

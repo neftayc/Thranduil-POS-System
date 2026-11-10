@@ -1,9 +1,11 @@
 import { createError, defineEventHandler, getHeader, readRawBody } from 'h3'
-import { requireAgentCredential, getAgentHandler } from '../../utils/agent'
-import { AgentConflictError, instructionSchema } from '../../modules/agent/contracts'
+import { requireAgentCredential, requireSeller, getAgentHandler } from '../../utils/agent'
+import { AgentConflictError, AgentForbiddenError, instructionSchema } from '../../modules/agent/contracts'
 
 export default defineEventHandler(async (event) => {
   requireAgentCredential(event)
+  // Every instruction re-validates the seller: session not revoked/expired, user active, valid role.
+  const seller = await requireSeller(event)
   if (!String(getHeader(event, 'content-type') || '').toLowerCase().startsWith('application/json')) {
     throw createError({ statusCode: 415, statusMessage: 'Se requiere application/json' })
   }
@@ -23,7 +25,7 @@ export default defineEventHandler(async (event) => {
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
       return await Promise.race([
-        getAgentHandler(event)(parsed.data),
+        getAgentHandler(event, seller)(parsed.data),
         new Promise(resolve => {
           timer = setTimeout(() => resolve({
             status: 'pending', operation_id: parsed.data.operation_id || parsed.data.request_id,
@@ -35,6 +37,7 @@ export default defineEventHandler(async (event) => {
       if (timer) clearTimeout(timer)
     }
   } catch (error) {
+    if (error instanceof AgentForbiddenError) throw createError({ statusCode: 403, statusMessage: error.message })
     if (error instanceof AgentConflictError) throw createError({ statusCode: 409, statusMessage: error.message })
     if ((error as any)?.statusCode) throw error
     throw createError({ statusCode: 503, statusMessage: 'Agente no disponible; conserva el request_id para reintentar' })

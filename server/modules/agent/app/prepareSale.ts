@@ -12,12 +12,13 @@ export interface AgentCatalog {
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
 const round = (value: number, places: number) => Number(value.toFixed(places))
 
-export const makeSalePreparer = (catalog: AgentCatalog) => async (input: Interpretation, previousCandidates: Product[]) => {
+// `reserved` = base units held by other "ventas por confirmar"; they are not available.
+export const makeSalePreparer = (catalog: AgentCatalog) => async (input: Interpretation, previousCandidates: Product[], reserved: Map<string, number> = new Map()) => {
   const candidates: Product[] = []
   const questions: string[] = input.question?.trim() ? [input.question.trim().slice(0, 500)] : []
   const draft: SaleDraft = { customer_id: null, payment_method: '', items: [], total: 0, currency: 'PEN' }
   if (!input.items.length || input.items.length > 20) {
-    return { candidates, question: 'Indica entre 1 y 20 artículos, con su cantidad, presentación y forma de pago.' }
+    return { candidates, items: [], question: 'Indica entre 1 y 20 artículos, con su cantidad, presentación y forma de pago.' }
   }
   if (input.customer_query) {
     const customers = await catalog.findCustomers(input.customer_query)
@@ -64,9 +65,13 @@ export const makeSalePreparer = (catalog: AgentCatalog) => async (input: Interpr
   for (const item of draft.items) quantities.set(item.product_id, (quantities.get(item.product_id) || 0) + item.qty * item.factor)
   for (const [id, qty] of quantities) {
     const product = candidates.find(p => p.id === id)!
-    if (!Number.isFinite(product.stock) || qty > product.stock + 0.000001) questions.push(`Stock insuficiente de ${product.name}: hay ${product.stock} ${product.unit}, y el pedido necesita ${round(qty, 4)}.`)
+    const held = reserved.get(id) || 0
+    const available = round(product.stock - held, 4)
+    if (!Number.isFinite(product.stock) || qty > available + 0.000001) {
+      questions.push(`Stock insuficiente de ${product.name}: hay ${available} ${product.unit} disponibles${held ? ` (${round(held, 4)} reservadas en ventas por confirmar)` : ''}, y el pedido necesita ${round(qty, 4)}.`)
+    }
   }
-  if (questions.length) return { candidates, question: questions.join('\n') }
+  if (questions.length) return { candidates, items: draft.items, question: questions.join('\n') }
   draft.total = round(draft.items.reduce((sum, item) => sum + item.total, 0), 2)
-  return { candidates, draft }
+  return { candidates, items: draft.items, draft }
 }

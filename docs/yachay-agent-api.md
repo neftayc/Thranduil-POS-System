@@ -126,3 +126,26 @@ node scripts/check-agent.mjs --prepare
 Las pruebas automatizadas de ejecución utilizan dobles del repositorio, sin
 registrar ventas reales. El smoke test verifica credencial, contrato y contexto;
 `--prepare` añade interpretación real, reintento idéntico y conflicto de UUID.
+
+## Agente 1: búsqueda de productos y propuesta de venta
+
+El preparador (`prepare()`) busca cada artículo con **búsqueda híbrida** y decide
+con atributos exactos; el detalle está en [agent-product-search.md](agent-product-search.md).
+Además de `draft` (solo cuando todo es seguro) devuelve `proposal`, que viaja en
+`result.proposal` de las respuestas `completed` y `pending_review`:
+
+| Campo | Contenido |
+| --- | --- |
+| `confidence` | `high` (se puede registrar), `medium` (producto probable con dudas → por confirmar) o `low` (sin producto o faltan datos). |
+| `items[]` | `product_id`, `name`, `sku`, `brand`, `qty`, `unit_name`, `factor`, `price_unit`, `total`, `stock_available` (stock − reservado), `confidence`, `match_score`, `reasons[]` y `alternatives[]` (≤ 5 candidatos reales). |
+| `payment_method`, `customer_id`, `total`, `currency` | Datos resueltos o `null`. |
+| `doubts[]` | Motivos de duda en español. |
+
+Los IDs solo provienen de candidatos reales del catálogo; precio
+(`resolve_sale_item_pricing`) y stock se leen en vivo y nunca se guardan en el índice.
+
+Las preguntas de catálogo («¿tenemos cuadernos Marking cuadriculados?», «¿cuánto
+cuesta…?», «¿cuántos quedan?») usan `intent: catalog_query` y responden
+`completed` con `result.kind = "catalog_answer"` y `result.answers[]`, sin vender
+ni reservar. Los reportes con cálculos («¿cuánto vendimos hoy?») aún no están
+soportados (segunda etapa).

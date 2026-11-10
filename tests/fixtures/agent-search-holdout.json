@@ -1,0 +1,200 @@
+[
+ {
+  "text": "cuad layconsa estudiante cuadriculado",
+  "expected": [
+   "53cb457e-280c-4f8c-a3bd-01af699066f6"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno puppy de cuadros 100 hjs",
+  "expected": [
+   "2c422c07-20cc-4634-8839-fb6861da6a24"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "engrapadora artesco",
+  "expected": [
+   "5174d238-7a28-43f3-b908-2c0ababd5f76"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "goma en barra layconsa 21 gramos",
+  "expected": [
+   "6ccdcbcb-8826-4088-afcb-b5bea60f19e0"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "masking tape pegafan 24 mm",
+  "expected": [
+   "9ac019db-10b8-4c51-8419-93904a2023d4"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "crayolas jumbo layconsa",
+  "expected": [
+   "b13b281e-3df1-4de2-9a3f-31c80f18b1cd"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "folder manila a4",
+  "expected": [
+   "38c58cf8-4616-42de-bf22-8abcdc61a594"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "micas tamaño a4 artesco",
+  "expected": [
+   "751bc068-7f19-4fc9-8c51-e0a6632cc8bc"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "paquete de hojas de colores x100",
+  "expected": [
+   "e63344f7-32ed-4446-9e24-72cb151a0407"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "lapiz jumbo layconsa",
+  "expected": [
+   "f1854d1d-3e4f-4a10-a8df-da7de832270a"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "barra de silicona",
+  "expected": [
+   "32eb31b2-1a46-483e-8bf4-b58086d71f02"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "tomatodo grande artesco",
+  "expected": [
+   "3212c760-6f49-45ec-9ded-1a6b07707c5d"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "plumon indeleble eco",
+  "expected": [
+   "3ed17de0-41c2-4fcc-9ea8-d322e92cf2ff"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "diccionario bruno de ingles",
+  "expected": [
+   "5bb4a6ea-01fb-49b0-82d3-358a7dfc88a4"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cartulina blanca",
+  "expected": [
+   "4bd3bb00-983a-499c-9437-83f4e0b58761"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "pañitos humedos de 100",
+  "expected": [
+   "8e270f74-661a-4703-8595-ab5333db5018"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuaderno stanford 1x1",
+  "expected": [
+   "2eb52ee4-22e0-45af-bb16-1d2ff13ea84b"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "lapicero pilot azul",
+  "expected": [
+   "de6c2a82-ee7e-498e-a710-3fa1873a5fcf"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "cuadernos surco rayados de 100",
+  "expected": [
+   "4cea310a-201b-41ce-8e58-40a85a7e0bf6"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "2 cuadernos markin cuadriculados 100 hojas a4",
+  "expected": [
+   "0b510863-080e-466b-8b49-5e26b13ac315"
+  ],
+  "expect": "high"
+ },
+ {
+  "text": "perforador",
+  "expected": [
+   "5dfc4d60-2817-4d4c-b063-1d6551d45d16",
+   "620686c5-2a2f-46ea-9a0b-f78eab9409f1",
+   "b1b4436a-ff85-490e-86eb-e69688f8e43e"
+  ],
+  "expect": "not_high"
+ },
+ {
+  "text": "tomatodo",
+  "expected": [
+   "217949d7-8add-4d0e-9ff4-c4e1fde7f4a9",
+   "3212c760-6f49-45ec-9ded-1a6b07707c5d",
+   "72f91adb-7817-4ad3-a55f-80b540d25016"
+  ],
+  "expect": "not_high"
+ },
+ {
+  "text": "diccionario bruno",
+  "expected": [
+   "65959a8d-7226-4113-83c5-ad648aa6fe3a",
+   "5bb4a6ea-01fb-49b0-82d3-358a7dfc88a4",
+   "b52f303f-8756-4952-9cfc-d28f2bae33bb"
+  ],
+  "expect": "not_high"
+ },
+ {
+  "text": "cinta de embalaje grande",
+  "expected": [
+   "88d1741d-5fcb-4fae-97d2-7af78e2459e6",
+   "e4a4f839-2cec-4a22-94c0-e0850a336ca0"
+  ],
+  "expect": "not_high"
+ },
+ {
+  "text": "cuaderno layconsa teens rayado",
+  "expected": [],
+  "expect": "not_high"
+ },
+ {
+  "text": "goma en barra 15 gramos",
+  "expected": [],
+  "expect": "not_high"
+ },
+ {
+  "text": "lapicero pilot rojo",
+  "expected": [],
+  "expect": "not_high"
+ },
+ {
+  "text": "papel lustre",
+  "expected": [
+   "bd2ff394-e021-4d77-abde-a7288ab73a70",
+   "f31f0a7a-88a5-4ef3-b066-d90c6c929e44"
+  ],
+  "expect": "not_high"
+ }
+]

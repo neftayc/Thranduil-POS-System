@@ -2,7 +2,8 @@
 // over the catalog snapshot, to measure the "before" accuracy. Offline, read-only.
 import fs from 'node:fs'
 const catalog = JSON.parse(fs.readFileSync(new URL('../../tests/fixtures/catalog-snapshot.json', import.meta.url)))
-const cases = JSON.parse(fs.readFileSync(new URL('../../tests/fixtures/agent-search-cases.json', import.meta.url)))
+const file = process.argv.find(a => a.endsWith('.json')) || 'tests/fixtures/agent-search-cases.json'
+const cases = JSON.parse(fs.readFileSync(new URL('../../' + file, import.meta.url)))
 const stopwords = new Set(['de', 'del', 'el', 'la', 'los', 'las', 'un', 'una', 'con', 'para', 'hoja', 'hojas'])
 const tokens = text => text.match(/[\p{L}\p{N}]+/gu)?.filter(t => !stopwords.has(t.toLowerCase())).slice(0, 16) || []
 const find = text => {

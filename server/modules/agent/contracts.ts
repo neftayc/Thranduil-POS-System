@@ -13,13 +13,18 @@ export const instructionSchema = z.object({
 })
 
 export const interpretationSchema = z.object({
-  intent: z.enum(['sale', 'cancel', 'unsupported']),
+  // catalog_query = a question about the catalog ("¿tenemos cuadernos Marking?", "¿cuánto cuesta…?").
+  intent: z.enum(['sale', 'cancel', 'unsupported', 'catalog_query']),
   items: z.array(z.object({
     query: z.string(),
     sku: z.string().nullable(),
     quantity: z.number().nullable(),
     unit: z.string().nullable(),
-    product_id: z.string().nullable()
+    product_id: z.string().nullable(),
+    // Agent 1: what the order says, separated (optional for callers that do not provide it).
+    product: z.string().nullable().optional(),
+    brand: z.string().nullable().optional(),
+    attributes: z.array(z.string()).optional()
   })),
   payment_method: z.string().nullable(),
   customer_query: z.string().nullable(),
@@ -40,6 +45,42 @@ export type StockAlert = { product_id: string; name: string; unit: string; avail
 export type Reservation = { product_id: string; qty: number }
 export type DraftItem = {
   product_id: string; name: string; qty: number; unit_name: string; price_unit: number; factor: number; total: number
+}
+/**
+ * Agent 1 output (contract agreed with process 2). `confidence: 'high'` ⇔ every line has a
+ * single product with exact attributes, quantity, live price and stock, and the payment
+ * method is known; only then `prepare()` also returns `draft`. Product IDs only ever come
+ * from real catalog candidates.
+ */
+export type Confidence = 'high' | 'medium' | 'low'
+export type ProposalAlternative = { product_id: string; name: string; sku: string | null; brand: string | null; score: number }
+export type ProposalItem = {
+  line: number
+  query: string
+  product_id: string | null
+  name: string | null
+  sku: string | null
+  brand: string | null
+  qty: number | null
+  unit_name: string | null
+  factor: number | null
+  price_unit: number | null
+  total: number | null
+  /** stock_on_hand − units reserved by other ventas por confirmar (base unit). */
+  stock_available: number | null
+  confidence: Confidence
+  match_score: number
+  reasons: string[]
+  alternatives: ProposalAlternative[]
+}
+export type SaleProposal = {
+  confidence: Confidence
+  customer_id: string | null
+  payment_method: string | null
+  items: ProposalItem[]
+  total: number | null
+  currency: 'PEN'
+  doubts: string[]
 }
 export type SaleDraft = {
   customer_id: string | null; payment_method: string; items: DraftItem[]; total: number; currency: string
@@ -76,8 +117,10 @@ export interface SalesAgentDependencies {
   store: AgentStore
   interpret(messages: string[], previous: Operation): Promise<Interpretation>
   prepare(input: Interpretation, previousCandidates: Product[], reserved: Map<string, number>): Promise<{
-    draft?: SaleDraft; question?: string; candidates: Product[]; items?: DraftItem[]
+    draft?: SaleDraft; question?: string; candidates: Product[]; items?: DraftItem[]; proposal?: SaleProposal
   }>
+  /** Answers catalog questions with live data (agent 1). */
+  answer?(input: Interpretation): Promise<{ message: string; result: Record<string, unknown> }>
   execute(draft: SaleDraft, beforeCommit: () => Promise<void>): Promise<{ saleId: string; total: number }>
   stockLevels?(productIds: string[]): Promise<StockLevel[]>
   /** How long a "venta por confirmar" keeps its stock reservation (default 48 h). */

@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import { createError, getHeader, getRequestURL, setHeader, type H3Event } from 'h3'
 import { makeSalesAgent } from '../modules/agent/app/salesAgent'
 import { makeSalePreparer } from '../modules/agent/app/prepareSale'
+import { makeCatalogAnswerer } from '../modules/agent/app/catalogAnswers'
+import { embeddingModelName, makeOpenAIEmbedder } from '../modules/agent/infra/openaiEmbeddings'
 import { makeSealer, makeSellerSessions, SellerRejectedError, type ActiveSeller, type SellerSessions } from '../modules/agent/app/sellerSessions'
 import { makeFileAgentStore } from '../modules/agent/infra/fileAgentStore'
 import { makeFileSellerSessionStore } from '../modules/agent/infra/fileSellerSessionStore'
@@ -61,11 +63,13 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   const config = useRuntimeConfig(event)
   const key = String(config.openaiApiKey || '').trim()
   if (!key) throw createError({ statusCode: 503, statusMessage: 'Intérprete de ventas no configurado' })
-  const catalog = makeSupabaseAgentCatalog()
+  const embeddingModel = embeddingModelName(String(config.posAgentEmbeddingModel || ''))
+  const catalog = makeSupabaseAgentCatalog({ embed: makeOpenAIEmbedder(key, embeddingModel), embeddingModel })
   const agent = makeSalesAgent({
     store: makeFileAgentStore(String(config.posAgentStorageDir)),
     interpret: makeOpenAISalesInterpreter(key, String(config.posAgentModel)),
     prepare: makeSalePreparer(catalog),
+    answer: makeCatalogAnswerer(catalog),
     execute: makeSupabaseSaleExecutor(seller.authorize),
     stockLevels: ids => catalog.stockLevels(ids),
     reviewTtlMs: Number(config.posAgentReviewTtlHours || 48) * 60 * 60 * 1000

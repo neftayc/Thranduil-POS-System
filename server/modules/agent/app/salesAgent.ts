@@ -114,8 +114,20 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       let prepared: Awaited<ReturnType<SalesAgentDependencies['prepare']>>
       try {
         const parsed = await deps.interpret(op.messages, op)
+        const previousInterpretation = op.interpretation
         op.interpretation = parsed
         if (parsed.intent === 'cancel') return cancel('Operación cancelada. No se registró una venta y se liberó cualquier reserva.')
+        if (parsed.intent === 'catalog_query' && deps.answer) {
+          // Catalog questions are answered with live data; nothing is reserved or sold.
+          const answer = await deps.answer(parsed)
+          if (op.state === 'preparing') op.state = 'completed'
+          else {
+            // A question inside an open venta por confirmar must not alter that sale.
+            op.interpretation = previousInterpretation
+            op.messages.pop()
+          }
+          return finish({ status: 'completed', operation_id: id, message: answer.message, result: { kind: 'catalog_answer', ...answer.result } })
+        }
         if (parsed.intent !== 'sale') {
           return finish({ status: 'rejected', operation_id: id, message: 'Esta integración registra ventas. Indica qué productos deseas vender, en qué cantidad y la forma de pago.' })
         }
@@ -138,7 +150,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
           status: 'pending_review', operation_id: id,
           message: `Venta por confirmar guardada (referencia ${id}). No se registró todavía: se validará en el POS. Pendiente: ${op.question}${op.reservations.length ? ' Se reservó el stock de los artículos identificados.' : ''}${alertText(alerts)}`,
           result: {
-            reference: id, pending: op.question, items, candidates: prepared.candidates,
+            reference: id, pending: op.question, items, candidates: prepared.candidates, ...(prepared.proposal ? { proposal: prepared.proposal } : {}),
             review_expires_at: new Date(op.expires_at).toISOString(), alerts
           }
         })
@@ -157,7 +169,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         return await finish({
           status: 'completed', operation_id: id,
           message: `Venta registrada correctamente (referencia ${result.saleId}).${alertText(alerts)}`,
-          result: { reference: result.saleId, total: result.total, currency: op.draft.currency, items: op.draft.items, alerts }
+          result: { reference: result.saleId, total: result.total, currency: op.draft.currency, items: op.draft.items, alerts, ...(prepared.proposal ? { proposal: prepared.proposal } : {}) }
         })
       } catch (error) {
         // A storage error after receiving the receipt must not report a failed sale.

@@ -25,6 +25,7 @@ export default defineNuxtConfig({
     posAgentPublicUrl: process.env.POS_AGENT_PUBLIC_URL || '',
     posAgentReviewTtlHours: Number(process.env.POS_AGENT_REVIEW_TTL_HOURS || 48),
     posAgentModel: process.env.POS_AGENT_MODEL || 'gpt-4o-mini',
+    posAgentEmbeddingModel: process.env.POS_AGENT_EMBEDDING_MODEL || 'text-embedding-3-small',
     posAgentStorageDir: process.env.POS_AGENT_STORAGE_DIR || '.data/agent',
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',

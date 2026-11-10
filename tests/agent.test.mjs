@@ -552,15 +552,18 @@ test('SaleProposal segura se convierte a sale-draft/1 y se registra directo; sus
 
 test('SaleProposal media: por confirmar con sus motivos y alternativas como candidatos', async t => {
   const alt = randomUUID()
-  const medium = proposal({ confidence: 'medium' }, { confidence: 'medium', reasons: ['no se indicó el rayado'], alternatives: [{ product_id: alt, name: 'Otro', sku: 'X', brand: null, score: 0.8 }] })
+  const medium = proposal({ confidence: 'medium', doubts: ['Artículo 1: no se indicó el rayado. ' + 'Opciones: '.repeat(60)] }, { confidence: 'medium', reasons: ['100 hojas coincide'], alternatives: [{ product_id: alt, name: 'Otro', sku: 'X', brand: null, score: 0.8 }] })
   const parsed = parseAgentDraft(medium)
+  assert.equal(parsed.success, true) // long doubts (> 300 chars) are truncated, not rejected
   assert.deepEqual(parsed.data.items[0].candidates, [alt])
-  assert.deepEqual(parsed.data.items[0].doubts, [{ code: 'other', note: 'no se indicó el rayado' }])
+  assert.deepEqual(parsed.data.items[0].doubts, []) // reasons explain the match; they are not doubts
+  assert.match(parsed.data.doubts[0].note, /^Artículo 1: no se indicó el rayado/)
   const { run, counts } = await setup(t, { drafts: [medium] })
   const response = await run(instruction())
   assert.equal(response.status, 'pending_review')
-  assert.ok(codes(response).includes('low_confidence'))
+  assert.deepEqual(codes(response), ['agent_doubt', 'low_confidence'])
   assert.match(response.message, /no se indicó el rayado/)
+  assert.doesNotMatch(response.message, /100 hojas coincide/)
   assert.equal(counts.execute, 0)
 })
 
@@ -568,6 +571,11 @@ test('SaleProposal con precio distinto al oficial o sin forma de pago queda por 
   const { run } = await setup(t, { drafts: [proposal({}, { price_unit: 4 }), proposal({ payment_method: null })] })
   assert.deepEqual(codes(await run(instruction('a'))), ['price_changed'])
   assert.deepEqual(codes(await run(instruction('b'))), ['missing_payment'])
+})
+
+test('SaleProposal general no segura con líneas seguras y sin dudas no pasa directo', () => {
+  const parsed = parseAgentDraft(proposal({ confidence: 'medium' }))
+  assert.equal(parsed.data.doubts.length, 1)
 })
 
 test('un objeto que no es sale-draft/1 ni SaleProposal no se acepta', () => {

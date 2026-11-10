@@ -132,7 +132,11 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
           message: `Venta por confirmar guardada (referencia ${id}). No se registró todavía: se validará en el POS. Motivo: ${pendingText}${reservations.length ? ' Se reservó el stock disponible de los artículos identificados.' : ''}${alertText(alerts)}`,
           result: {
             reference: id,
-            reasons: reasons.map(({ code, line, message }) => ({ code, ...(line ? { line } : {}), message })),
+            // Agent 1's doubt code (ambiguous_product, product_not_found…) and the ungrounded flag are kept.
+            reasons: reasons.map(({ code, line, message, detail }) => ({
+              code, ...(line ? { line } : {}), message,
+              ...(detail?.doubt ? { doubt: detail.doubt } : {}), ...(detail?.ungrounded ? { ungrounded: true } : {})
+            })),
             pending: pendingText,
             items, reservations,
             review_expires_at: new Date(op!.expires_at).toISOString(),

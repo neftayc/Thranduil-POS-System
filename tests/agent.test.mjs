@@ -837,3 +837,62 @@ test('B3: si create_sale no responde, el ejecutor corta por timeout y la venta q
   assert.equal((await run(request)).status, 'pending') // the lock was released, and no second call
   assert.equal(calls, 2) // one for the direct executor check, one for the orchestrated sale
 })
+
+// ---------------------------------------------------------------- supervisor observations
+
+test('O1: una línea ambigua o no encontrada NO reserva el producto propuesto; las demás sí', async () => {
+  const { catalog } = makeCatalog()
+  const result = await makeDraftValidator(catalog)(draftOf({
+    items: [
+      line({ product_id: LAPICERO.id, confidence: 'medium', candidates: [randomUUID()], doubts: [{ code: 'ambiguous_product', note: 'Opciones: A; B.' }], price_unit: 1.5, query: 'papel lustre' }),
+      line({ quantity: 3 })
+    ],
+    source_text: 'vende 2 papel lustre y 3 cuadernos, efectivo'
+  }))
+  assert.equal(result.kind, 'review')
+  assert.deepEqual(result.reservations, [{ product_id: CUADERNO.id, qty: 3 }])
+  const notFound = await makeDraftValidator(catalog)(draftOf({ items: [line({ confidence: 'low', doubts: [{ code: 'product_not_found' }] })] }))
+  assert.deepEqual(notFound.reservations, [])
+  // Other doubts (e.g. unit_unclear) still reserve the identified product.
+  const unit = await makeDraftValidator(catalog)(draftOf({ items: [line({ confidence: 'medium', doubts: [{ code: 'unit_unclear' }] })] }))
+  assert.deepEqual(unit.reservations, [{ product_id: CUADERNO.id, qty: 2 }])
+})
+
+test('O1 de punta a punta: «papel lustre» ambiguo queda por confirmar sin reserva ni alerta de agotado por reserva', async t => {
+  const { run, dependencies } = await setup(t, {
+    drafts: [draftOf({ items: [line({ quantity: 20, confidence: 'medium', candidates: [LAPICERO.id], doubts: [{ code: 'ambiguous_product' }], query: 'papel lustre' })] })]
+  })
+  const response = await run(instruction('vende 20 papel lustre, efectivo'))
+  assert.equal(response.status, 'pending_review')
+  assert.deepEqual(response.result.reservations, [])
+  assert.doesNotMatch(response.message, /Se reservó/)
+  assert.deepEqual(response.result.alerts, [])
+  assert.deepEqual((await dependencies.store.getOperation(response.operation_id)).reservations, [])
+})
+
+test('O2: result.reasons incluye el código de duda de cada línea (ambiguous_product) y la marca ungrounded', async t => {
+  const { run } = await setup(t, {
+    drafts: [draftOf({ items: [line({ confidence: 'medium', doubts: [{ code: 'ambiguous_product', note: 'Opciones: A; B.' }] })] })]
+  })
+  const response = await run(instruction('vende 2 cuadernos'))
+  // The draft says "efectivo" but the seller did not: missing_payment is flagged as ungrounded.
+  assert.deepEqual(response.result.reasons.map(r => [r.code, r.line ?? null, r.doubt ?? null, r.ungrounded ?? false]), [
+    ['missing_payment', null, null, true],
+    ['agent_doubt', 1, 'ambiguous_product', false],
+    ['low_confidence', 1, null, false]
+  ])
+  const invented = await setup(t, { drafts: [draftOf()] })
+  const grounded = await invented.run(instruction('vende 2 cuadernos'))
+  assert.deepEqual(grounded.result.reasons.map(r => [r.code, r.ungrounded]), [['missing_payment', true]])
+})
+
+test('O3: los mensajes de duda terminan con un solo punto', async () => {
+  const { catalog } = makeCatalog()
+  const result = await makeDraftValidator(catalog)(draftOf({
+    doubts: [{ code: 'other', note: 'Pago con Tarjeta.' }],
+    items: [line({ doubts: [{ code: 'unit_unclear', note: '¿Caja o unidad?' }, { code: 'other', note: 'sin punto' }] })]
+  }))
+  const messages = result.reasons.filter(r => r.code === 'agent_doubt').map(r => r.message)
+  assert.deepEqual(messages, ['Duda del pedido: Pago con Tarjeta.', 'Artículo 1 («cuaderno A4»): ¿Caja o unidad?', 'Artículo 1 («cuaderno A4»): sin punto.'])
+  for (const message of messages) assert.doesNotMatch(message, /\.\.$/)
+})

@@ -183,7 +183,8 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       if (!parsed.success) {
         return review([{ code: 'invalid_draft', message: 'El borrador del agente no respeta el contrato (sale-draft/1 o SaleProposal).' }], [], [])
       }
-      const proposal: SaleDraftV1 = parsed.data
+      // Grounding uses the seller's own messages, never a text supplied by the AI.
+      const proposal: SaleDraftV1 = { ...parsed.data, source_text: op.messages.join('\n').slice(0, 5000) }
       op.proposal = proposal
       if (proposal.intent === 'cancel') return cancel('Operación cancelada. No se registró una venta y se liberó cualquier reserva.')
       if (proposal.intent !== 'sale') {
@@ -239,7 +240,8 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
             const recheck = await deps.validate(proposal, await reservedTotals(op.id))
             if (recheck.kind === 'review') reservations = recheck.reservations
           } catch {}
-          return review([{ code: 'pos_rejected', message: `El POS rechazó la venta: ${error.message}` }], decision.items, reservations)
+          // error.message is only the database error code; details stay in the server log.
+          return review([{ code: 'pos_rejected', message: `El POS rechazó la venta (código ${error.message}); no se registró. Revísala en el POS.`, detail: { db_code: error.message } }], decision.items, reservations)
         }
         // After dispatch, any other error may be a lost RPC response rather than a rolled-back sale.
         if (state === 'executing') return finish(pending(id))

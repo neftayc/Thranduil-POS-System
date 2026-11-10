@@ -148,5 +148,8 @@ export interface SalesAgentDependencies {
 
 /** The sale was certainly NOT registered and should not be retried (e.g. the seller is no longer authorized). */
 export class SaleNotCommittedError extends Error {}
-/** create_sale answered with an error (rolled back): nothing was registered; the order stays "por confirmar". */
+/**
+ * create_sale answered with an error (rolled back): nothing was registered; the order stays "por confirmar".
+ * Its message is ONLY the database error code (e.g. P0001): the detail is logged on the server.
+ */
 export class SaleRejectedByPosError extends Error {}

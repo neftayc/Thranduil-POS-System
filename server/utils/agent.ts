@@ -14,11 +14,10 @@ import { makeSupabaseSaleExecutor } from '../modules/agent/infra/supabaseSaleExe
 import { makeSupabaseSellerAuth } from '../modules/agent/infra/supabaseSellerAuth'
 import { getSupabaseUserClient } from './supabase'
 import { SaleNotCommittedError } from '../modules/agent/contracts'
+import { memoizeByKey, resolveAgentModes } from '../modules/agent/app/runtimeModes'
 
-/** Boolean env flag: true, '1' or 'true' (NUXT_* overrides arrive as strings). */
-export const isFlagOn = (value: unknown) => value === true || ['1', 'true'].includes(String(value ?? '').trim().toLowerCase())
-/** POS_AGENT_DRY_RUN=1|true (or NUXT_POS_AGENT_DRY_RUN): validation only, never registers sales. */
-export const isDryRun = isFlagOn
+/** Dry-run / autoindex resolved at RUNTIME from every source (see runtimeModes.ts). */
+export const getAgentModes = (event?: H3Event) => resolveAgentModes(useRuntimeConfig(event) as any)
 
 export const SELLER_SESSION_HEADER = 'x-yachay-session'
 
@@ -66,17 +65,29 @@ export const requireSeller = async (event: H3Event): Promise<ActiveSeller> => {
   }
 }
 
+type CatalogConfig = { apiKey: string; embeddingModel: string; autoindex: boolean; dryRun: boolean }
+let catalogConfig: CatalogConfig
+/**
+ * One catalog per process (and per configuration): its caches and the background-indexing
+ * throttle are shared by every request instead of starting over on each one.
+ */
+const catalogFor = memoizeByKey(() => makeSupabaseAgentCatalog({
+  embed: makeOpenAIEmbedder(catalogConfig.apiKey, catalogConfig.embeddingModel), embeddingModel: catalogConfig.embeddingModel,
+  // Read-only by default: background indexing only with POS_AGENT_SEARCH_AUTOINDEX=1, never in dry-run.
+  backgroundIndexIntervalMs: searchAutoindexIntervalMs({ autoindex: catalogConfig.autoindex, dryRun: catalogConfig.dryRun })
+}))
+const getCatalog = (apiKey: string, embeddingModel: string, autoindex: boolean, dryRun: boolean) => {
+  catalogConfig = { apiKey, embeddingModel, autoindex, dryRun }
+  return catalogFor(createHash('sha256').update(JSON.stringify([apiKey, embeddingModel, autoindex, dryRun])).digest('hex'))
+}
+
 export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   const config = useRuntimeConfig(event)
   const key = String(config.openaiApiKey || '').trim()
   if (!key) throw createError({ statusCode: 503, statusMessage: 'Intérprete de ventas no configurado' })
   const embeddingModel = embeddingModelName(String(config.posAgentEmbeddingModel || ''))
-  const dryRun = isDryRun(config.posAgentDryRun)
-  const catalog = makeSupabaseAgentCatalog({
-    embed: makeOpenAIEmbedder(key, embeddingModel), embeddingModel,
-    // Read-only by default: background indexing only with POS_AGENT_SEARCH_AUTOINDEX=1, never in dry-run.
-    backgroundIndexIntervalMs: searchAutoindexIntervalMs({ autoindex: isFlagOn(config.posAgentSearchAutoindex), dryRun })
-  })
+  const { dryRun, autoindex } = getAgentModes(event)
+  const catalog = getCatalog(key, embeddingModel, autoindex, dryRun)
   const agent = makeSalesAgent({
     // Dry-run keeps its own idempotency records and simulated reservations, apart from the real ones.
     store: makeFileAgentStore(dryRun ? join(String(config.posAgentStorageDir), 'dry-run') : String(config.posAgentStorageDir)),

@@ -55,7 +55,7 @@ POS_AGENT_STORAGE_DIR=.data/agent
 POS_AGENT_PUBLIC_URL=            # origen público del enlace /vincular (fase 2)
 POS_AGENT_REVIEW_TTL_HOURS=48    # vigencia de la reserva de una venta por confirmar
 POS_AGENT_DRY_RUN=               # 1 = solo validación: nunca registra ventas (apagado por defecto)
-POS_AGENT_SEARCH_AUTOINDEX=      # 1 = calcular vectores al buscar (ESCRIBE en la base; apagado por defecto)
+POS_AGENT_SEARCH_AUTOINDEX=      # 1 = calcular vectores al buscar (ESCRIBE en la base; apagado; nunca con dry-run)
 ```
 
 Genera cada secreto con `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
@@ -261,6 +261,13 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   borrador no trae precio, se usa el oficial. **Siempre** se envía el oficial;
 - el stock alcanza: `disponible = stock_on_hand − reservas de otras ventas por
   confirmar vigentes`, sumando las líneas repetidas en unidad base;
+- la cantidad y la forma de pago **las escribió el vendedor**: el proceso 2 las
+  contrasta con los mensajes reales de la conversación (nunca con un texto del agente).
+  La forma de pago debe aparecer por código, etiqueta o alias (`efectivo`, `al contado`,
+  `yapeo`, `plin`, `visa`…); la cantidad, como número o palabra («dos», «una docena»,
+  «media docena»), sin contar los números que describen el producto («100 hojas»,
+  «30 cm», «a4»). Si la cantidad solo coincide con un número de la descripción, va a
+  revisión. Si no, `missing_payment` / `missing_quantity` con `detail.ungrounded`;
 - la forma de pago existe y está activa en `payment_method_catalog`, y el cliente
   (si se indicó) existe;
 - el agente 1 no reportó dudas generales.
@@ -307,9 +314,12 @@ Alertas: tras `completed` o `pending_review`, para cada producto afectado
 
 ## Modo de solo validación (`POS_AGENT_DRY_RUN=1`)
 
-Sirve para probar con lecturas reales sin registrar ventas. Está apagado por defecto;
-se activa con `POS_AGENT_DRY_RUN=1` o `true` (`NUXT_POS_AGENT_DRY_RUN` en producción)
-y `GET /api/agent/context` lo indica en `dry_run`.
+Sirve para probar con lecturas reales sin registrar ventas. Está apagado por defecto.
+Se evalúa **en tiempo de ejecución** y basta con que una fuente lo pida:
+`POS_AGENT_DRY_RUN=1|true`, `NUXT_POS_AGENT_DRY_RUN` o el valor compilado en
+`runtimeConfig` (así funciona también con `node .output/server/index.mjs`). Al arrancar,
+el servidor escribe en el log el modo («SOLO VALIDACIÓN» o «REAL») y si el indexado de
+búsqueda está encendido. `GET /api/agent/context` lo indica en `dry_run`.
 
 - Hace todas las lecturas reales (producto activo, `resolve_sale_item_pricing`,
   stock, forma de pago, cliente) y aplica la misma regla de decisión, motivos y alertas.
@@ -340,10 +350,10 @@ llamar a `create_sale`. Después de enviarla:
 - respuesta con id → `completed`;
 - error **con código** de Postgres/PostgREST (p. ej. `P0001` «Stock insuficiente»,
   o el rechazo de precio manual) → la transacción se revirtió: queda por confirmar
-  con `pos_rejected`;
-- error **sin código** (red, timeout, 502) → **indeterminado**: `pending`, nunca
-  éxito y nunca una segunda llamada; reintentar el mismo `request_id` devuelve
-  `pending` hasta conciliar. Si el proceso muere puede quedar `processing.lock`: conciliar antes de
+  con `pos_rejected`. Al chat solo llega el código; el detalle va al log del servidor;
+- error **sin código** (red, 502) o sin respuesta en 20 s (timeout de `create_sale`)
+  → **indeterminado**: `pending`, nunca éxito y nunca una segunda llamada; reintentar el
+  mismo `request_id` devuelve `pending` hasta conciliar. El timeout libera el bloqueo. Si el proceso muere puede quedar `processing.lock`: conciliar antes de
 borrarlo. Varias réplicas o Vercel necesitan almacenamiento transaccional
 compartido (sesiones incluidas); no desplegar así.
 

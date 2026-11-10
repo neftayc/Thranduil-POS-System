@@ -1,3 +1,4 @@
+import { paymentMentioned, quantityGrounded } from './grounding'
 import type { DraftDecision, DraftItem, Product, Reservation, ReviewReason, SaleDraftV1 } from '../contracts'
 
 /** Read-only catalog used by process 2. Every value comes from the POS, never from the draft. */
@@ -34,7 +35,8 @@ const doubtText: Record<string, string> = {
  *
  *   DIRECT  ⇔ at least one line, and for EVERY line: product_id given, active, confidence "high",
  *             no doubts, valid quantity, official price resolved and equal to the draft price
- *             (when the draft had one), enough available stock (stock_on_hand − reservations of
+ *             (when the draft had one), a quantity and a payment method that the SELLER wrote
+ *             (draft.source_text, see grounding.ts), enough available stock (stock_on_hand − reservations of
  *             other pending sales); plus a valid payment method, a valid customer (or none) and
  *             no general doubts.
  *   REVIEW  ⇔ anything else. Each failed check adds one coded reason. Stock is reserved for
@@ -64,7 +66,10 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
     const methods = await catalog.paymentMethods()
     const wanted = normalize(draft.payment_method)
     const method = methods.find(m => normalize(m.code) === wanted) || methods.find(m => normalize(m.label) === wanted)
-    if (method) paymentCode = method.code
+    if (method && !paymentMentioned(draft.source_text, method)) {
+      // The AI may not invent the payment method: the seller must have said it.
+      reasons.push({ code: 'missing_payment', message: `La forma de pago «${method.label}» no aparece en el pedido del vendedor (no se asume).`, detail: { payment_method: draft.payment_method, ungrounded: true } })
+    } else if (method) paymentCode = method.code
     else reasons.push({ code: 'invalid_payment', message: `La forma de pago «${draft.payment_method}» no existe en el POS.`, detail: { payment_method: draft.payment_method } })
   }
 
@@ -96,6 +101,10 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
     if (line.quantity === null || !Number.isFinite(line.quantity) || line.quantity <= 0 || line.quantity > MAX_QTY) {
       reasons.push({ code: 'missing_quantity', line: n, message: `${label}: falta una cantidad válida.` })
       continue
+    }
+    if (!quantityGrounded(draft.source_text, line.quantity, line.query)) {
+      // The AI may not invent the quantity nor take it from the description ("100 hojas", "a4").
+      reasons.push({ code: 'missing_quantity', line: n, message: `${label}: la cantidad ${line.quantity} no aparece como cantidad en el pedido del vendedor.`, detail: { quantity: line.quantity, ungrounded: true } })
     }
     if (!product) continue
 

@@ -208,7 +208,9 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         })
       } catch (error) {
         // A storage error after receiving the receipt must not report a failed sale.
-        if (op.state === 'completed' && op.response?.status === 'completed') return op.response
+        // The state changes inside beforeCommit/finish; TypeScript does not follow it, hence the casts.
+        const state = op.state as Operation['state']
+        if (state === 'completed' && op.response?.status === 'completed') return op.response
         if (error instanceof SaleNotCommittedError) return cancel(error.message)
         if (error instanceof SaleRejectedByPosError) {
           // The database answered with an error: the transaction was rolled back. Keep it for validation,
@@ -221,7 +223,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
           return review([{ code: 'pos_rejected', message: `El POS rechazó la venta: ${error.message}` }], decision.items, reservations)
         }
         // After dispatch, any other error may be a lost RPC response rather than a rolled-back sale.
-        if (op.state === 'executing') return finish(pending(id))
+        if (state === 'executing') return finish(pending(id))
         return finish({ status: 'rejected', operation_id: id, message: 'No se pudo registrar la venta. No se envió al POS. Reintenta con otro request_id.' })
       }
     })

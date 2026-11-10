@@ -50,7 +50,8 @@ async def test_check_identification_pending_then_approved(pos_identified):
     active = await service.check_identification(token)
     assert active["status"] == "selected"
     assert active["seller"] == {"name": "Ana Pérez", "role": "cashier"}
-    assert active["message"] == "Sesión activa como Ana Pérez (cashier)."
+    assert active["message"].startswith("Sesión activa como Ana Pérez (cashier).")
+    assert "si no es él o ella" in active["message"]
     assert active["prepared_context"]["system_id"] == "pos"
     assert "sess-ana" not in active["selection_token"]
     selection = service.signer.verify(active["selection_token"])

@@ -23,7 +23,7 @@ function fakeAuth() {
     'sinrol@tienda.pe': { password: 'clave-x', user_id: 'user-x', name: 'Sin Rol', role: '', banned: false },
     'baja@tienda.pe': { password: 'clave-b', user_id: 'user-b', name: 'Dado de baja', role: 'cashier', banned: true }
   }
-  const state = { refreshes: 0, signOuts: 0, failRefresh: false, ttl: 3600 }
+  const state = { refreshes: 0, signOuts: 0, signedOut: [], failRefresh: false, failSignOut: false, ttl: 3600, refreshDelay: 10, signInDelay: 0, onProfile: null }
   let n = 0
   const issue = email => ({ access_token: `access-${email}-${++n}`, refresh_token: `refresh-${email}-${n}`, expires_at: Math.floor(Date.now() / 1000) + state.ttl })
   const byToken = token => Object.entries(users).find(([email]) => token.startsWith(`access-${email}-`))
@@ -31,34 +31,40 @@ function fakeAuth() {
     users, state,
     gateway: {
       async signIn(email, password) {
+        if (state.signInDelay) await new Promise(resolve => setTimeout(resolve, state.signInDelay))
         if (users[email]?.password !== password) throw new Error('invalid')
         return issue(email)
       },
       async refresh(refreshToken) {
         state.refreshes++
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await new Promise(resolve => setTimeout(resolve, state.refreshDelay))
         if (state.failRefresh) throw new Error('revoked')
         const email = Object.keys(users).find(e => refreshToken.startsWith(`refresh-${e}-`))
-        state.ttl = 3600
-        return issue(email)
+        return { ...issue(email), expires_at: Math.floor(Date.now() / 1000) + 3600 }
       },
       async profile(accessToken) {
         const found = byToken(accessToken)
         if (!found) throw new Error('bad token')
+        if (state.onProfile) await state.onProfile()
         const { user_id, name, role, banned } = found[1]
         return { user_id, name, role, banned }
       },
-      async signOut() { state.signOuts++ }
+      async signOut(accessToken) {
+        state.signOuts++
+        if (state.failSignOut) throw new Error('supabase caído')
+        state.signedOut.push(accessToken)
+      }
     }
   }
 }
 
-async function setup(t, now = () => Date.now()) {
+async function setup(t, now = () => Date.now(), limits) {
   const dir = await mkdtemp(join(tmpdir(), 'papeleria-sessions-test-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
   const auth = fakeAuth()
-  const sessions = makeSellerSessions({ store: makeFileSellerSessionStore(dir), auth: auth.gateway, sealer: makeSealer(KEY), now })
-  return { sessions, auth, dir }
+  const logs = []
+  const sessions = makeSellerSessions({ store: makeFileSellerSessionStore(dir), auth: auth.gateway, sealer: makeSealer(KEY), now, log: m => logs.push(m), limits })
+  return { sessions, auth, dir, logs }
 }
 
 async function approveAna(sessions) {
@@ -106,7 +112,7 @@ test('contraseña incorrecta no aprueba y tras varios intentos anula el código'
     await assert.rejects(sessions.approve(started.user_code, 'ana@tienda.pe', 'mala'), /Correo o contraseña incorrectos/)
   }
   await assert.rejects(sessions.approve(started.user_code, 'ana@tienda.pe', 'mala'), /Demasiados intentos/)
-  await assert.rejects(sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana'), /no existe o venció/)
+  await assert.rejects(sessions.approve(started.user_code, 'otra@tienda.pe', 'x'), /no existe o venció/)
   assert.deepEqual(await sessions.status(started.identification_id), { status: 'denied' })
 })
 
@@ -133,7 +139,7 @@ test('una referencia alterada, desconocida o ausente se rechaza sin detalles', a
   const { sessions } = await setup(t)
   const { approved } = await approveAna(sessions)
   const [id, secret] = approved.session.split('.')
-  for (const ref of [`${id}.${secret.slice(0, -1)}A`, `00000000-0000-0000-0000-000000000000.${secret}`, '', 'basura']) {
+  for (const ref of [`${id}.${secret.slice(0, -1)}${secret.endsWith("A") ? "B" : "A"}`, `00000000-0000-0000-0000-000000000000.${secret}`, '', 'basura']) {
     await assert.rejects(sessions.resolve(ref), err => err instanceof SellerRejectedError && !err.message.includes(secret))
   }
 })
@@ -144,7 +150,7 @@ test('revocar desde el POS invalida la sesión de inmediato', async t => {
   const seller = await sessions.resolve(approved.session)
   const [listed] = await sessions.list()
   assert.equal(listed.active, true)
-  assert.equal(await sessions.revoke(listed.id), true)
+  assert.deepEqual(await sessions.revoke(listed.id), { revoked: true, supabase_signed_out: true })
   await assert.rejects(sessions.resolve(approved.session), /revocada/)
   await assert.rejects(seller.authorize(), /revocada/)
   assert.equal((await sessions.list())[0].active, false)
@@ -193,4 +199,120 @@ test('renueva el token una sola vez ante llamadas concurrentes y rechaza si Supa
 
 test('la clave de cifrado es obligatoria y larga', () => {
   assert.throws(() => makeSealer('corta'), /POS_AGENT_SESSION_KEY/)
+})
+
+// --- Correcciones de la revisión de seguridad ---
+
+test('A1: una revocación durante el refresh no se pierde y cierra los tokens nuevos', async t => {
+  const { sessions, auth } = await setup(t)
+  auth.state.ttl = 30 // the stored access token is about to expire: resolve() must refresh
+  const started = await sessions.start(LINK)
+  await sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')
+  const { session: ref } = await sessions.status(started.identification_id)
+  const [listed] = await sessions.list()
+  auth.state.refreshDelay = 50
+  const resolving = sessions.resolve(ref).then(() => 'ok', err => err.message)
+  await new Promise(resolve => setTimeout(resolve, 5)) // refresh in flight
+  assert.equal(auth.state.refreshes, 1)
+  const revoked = await sessions.revoke(listed.id)
+  assert.equal(revoked.revoked, true)
+  await resolving
+  const after = (await sessions.list()).find(s => s.id === listed.id)
+  assert.ok(after.revoked_at, 'revoked_at no debe volver a null')
+  await assert.rejects(sessions.resolve(ref), /revocada/)
+  // The tokens obtained by the in-flight refresh are the ones closed in Supabase.
+  assert.equal(auth.state.signedOut.length, 1)
+  assert.match(auth.state.signedOut[0], /^access-ana@tienda\.pe-2$/)
+})
+
+test('A1: revocar con el access token vencido lo renueva y cierra la sesión de Supabase', async t => {
+  const { sessions, auth } = await setup(t)
+  auth.state.ttl = 10 // vencido para la ventana de 30 s de revoke
+  await approveAna(sessions)
+  const [listed] = await sessions.list()
+  const result = await sessions.revoke(listed.id)
+  assert.deepEqual(result, { revoked: true, supabase_signed_out: true })
+  assert.equal(auth.state.refreshes, 1)
+  assert.equal(auth.state.signedOut.length, 1)
+})
+
+test('A1: un fallo al cerrar en Supabase se registra (sin secretos) y la sesión queda revocada', async t => {
+  const { sessions, auth, logs } = await setup(t)
+  const { approved } = await approveAna(sessions)
+  const [listed] = await sessions.list()
+  auth.state.failSignOut = true
+  assert.deepEqual(await sessions.revoke(listed.id), { revoked: true, supabase_signed_out: false })
+  assert.equal(logs.length, 1)
+  assert.match(logs[0], /no se pudo cerrar/)
+  assert.doesNotMatch(logs[0], /access-|refresh-/)
+  await assert.rejects(sessions.resolve(approved.session), /revocada/)
+})
+
+test('A1: authorize vuelve a comprobar la revocación justo antes de entregar el token', async t => {
+  const { sessions, auth } = await setup(t)
+  const { approved } = await approveAna(sessions)
+  const seller = await sessions.resolve(approved.session)
+  const [listed] = await sessions.list()
+  auth.state.onProfile = async () => { auth.state.onProfile = null; await sessions.revoke(listed.id) }
+  await assert.rejects(seller.authorize(), /revocada/)
+})
+
+test('M5: intentos en paralelo cuentan cada fallo y anulan el código a los 5', async t => {
+  const { sessions, auth } = await setup(t, undefined, { perEmail: 1000, perIp: 1000 })
+  auth.state.signInDelay = 5
+  const started = await sessions.start(LINK)
+  const results = await Promise.allSettled(Array.from({ length: 20 }, () => sessions.approve(started.user_code, 'ana@tienda.pe', 'mala')))
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 0)
+  assert.equal(results.filter(r => /incorrectos|Demasiados/.test(r.reason?.message)).length, MAX_APPROVAL_FAILURES)
+  assert.deepEqual(await sessions.status(started.identification_id), { status: 'denied' })
+  await assert.rejects(sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana'), /no existe o venció/)
+})
+
+test('M5: límite por correo entre códigos distintos; los aciertos no cuentan', async t => {
+  const { sessions } = await setup(t, undefined, { perEmail: 3, perIp: 1000 })
+  for (let i = 0; i < 6; i++) await approveAna(sessions) // aciertos: nunca bloquean
+  for (let i = 0; i < 3; i++) {
+    const s = await sessions.start(LINK)
+    await assert.rejects(sessions.approve(s.user_code, 'ana@tienda.pe', 'mala'), /incorrectos/)
+  }
+  const s = await sessions.start(LINK)
+  await assert.rejects(sessions.approve(s.user_code, 'ANA@tienda.pe', 'clave-ana'), /Demasiados intentos/)
+  // Otro vendedor en la misma tienda (misma IP) no queda bloqueado.
+  const other = await sessions.start(LINK)
+  await assert.rejects(sessions.approve(other.user_code, 'sinrol@tienda.pe', 'clave-x'), /rol de vendedor/)
+})
+
+test('M5: peticiones basura sin código válido no bloquean la tienda; por IP solo cuentan fallos', async t => {
+  const { sessions } = await setup(t, undefined, { perIp: 5 })
+  for (let i = 0; i < 20; i++) await assert.rejects(sessions.approve('', 'x', 'y', '10.0.0.1'), /Completa/)
+  for (let i = 0; i < 4; i++) await assert.rejects(sessions.approve('ZZZ-ZZZZ', 'x@y.pe', 'y', '10.0.0.1'), /no existe/)
+  const s = await sessions.start(LINK)
+  await sessions.approve(s.user_code, 'ana@tienda.pe', 'clave-ana', '10.0.0.1')
+  await assert.rejects(sessions.approve('ZZZ-ZZZZ', 'x@y.pe', 'y', '10.0.0.1'), /no existe/)
+  const blocked = await sessions.start(LINK)
+  await assert.rejects(sessions.approve(blocked.user_code, 'ana@tienda.pe', 'clave-ana', '10.0.0.1'), /Demasiados intentos/)
+})
+
+test('B1: un código crea una sola sesión y se entrega una sola vez aunque haya concurrencia', async t => {
+  const { sessions, auth } = await setup(t)
+  auth.state.signInDelay = 5
+  const started = await sessions.start(LINK)
+  const approvals = await Promise.allSettled([1, 2, 3].map(() => sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')))
+  assert.equal(approvals.filter(r => r.status === 'fulfilled').length, 1)
+  assert.equal((await sessions.list()).length, 1)
+  const polls = await Promise.all([1, 2, 3].map(() => sessions.status(started.identification_id)))
+  assert.equal(polls.filter(p => p.status === 'approved').length, 1)
+  assert.equal(polls.filter(p => p.status === 'expired').length, 2)
+})
+
+test('M4: /vincular puede mostrar la hora de la solicitud de un código pendiente', async t => {
+  let now = Date.UTC(2026, 10, 10, 15, 42, 0)
+  const { sessions } = await setup(t, () => now)
+  const started = await sessions.start(LINK)
+  const info = await sessions.lookup(started.user_code.toLowerCase())
+  assert.equal(info.requested_at, Date.UTC(2026, 10, 10, 15, 42, 0))
+  assert.equal(info.expires_at, Date.UTC(2026, 10, 10, 15, 52, 0))
+  await assert.rejects(sessions.lookup('ZZZ-ZZZZ'), /no existe o venció/)
+  now += 601_000
+  await assert.rejects(sessions.lookup(started.user_code), /no existe o venció/)
 })

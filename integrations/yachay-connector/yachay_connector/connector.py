@@ -148,7 +148,11 @@ class Connector:
         }
         if seller is not None:
             response["seller"] = seller
-            response["message"] = f"Sesión activa como {seller['name']} ({seller['role']})."
+            response["message"] = (
+                f"Sesión activa como {seller['name']} ({seller['role']}). Muéstrale al vendedor este "
+                "nombre y rol antes de operar: si no es él o ella, que no dicte pedidos, vuelva a "
+                "seleccionar el sistema y pida al dueño revocar esta sesión en el POS."
+            )
         return response
 
     async def _identification(self, system: System, body: dict[str, Any]) -> dict[str, Any]:

@@ -11,6 +11,26 @@ const loading = ref(false)
 const error = ref('')
 const done = ref<{ name: string; role: string; expires_at: string } | null>(null)
 
+// Show WHEN this code was requested, so a seller can spot a code that is not theirs.
+const requestedAt = ref('')
+const lookupError = ref('')
+const limaTime = (iso: string) => new Date(iso).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit' })
+let lookupTimer: ReturnType<typeof setTimeout> | undefined
+watch(code, (value) => {
+  requestedAt.value = ''
+  lookupError.value = ''
+  if (lookupTimer) clearTimeout(lookupTimer)
+  if (value.replace(/[^A-Za-z0-9]/g, '').length !== 7) return
+  lookupTimer = setTimeout(async () => {
+    try {
+      const res = await $fetch<{ requested_at: string; expires_at: string }>('/api/agent/identification/lookup', { method: 'POST', body: { user_code: value } })
+      requestedAt.value = `Solicitado a las ${limaTime(res.requested_at)} · vence a las ${limaTime(res.expires_at)}`
+    } catch (err: any) {
+      lookupError.value = err?.data?.statusMessage || 'No se pudo consultar el código.'
+    }
+  }, 300)
+}, { immediate: true })
+
 const roleLabel: Record<string, string> = { owner: 'propietario', manager: 'gerente', cashier: 'cajero' }
 
 const approve = async () => {
@@ -47,6 +67,8 @@ const approve = async () => {
           <div>
             <label class="ui-label" for="code">Código que muestra Claude</label>
             <input id="code" v-model="code" class="ui-input font-mono uppercase tracking-widest" autocomplete="one-time-code" placeholder="ABC-DEFG" required />
+            <p v-if="requestedAt" class="mt-2 text-sm text-slate-600">{{ requestedAt }}. Si no lo pediste tú hace un momento, no lo apruebes.</p>
+            <p v-else-if="lookupError" class="mt-2 text-sm text-red-600">{{ lookupError }}</p>
           </div>
           <div>
             <label class="ui-label" for="email">Tu correo del POS</label>

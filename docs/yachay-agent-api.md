@@ -93,8 +93,16 @@ enviar secretos al modelo ni al contexto.
   ese vendedor.
 - Una operación pertenece al vendedor que la creó: otro vendedor recibe 403
   («Esta operación pertenece a otro vendedor.»).
-- El código admite 5 intentos fallidos y luego se anula; `/vincular` limita a 10
-  intentos por IP cada 10 minutos. La referencia de sesión se entrega una sola vez.
+- Límites (solo cuentan los fallos; un acierto nunca bloquea a nadie): 5 fallos por
+  código, contados de forma atómica (luego se anula); 5 por correo y 30 por IP cada
+  10 minutos. Peticiones sin código válido no cuentan. Aprobar un código y entregar la
+  sesión son transiciones atómicas: un código crea una sola sesión y se entrega una vez.
+- Antiphishing: `/vincular` muestra la hora en que se pidió el código, y Claude
+  muestra el nombre y el rol del vendedor aprobado y pide confirmar que es él o ella.
+- Revocar es inmediato en el POS y no lo deshace una renovación de token en curso
+  (renovación y revocación comparten un bloqueo y se relee el registro). Luego se
+  cierra la sesión en Supabase con un token vigente; si falla, se registra en el log
+  (sin secretos) y la respuesta lo indica con `supabase_signed_out: false`.
 
 Errores (español, sin secretos): 401 credencial del conector; 403 vendedor sin
 identificar, sesión vencida/revocada, usuario desactivado o sin rol; 503 servicio
@@ -122,6 +130,11 @@ El conector exige que `verification_url` tenga el mismo origen que su
 Usado por la página pública `/vincular`: `{ "user_code", "email", "password" }`
 (JSON). Devuelve el nombre, el rol y el vencimiento; 400 con mensaje en español si
 el código venció, la contraseña es incorrecta o el usuario no tiene rol válido.
+
+## POST /api/agent/identification/lookup
+
+Pública, para `/vincular`: `{ "user_code" }` → `{ "requested_at", "expires_at" }` de
+un código pendiente (400 si no existe o venció; cuenta como fallo por IP).
 
 ## GET /api/agent/sessions y POST /api/agent/sessions/revoke
 

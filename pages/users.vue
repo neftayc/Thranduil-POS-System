@@ -92,8 +92,10 @@ const loadClaudeSessions = async () => {
 }
 const revokeClaudeSession = async (id: string) => {
   try {
-    await $fetch('/api/agent/sessions/revoke', { method: 'POST', body: { id } })
-    sessionsMessage.value = 'Sesión revocada. Claude ya no puede vender con ella.'
+    const res = await $fetch<{ supabase_signed_out: boolean }>('/api/agent/sessions/revoke', { method: 'POST', body: { id } })
+    sessionsMessage.value = res.supabase_signed_out
+      ? 'Sesión revocada. Claude ya no puede vender con ella.'
+      : 'Sesión revocada en el POS (Claude ya no puede vender con ella). No se pudo cerrar la sesión en Supabase; quedó registrado.'
     await loadClaudeSessions()
   } catch (err: any) {
     sessionsMessage.value = err?.data?.statusMessage || 'No se pudo revocar la sesión.'

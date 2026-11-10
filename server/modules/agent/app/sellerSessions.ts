@@ -124,41 +124,98 @@ const SESSION_INVALID = 'La sesión del vendedor no es válida, venció o fue re
 const NO_ROLE = 'Tu usuario no tiene un rol de vendedor válido en el POS. No se puede preparar ni registrar ventas.'
 const DISABLED = 'Tu usuario está desactivado en el POS. No se puede preparar ni registrar ventas.'
 
+const INVALID_CODE = 'El código no existe o venció. Pide a Claude un código nuevo.'
+const TOO_MANY = 'Demasiados intentos fallidos. Espera unos minutos y pide a Claude un código nuevo.'
+
+/** Per-key failure counter (only failures count; successes never block anyone). */
+export const makeFailureLimiter = (max: number, windowMs: number, now: () => number = Date.now) => {
+  const entries = new Map<string, { count: number; since: number }>()
+  const current = (key: string) => {
+    const entry = entries.get(key)
+    if (!entry || now() - entry.since > windowMs) return null
+    return entry
+  }
+  return {
+    blocked: (key: string) => (current(key)?.count || 0) >= max,
+    fail(key: string) {
+      const entry = current(key)
+      if (entry) entry.count++
+      else entries.set(key, { count: 1, since: now() })
+    }
+  }
+}
+
+/** In-process mutex per key. The POS agent storage is single-host by design. */
+const makeLocks = () => {
+  const tails = new Map<string, Promise<unknown>>()
+  return async <T>(key: string, work: () => Promise<T>): Promise<T> => {
+    const previous = tails.get(key) || Promise.resolve()
+    let release!: () => void
+    const done = new Promise<void>(resolve => { release = resolve })
+    const tail = previous.then(() => done)
+    tails.set(key, tail)
+    await previous
+    try {
+      return await work()
+    } finally {
+      release()
+      if (tails.get(key) === tail) tails.delete(key)
+    }
+  }
+}
+
 export const makeSellerSessions = (deps: {
   store: SellerSessionStore
   auth: SellerAuthGateway
   sealer: ReturnType<typeof makeSealer>
   now?: () => number
+  /** Operational log WITHOUT secrets (default console.warn). */
+  log?: (message: string) => void
+  /** Failed approvals allowed per email and per client IP in 10 minutes. */
+  limits?: { perEmail?: number; perIp?: number }
 }) => {
   const now = deps.now || Date.now
-  const refreshing = new Map<string, Promise<AuthTokens>>()
+  const log = deps.log || ((message: string) => console.warn(`[agent] ${message}`))
+  const lock = makeLocks()
+  const byEmail = makeFailureLimiter(deps.limits?.perEmail ?? 5, 10 * 60_000, now)
+  const byIp = makeFailureLimiter(deps.limits?.perIp ?? 30, 10 * 60_000, now)
 
   const checkProfile = (profile: SellerProfile) => {
     if (profile.banned) throw new SellerRejectedError(DISABLED)
     if (!SELLER_ROLES.has(profile.role)) throw new SellerRejectedError(NO_ROLE)
   }
 
-  const tokensFor = async (session: SellerSessionRecord): Promise<AuthTokens> => {
+  const signOutQuietly = async (accessToken: string, sessionId: string) => {
+    try {
+      await deps.auth.signOut(accessToken)
+      return true
+    } catch {
+      log(`no se pudo cerrar la sesión de Supabase de la vinculación ${sessionId}; ya está revocada en el POS`)
+      return false
+    }
+  }
+
+  // Refresh and revoke share the per-session lock, and the record is re-read under it, so a
+  // revocation can never be overwritten by a refresh that started earlier.
+  const tokensFor = (sessionId: string): Promise<AuthTokens> => lock(`session:${sessionId}`, async () => {
+    const session = await deps.store.getSession(sessionId)
+    if (!session || session.revoked_at || session.expires_at <= now()) throw new SellerRejectedError(SESSION_INVALID)
     const current = deps.sealer.open<AuthTokens>(session.tokens_enc)
     if (current.expires_at * 1000 > now() + 60_000) return current
-    // One refresh per session at a time: refresh tokens rotate.
-    let pending = refreshing.get(session.id)
-    if (!pending) {
-      pending = (async () => {
-        try {
-          const fresh = await deps.auth.refresh(current.refresh_token)
-          await deps.store.saveSession({ ...session, tokens_enc: deps.sealer.seal(fresh) })
-          return fresh
-        } catch {
-          throw new SellerRejectedError(SESSION_INVALID)
-        } finally {
-          refreshing.delete(session.id)
-        }
-      })()
-      refreshing.set(session.id, pending)
+    let fresh: AuthTokens
+    try {
+      fresh = await deps.auth.refresh(current.refresh_token)
+    } catch {
+      throw new SellerRejectedError(SESSION_INVALID)
     }
-    return pending
-  }
+    const latest = await deps.store.getSession(sessionId)
+    if (!latest || latest.revoked_at) {
+      await signOutQuietly(fresh.access_token, sessionId)
+      throw new SellerRejectedError(SESSION_INVALID)
+    }
+    await deps.store.saveSession({ ...latest, tokens_enc: deps.sealer.seal(fresh) })
+    return fresh
+  })
 
   const loadSession = async (ref: string) => {
     const parts = splitRef(ref)
@@ -189,57 +246,80 @@ export const makeSellerSessions = (deps: {
 
     async status(handle: string) {
       const parts = splitRef(handle)
-      const record = parts ? await deps.store.getIdentification(parts.id) : null
-      if (!parts || !record || !sameHash(parts.secret, record.secret_hash)) return { status: 'denied' as const }
-      if (record.status === 'denied') return { status: 'denied' as const }
-      // The session reference is delivered exactly once.
-      if (record.status === 'delivered' || (record.status === 'pending' && record.expires_at <= now())) return { status: 'expired' as const }
-      if (record.status === 'pending') return { status: 'pending' as const }
-      const session = deps.sealer.open<string>(record.session_ref_enc!)
-      await deps.store.saveIdentification({ ...record, status: 'delivered', session_ref_enc: undefined })
-      return { status: 'approved' as const, session, seller: record.seller!, expires_at: Math.floor(record.session_expires_at! / 1000) }
+      if (!parts) return { status: 'denied' as const }
+      // approved → delivered is atomic: the session reference is delivered exactly once.
+      return lock(`identification:${parts.id}`, async () => {
+        const record = await deps.store.getIdentification(parts.id)
+        if (!record || !sameHash(parts.secret, record.secret_hash)) return { status: 'denied' as const }
+        if (record.status === 'denied') return { status: 'denied' as const }
+        if (record.status === 'delivered' || (record.status === 'pending' && record.expires_at <= now())) return { status: 'expired' as const }
+        if (record.status === 'pending') return { status: 'pending' as const }
+        const session = deps.sealer.open<string>(record.session_ref_enc!)
+        await deps.store.saveIdentification({ ...record, status: 'delivered', session_ref_enc: undefined })
+        return { status: 'approved' as const, session, seller: record.seller!, expires_at: Math.floor(record.session_expires_at! / 1000) }
+      })
+    },
+
+    /** For /vincular: when the pending request was created, so the seller can spot a foreign code. */
+    async lookup(userCode: string, ip = 'desconocida') {
+      const code = normalizeUserCode(userCode)
+      if (byIp.blocked(ip)) throw new IdentificationError(TOO_MANY)
+      const record = code.length === 7 ? await deps.store.findIdentificationByCode(code) : null
+      if (!record || record.status !== 'pending' || record.expires_at <= now()) {
+        if (code.length === 7) byIp.fail(ip)
+        throw new IdentificationError(INVALID_CODE)
+      }
+      return { requested_at: record.created_at, expires_at: record.expires_at }
     },
 
     /** Called from the POS page /vincular. Throws IdentificationError with a Spanish message. */
-    async approve(userCode: string, email: string, password: string) {
+    async approve(userCode: string, email: string, password: string, ip = 'desconocida') {
       const code = normalizeUserCode(userCode)
-      if (code.length !== 7 || !email.trim() || !password) throw new IdentificationError('Completa el código, tu correo y tu contraseña.')
-      const record = await deps.store.findIdentificationByCode(code)
-      if (!record || record.status !== 'pending' || record.expires_at <= now()) {
-        throw new IdentificationError('El código no existe o venció. Pide a Claude un código nuevo.')
-      }
-      let tokens: AuthTokens
-      try {
-        tokens = await deps.auth.signIn(email.trim(), password)
-      } catch {
-        const failures = record.failures + 1
-        await deps.store.saveIdentification({ ...record, failures, status: failures >= MAX_APPROVAL_FAILURES ? 'denied' : 'pending' })
-        throw new IdentificationError(failures >= MAX_APPROVAL_FAILURES
-          ? 'Demasiados intentos fallidos. El código quedó anulado; pide a Claude uno nuevo.'
-          : 'Correo o contraseña incorrectos.')
-      }
-      let profile: SellerProfile
-      try {
-        profile = await deps.auth.profile(tokens.access_token)
-        checkProfile(profile)
-      } catch (error) {
-        await deps.auth.signOut(tokens.access_token).catch(() => {})
-        await deps.store.saveIdentification({ ...record, status: 'denied' })
-        throw new IdentificationError(error instanceof SellerRejectedError ? error.message : 'No se pudo comprobar tu usuario. Intenta de nuevo.')
-      }
-      const secret = randomBytes(32).toString('base64url')
-      const session: SellerSessionRecord = {
-        id: randomUUID(), secret_hash: sha256(secret).toString('hex'),
-        user_id: profile.user_id, name: profile.name, role: profile.role,
-        created_at: now(), expires_at: endOfWorkdayLima(now()), revoked_at: null,
-        tokens_enc: deps.sealer.seal(tokens)
-      }
-      await deps.store.saveSession(session)
-      await deps.store.saveIdentification({
-        ...record, status: 'approved', session_ref_enc: deps.sealer.seal(`${session.id}.${secret}`),
-        seller: { name: profile.name, role: profile.role }, session_expires_at: session.expires_at
+      const mail = email.trim().toLowerCase()
+      if (code.length !== 7 || !mail || !password) throw new IdentificationError('Completa el código, tu correo y tu contraseña.')
+      if (byIp.blocked(ip) || byEmail.blocked(mail)) throw new IdentificationError(TOO_MANY)
+      // One attempt per code at a time: failures are counted atomically (pending → approved/denied).
+      return lock(`code:${code}`, async () => {
+        const record = await deps.store.findIdentificationByCode(code)
+        if (!record || record.status !== 'pending' || record.expires_at <= now()) {
+          byIp.fail(ip)
+          throw new IdentificationError(INVALID_CODE)
+        }
+        let tokens: AuthTokens
+        try {
+          tokens = await deps.auth.signIn(mail, password)
+        } catch {
+          byIp.fail(ip)
+          byEmail.fail(mail)
+          const failures = record.failures + 1
+          await deps.store.saveIdentification({ ...record, failures, status: failures >= MAX_APPROVAL_FAILURES ? 'denied' : 'pending' })
+          throw new IdentificationError(failures >= MAX_APPROVAL_FAILURES
+            ? 'Demasiados intentos fallidos. El código quedó anulado; pide a Claude uno nuevo.'
+            : 'Correo o contraseña incorrectos.')
+        }
+        let profile: SellerProfile
+        try {
+          profile = await deps.auth.profile(tokens.access_token)
+          checkProfile(profile)
+        } catch (error) {
+          await signOutQuietly(tokens.access_token, record.id)
+          await deps.store.saveIdentification({ ...record, status: 'denied' })
+          throw new IdentificationError(error instanceof SellerRejectedError ? error.message : 'No se pudo comprobar tu usuario. Intenta de nuevo.')
+        }
+        const secret = randomBytes(32).toString('base64url')
+        const session: SellerSessionRecord = {
+          id: randomUUID(), secret_hash: sha256(secret).toString('hex'),
+          user_id: profile.user_id, name: profile.name, role: profile.role,
+          created_at: now(), expires_at: endOfWorkdayLima(now()), revoked_at: null,
+          tokens_enc: deps.sealer.seal(tokens)
+        }
+        await deps.store.saveSession(session)
+        await deps.store.saveIdentification({
+          ...record, status: 'approved', session_ref_enc: deps.sealer.seal(`${session.id}.${secret}`),
+          seller: { name: profile.name, role: profile.role }, session_expires_at: session.expires_at
+        })
+        return { name: profile.name, role: profile.role, expires_at: session.expires_at }
       })
-      return { name: profile.name, role: profile.role, expires_at: session.expires_at }
     },
 
     /** Resolves X-Yachay-Session into a validated seller, or throws SellerRejectedError. */
@@ -247,12 +327,14 @@ export const makeSellerSessions = (deps: {
       const session = await loadSession(ref)
       const authorize = async () => {
         const latest = await loadSession(ref)
-        const tokens = await tokensFor(latest)
+        const tokens = await tokensFor(latest.id)
         let profile: SellerProfile
         try { profile = await deps.auth.profile(tokens.access_token) }
         catch { throw new SellerRejectedError(SESSION_INVALID) }
         if (profile.user_id !== latest.user_id) throw new SellerRejectedError(SESSION_INVALID)
         checkProfile(profile)
+        // Last check right before handing out the token: a revocation always wins.
+        await loadSession(ref)
         return tokens.access_token
       }
       await authorize()
@@ -269,14 +351,26 @@ export const makeSellerSessions = (deps: {
         }))
     },
 
-    async revoke(id: string) {
-      const session = await deps.store.getSession(id)
-      if (!session) return false
-      if (!session.revoked_at) {
-        await deps.store.saveSession({ ...session, revoked_at: now() })
-        try { await deps.auth.signOut(deps.sealer.open<AuthTokens>(session.tokens_enc).access_token) } catch {}
-      }
-      return true
+    /**
+     * Revokes in the POS first (immediate effect), then closes the Supabase session with a
+     * valid access token (refreshing it if needed). A failure to close it is logged and reported.
+     */
+    async revoke(id: string): Promise<{ revoked: boolean; supabase_signed_out: boolean }> {
+      return lock(`session:${id}`, async () => {
+        const session = await deps.store.getSession(id)
+        if (!session) return { revoked: false, supabase_signed_out: false }
+        if (!session.revoked_at) await deps.store.saveSession({ ...session, revoked_at: now() })
+        let tokens: AuthTokens
+        try {
+          tokens = deps.sealer.open<AuthTokens>(session.tokens_enc)
+          if (tokens.expires_at * 1000 <= now() + 30_000) tokens = await deps.auth.refresh(tokens.refresh_token)
+        } catch {
+          // Refresh failed: the Supabase session is already invalid (or unreachable); nothing to close.
+          log(`no se pudo renovar la sesión de Supabase de la vinculación ${id} para cerrarla; ya está revocada en el POS`)
+          return { revoked: true, supabase_signed_out: false }
+        }
+        return { revoked: true, supabase_signed_out: await signOutQuietly(tokens.access_token, id) }
+      })
     }
   }
 }

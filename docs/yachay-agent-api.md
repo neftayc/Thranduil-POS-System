@@ -347,6 +347,25 @@ Alertas: tras `completed` o `pending_review`, para cada producto afectado
 `disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`
 (de `product_catalog`). Un fallo al calcularlas nunca altera la venta.
 
+## Migración pendiente: precio manual para cualquier rol
+
+`create_sale` hoy exige rol owner/manager para cualquier precio distinto del automático. El cambio
+mínimo (decisión del dueño, 2026-11-15): el **precio manual** se permite a cualquier rol que pueda
+registrar ventas; los **descuentos** (`manual_discount_pct`, `manual_discount_amount`) siguen solo
+para owner/manager; el **motivo** sigue siendo obligatorio (el agente lo llena: «Precio dictado por
+vendedor (lista S/ X)»; en la pantalla del POS solo owner/manager cambian precios y ya escriben motivo).
+
+La migración se genera a partir de la definición **real** de la base, nunca de `schema.sql`:
+
+1. Solo lectura, en el SQL Editor de Supabase:
+   `select pg_get_functiondef('public.create_sale(uuid,text,jsonb)'::regprocedure);` → guardar en un `.sql`.
+2. `node scripts/create-sale-manual-price-migration.mjs <definicion-real.sql>` escribe
+   `supabase/migrations/20261115_create_sale_manual_price_any_role.sql` y
+   `supabase/rollbacks/20261115_create_sale_manual_price_any_role_down.sql` (exactamente la definición
+   real). Falla si el bloque de permisos no aparece exactamente una vez o si cambiaría algo más.
+3. Aplicarla es decisión del dueño. Sin ella, el precio dictado por un cajero queda por confirmar
+   (`pos_rejected`).
+
 ## Modo de solo validación (`POS_AGENT_DRY_RUN=1`)
 
 Sirve para probar con lecturas reales sin registrar ventas. Está apagado por defecto.

@@ -5,7 +5,9 @@
   "product": "nombre EXACTO del catálogo (tests/fixtures/selector-catalog.json); brand opcional si hay homónimos",
   "ask": "true = debe preguntar; options = productos aceptables en la pregunta (basta que la pregunta incluya uno)",
   "also_ok": "alternativa también correcta mientras el dueño no valide (p. ej. decidir el producto en vez de preguntar)",
-  "follows": "el caso es una aclaración: se envía el dictado del caso anterior más este mensaje, con el consolidado previo"
+  "follows": "el caso es una aclaración: se envía el dictado del caso anterior más este mensaje, con el consolidado previo",
+  "noise_of": "variante con ruido («.», «...», «eh», «em», repeticiones, «perdón») del caso indicado: debe dar exactamente el mismo resultado que la versión limpia",
+  "price_said": "precio dictado esperado en esa línea; si falta, la línea no debe traer precio"
  },
  "rules": [
   "Sin número delante → 1 (la cantidad va siempre ANTES del producto).",
@@ -83,7 +85,8 @@
       "Lápiz Punzón",
       "lapiz con diseño"
      ],
-     "quantity": 1
+     "quantity": 1,
+     "price_said": 1
     }
    ],
    "payment_method": "efectivo"
@@ -176,7 +179,8 @@
     },
     {
      "product": "Lapicero Trilux Azul-032",
-     "quantity": 1
+     "quantity": 1,
+     "price_said": 1
     },
     {
      "product": "carton cartulina",
@@ -215,7 +219,8 @@
     },
     {
      "product": "Lapicero Trilux Azul-032",
-     "quantity": 1
+     "quantity": 1,
+     "price_said": 1
     },
     {
      "product": "carton cartulina",
@@ -361,6 +366,401 @@
     {
      "product": "Plumón de Pizarra Acrílico Jumbo - 123",
      "quantity": 10
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D12",
+   "ref": "c4d9a7e3",
+   "note": "Dictado real recibido por el POS: el dictado por voz convirtió «perdón» en «...». El vendedor corrigió «10 papel arcoíris» por «20 papel a color» → UNA línea de Papel Arcoiris con 20 (supuesto: «papel a color» corrige al mismo papel arcoíris; «a colores» es redundante).",
+   "messages": [
+    "5 cartulinas blancas, 2 lapiceros de 0,60, una cartulina negra, 2 plumones Jumbo Faber-Castell de 123, ...10 unidades de papel arcoíris a colores y 20 unidades de papel a color. 20 unidades de papel bond."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 5
+    },
+    {
+     "product": "Lapicero 060 - Azul, Rojo",
+     "quantity": 2
+    },
+    {
+     "product": "Cartulina Negra",
+     "quantity": 1
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Papel Arcoiris",
+     "quantity": 20
+    },
+    {
+     "product": "Papel Bond",
+     "quantity": 20
+    }
+   ],
+   "payment_method": "efectivo",
+   "noise_of": "D12p"
+  },
+  {
+   "id": "D12p",
+   "ref": "c4d9a7e3",
+   "note": "El mismo dictado con «perdón» explícito.",
+   "messages": [
+    "5 cartulinas blancas, 2 lapiceros de 0,60, una cartulina negra, 2 plumones Jumbo Faber-Castell de 123, 10 unidades de papel arcoíris a colores, perdón, 20 unidades de papel a color. 20 unidades de papel bond."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 5
+    },
+    {
+     "product": "Lapicero 060 - Azul, Rojo",
+     "quantity": 2
+    },
+    {
+     "product": "Cartulina Negra",
+     "quantity": 1
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Papel Arcoiris",
+     "quantity": 20
+    },
+    {
+     "product": "Papel Bond",
+     "quantity": 20
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D13",
+   "note": "Autocorrección de cantidad con «no, mejor».",
+   "messages": [
+    "3 cuadernos layconsa teens cuadriculados, no, mejor 2 cuadernos teens cuadriculados, y un corrector en cinta"
+   ],
+   "lines": [
+    {
+     "product": "cuaderno layconsa teens # 100 h",
+     "quantity": 2
+    },
+    {
+     "product": "Corrector en Cinta",
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D14",
+   "note": "Autocorrección de cantidad con «digo».",
+   "messages": [
+    "4 siliconas en barra, digo, 6 siliconas en barra, y una cinta scotch delgada"
+   ],
+   "lines": [
+    {
+     "product": "Silicona en barrra",
+     "quantity": 6
+    },
+    {
+     "product": "Cinta scotch delgada",
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D15",
+   "note": "Autocorrección de producto con «en vez de».",
+   "messages": [
+    "en vez de 5 cartulinas negras ponle 5 cartulinas blancas, y 3 lapiceros Trilux azul"
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 5
+    },
+    {
+     "product": "Lapicero Trilux Azul-032",
+     "quantity": 3
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D16",
+   "note": "Autocorrección de producto con «perdón».",
+   "messages": [
+    "2 plumones Faber-Castell de papel W47, perdón, de pizarra Jumbo 123, y una cartulina fosforescente"
+   ],
+   "lines": [
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Cartulina Fosforescente",
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D17",
+   "note": "Autocorrección de cantidad con «...» (voz).",
+   "messages": [
+    "10 cartulinas negras... 12 cartulinas negras, y 2 borradores Oval x 30"
+   ],
+   "lines": [
+    {
+     "product": "Cartulina Negra",
+     "quantity": 12
+    },
+    {
+     "product": "Borrador Oval x 30",
+     "quantity": 2
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D8n1",
+   "noise_of": "D8",
+   "note": "Variante con ruido de D8: debe dar EXACTAMENTE el mismo resultado. «...» solo al inicio o al final: en medio puede ser un «perdón» dictado (ambiguo de verdad).",
+   "messages": [
+    "Eh... dos cartulinas blancas. Un lapicero Faber-Castell azul, eh, de un sol. Un cartón cartulina, em, tres cartulinas a colores. Dos plumones Faber-Castell para pisar..."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 2
+    },
+    {
+     "product": "Lapicero Trilux Azul-032",
+     "quantity": 1,
+     "price_said": 1
+    },
+    {
+     "product": "carton cartulina",
+     "quantity": 1
+    },
+    {
+     "product": "Cartulina a colores",
+     "quantity": 3
+    },
+    {
+     "ask": true,
+     "options": [
+      "Plumón de Pizarra Acrílico Jumbo - 123",
+      "Plumón de papel delgado  - W47"
+     ],
+     "quantity": 2,
+     "owner_check": true,
+     "also_ok": {
+      "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+      "quantity": 2
+     }
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D8n2",
+   "noise_of": "D8",
+   "note": "Variante con ruido de D8: debe dar EXACTAMENTE el mismo resultado.",
+   "messages": [
+    "Dos cartulinas blancas, dos cartulinas blancas. Un lapicero Faber-Castell azul de un sol. Un cartón cartulina. Tres cartulinas a colores. Em. Dos plumones Faber-Castell para pisar."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 2
+    },
+    {
+     "product": "Lapicero Trilux Azul-032",
+     "quantity": 1,
+     "price_said": 1
+    },
+    {
+     "product": "carton cartulina",
+     "quantity": 1
+    },
+    {
+     "product": "Cartulina a colores",
+     "quantity": 3
+    },
+    {
+     "ask": true,
+     "options": [
+      "Plumón de Pizarra Acrílico Jumbo - 123",
+      "Plumón de papel delgado  - W47"
+     ],
+     "quantity": 2,
+     "owner_check": true,
+     "also_ok": {
+      "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+      "quantity": 2
+     }
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D10n1",
+   "noise_of": "D10",
+   "note": "Variante con ruido de D10: debe dar EXACTAMENTE el mismo resultado. «...» solo al inicio o al final: en medio puede ser un «perdón» dictado (ambiguo de verdad).",
+   "messages": [
+    "Tengo, eh, cartulinas a colores. Em. Dos cartulinas. Dos plumones Faber-Castell 123 Jumbo, eh, silicona en barra delgada. Dos lapiceros así, azul 0.60. ¿Y qué más? A ver, eh, un momento. Goma en barra, la iconza de 250. Diez cartulinas negras. Y 5 cartulinas fosforescentes..."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina a colores",
+     "quantity": 1
+    },
+    {
+     "ask": true,
+     "options": [
+      "Cartulina blanca",
+      "Cartulina a colores",
+      "Cartulina Negra",
+      "Cartulina Fosforescente",
+      "carton cartulina",
+      "cartulinas de pliego a color A4"
+     ],
+     "quantity": 2
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Silicona delgada en barra",
+     "quantity": 1
+    },
+    {
+     "product": "Lapicero 060 - Azul, Rojo",
+     "quantity": 2
+    },
+    {
+     "ask": true,
+     "options": [
+      "Goma liquida 250g"
+     ],
+     "quantity": 1
+    },
+    {
+     "product": "Cartulina Negra",
+     "quantity": 10
+    },
+    {
+     "product": "Cartulina Fosforescente",
+     "quantity": 5
+    }
+   ],
+   "payment_method": "efectivo",
+   "owner_check": true
+  },
+  {
+   "id": "D11n1",
+   "noise_of": "D11",
+   "note": "Variante con ruido de D11: debe dar EXACTAMENTE el mismo resultado.",
+   "messages": [
+    "Eh, cartulina blanco... 5 papeles a4 arcohiries. Em, 10 plumons FC 123 Jumbo."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 1
+    },
+    {
+     "ask": true,
+     "options": [
+      "Papel Arcoiris",
+      "Papel Arcoiris  Color Pastel"
+     ],
+     "quantity": 5,
+     "also_ok": {
+      "product": "Papel Arcoiris",
+      "quantity": 5
+     }
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 10
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D11n2",
+   "noise_of": "D11",
+   "note": "Variante con ruido de D11: debe dar EXACTAMENTE el mismo resultado. «...» solo al inicio o al final: en medio puede ser un «perdón» dictado (ambiguo de verdad).",
+   "messages": [
+    "Cartulina blanco, cartulina blanco. 5 papeles, eh, a4 arcohiries. 10 plumons FC 123 Jumbo..."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 1
+    },
+    {
+     "ask": true,
+     "options": [
+      "Papel Arcoiris",
+      "Papel Arcoiris  Color Pastel"
+     ],
+     "quantity": 5,
+     "also_ok": {
+      "product": "Papel Arcoiris",
+      "quantity": 5
+     }
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 10
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D12n2",
+   "noise_of": "D12p",
+   "note": "Variante con ruido de D12p: debe dar EXACTAMENTE el mismo resultado. «...» solo al inicio o al final: en medio puede ser un «perdón» dictado (ambiguo de verdad).",
+   "messages": [
+    "5 cartulinas blancas. Eh, 2 lapiceros de 0,60. Una cartulina negra, 2 plumones Jumbo Faber-Castell de 123. Em, 10 unidades de papel arcoíris a colores, perdón, 20 unidades de papel a color. Eh. 20 unidades de papel bond..."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 5
+    },
+    {
+     "product": "Lapicero 060 - Azul, Rojo",
+     "quantity": 2
+    },
+    {
+     "product": "Cartulina Negra",
+     "quantity": 1
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Papel Arcoiris",
+     "quantity": 20
+    },
+    {
+     "product": "Papel Bond",
+     "quantity": 20
     }
    ],
    "payment_method": "efectivo"

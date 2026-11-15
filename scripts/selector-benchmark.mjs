@@ -37,6 +37,7 @@ const PRICES = {
 const models = (arg('models', 'gpt-5.4,gpt-5.4-mini')).split(',').map(s => s.trim()).filter(Boolean)
 const legacyModel = arg('legacy-model', process.env.POS_AGENT_MODEL || 'gpt-4o-mini')
 const runLegacy = !process.argv.includes('--no-legacy')
+const effort = arg('effort', null) // reasoning effort of the selector model (low by default)
 
 const root = new URL('..', import.meta.url)
 const catalog = JSON.parse(fs.readFileSync(new URL('tests/fixtures/selector-catalog.json', root)))
@@ -73,7 +74,7 @@ const nameOf = id => catalog.products.find(p => p.id === id)?.name ?? (id ? `?${
 // ------------------------------------------------------------------ systems
 
 const llmSystem = model => {
-  const select = makeSalesSelector({ model: makeOpenAISelectorModel(key, model), catalog: async () => catalog })
+  const select = makeSalesSelector({ model: makeOpenAISelectorModel(key, model, effort ? { reasoningEffort: effort } : {}), catalog: async () => catalog })
   return async (messages, previous) => {
     const { consolidated, usage } = await select({ messages, previous })
     const price = PRICES[model]
@@ -164,7 +165,7 @@ const judge = (e, g) => {
 
 // ------------------------------------------------------------------ run
 
-const systems = [...(runLegacy ? [[`legacy (${legacyModel})`, legacySystem()]] : []), ...models.map(m => [`llm ${m}`, llmSystem(m)])]
+const systems = [...(runLegacy ? [[`legacy (${legacyModel})`, legacySystem()]] : []), ...models.map(m => [`llm ${m}${effort ? ` (${effort})` : ''}`, llmSystem(m)])]
 const report = []
 for (const [label, run] of systems) {
   const states = new Map()
@@ -180,10 +181,16 @@ for (const [label, run] of systems) {
     const { pairs, extra } = pair(c.lines, result.lines)
     const verdicts = c.lines.map((e, i) => judge(e, pairs[i] === null ? null : result.lines[pairs[i]]))
     const extraHigh = extra.filter(j => !asks(result.lines[j])).length
-    const perfect = verdicts.every(v => v === 'correcto') && !extra.length
+    // Invented price: a line carries price_said and the expected line has none (or another one).
+    const inventedPrice = c.lines.reduce((n, e, i) => { const got = pairs[i] === null ? null : result.lines[pairs[i]]; return n + (got && got.price_said != null && got.price_said !== (e.price_said ?? null) ? 1 : 0) }, 0)
+      + extra.filter(j => result.lines[j].price_said != null).length
+    const payment = result.state?.payment_method ?? null
+    const wrongPayment = payment !== null && payment !== (c.payment_method || 'efectivo') ? 1 : 0
+    const signature = JSON.stringify({ lines: result.lines.map(l => [l.product_id, l.quantity, asks(l) ? 'baja' : 'alta']).sort(), payment })
+    const perfect = verdicts.every(v => v === 'correcto') && !extra.length && !wrongPayment
     const expectedDirect = !c.lines.some(l => l.ask && !l.also_ok)
     rows.push({ id: c.id, verdicts, extra: extra.length, extraHigh, usage: result.usage, error: result.error, lines: result.lines,
-      step3: decision?.kind ?? null, step3_reasons: (decision?.reasons || []).map(r => r.code), perfect, expectedDirect })
+      step3: decision?.kind ?? null, step3_reasons: (decision?.reasons || []).map(r => r.code), perfect, expectedDirect, inventedPrice, wrongPayment, signature })
     const mark = verdicts.every(v => v === 'correcto') && !extra.length ? '✔' : verdicts.some(v => v === 'equivocado_alta' || v === 'cantidad_errada') || extraHigh ? '✘' : '~'
     console.log(`${label.padEnd(22)} ${mark} ${c.id.padEnd(4)} ${verdicts.join(', ')}${extra.length ? ` +${extra.length} extra` : ''}${result.error ? ` ERROR ${result.error}` : ''}${result.usage.latency_ms ? ` (${(result.usage.latency_ms / 1000).toFixed(1)} s)` : ''} → paso 3: ${decision?.kind ?? '—'}${decision?.reasons?.length ? ` [${[...new Set(decision.reasons.map(r => r.code))].join(', ')}]` : ''}`)
     if (verbose) for (const l of result.lines) console.log(`      ${l.confidence.padEnd(4)} ${String(l.quantity).padStart(3)} × ${nameOf(l.product_id)}  «${l.phrase}»${asks(l) ? `  ❓ ${(l.options || []).map(nameOf).join(' / ')}` : ''}`)
@@ -198,7 +205,10 @@ for (const [label, run] of systems) {
     sistema: label,
     lineas_correctas: `${count('correcto')}/${all.length}`,
     ventas_perfectas: `${rows.filter(r => r.verdicts.every(v => v === 'correcto') && !r.extra).length}/${rows.length}`,
-    equivocados_alta: count('equivocado_alta') + rows.reduce((n, r) => n + r.extraHigh, 0),
+    // Wrong with «alta»: wrong product, wrong quantity or a payment that was not said.
+    equivocados_alta: count('equivocado_alta') + count('cantidad_errada') + rows.reduce((n, r) => n + r.extraHigh + r.wrongPayment, 0),
+    precio_inventado: rows.reduce((n, r) => n + r.inventedPrice, 0),
+    robustez_ruido: (() => { const noisy = rows.filter(r => cases.find(c => c.id === r.id).noise_of); const same = noisy.filter(r => { const base = rows.find(b => b.id === cases.find(c => c.id === r.id).noise_of); return base && base.signature === r.signature }); return noisy.length ? `${same.length}/${noisy.length}` : '—' })(),
     cantidad_errada: count('cantidad_errada'),
     preguntas_de_mas: count('pregunta_de_mas'),
     preguntas: rows.reduce((n, r) => n + r.lines.filter(asks).length, 0),
@@ -217,14 +227,14 @@ for (const [label, run] of systems) {
     directas_correctas: rows.filter(r => r.step3 === 'direct' && r.perfect).length,
     directas_equivocadas: rows.filter(r => r.step3 === 'direct' && !r.perfect).length,
     directas_esperadas: rows.filter(r => r.expectedDirect).length,
-    frases_no_literales: rows.reduce((n, r) => n + r.step3_reasons.filter(x => x === 'phrase_not_in_order').length, 0),
+
     rows
   })
 }
 
-console.log('\n| Sistema | Ventas directas en el paso 3 (esperadas) | Directas correctas | Directas EQUIVOCADAS | Frases no literales |')
-console.log('|---|---|---|---|---|')
-for (const r of report) console.log(`| ${r.sistema} | ${r.directas} (${r.directas_esperadas}) | ${r.directas_correctas} | ${r.directas_equivocadas} | ${r.frases_no_literales} |`)
+console.log('\n| Sistema | Ventas directas en el paso 3 (esperadas) | Directas correctas | Directas EQUIVOCADAS | Equivocados con alta (producto, cantidad o pago) | Precio inventado | Robustez al ruido |')
+console.log('|---|---|---|---|---|---|---|')
+for (const r of report) console.log(`| ${r.sistema} | ${r.directas} (${r.directas_esperadas}) | ${r.directas_correctas} | ${r.directas_equivocadas} | ${r.equivocados_alta} | ${r.precio_inventado} | ${r.robustez_ruido} |`)
 console.log('\n| Sistema | Líneas correctas | Ventas perfectas | Equivocados con alta | Cantidad errada | Preguntas (esperadas) | Preguntas de más | Faltan / extra | Latencia mediana (máx) | Costo medio por llamada | Tokens entrada (caché) / salida |')
 console.log('|---|---|---|---|---|---|---|---|---|---|---|')
 for (const r of report) {

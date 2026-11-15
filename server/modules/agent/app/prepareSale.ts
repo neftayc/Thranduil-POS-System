@@ -124,7 +124,12 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
       else draft.customer_id = proposal.customer_id = customers[0].id
     }
     const methods = await catalog.paymentMethods()
-    const payment = methods.find(p => input.payment_method && [p.code, p.label].some(value => normalize(value) === normalize(input.payment_method!)))
+    // Business rule: when the seller does not say how the customer pays, it is cash (efectivo).
+    // A payment that WAS said but does not exist (or is ambiguous) is still a doubt.
+    const said = input.payment_method?.trim() || null
+    const payment = said
+      ? methods.find(p => [p.code, p.label].some(value => normalize(value) === normalize(said)))
+      : methods.find(p => [p.code, p.label].some(value => normalize(value) === 'efectivo'))
     if (!payment) ask(`Indica una forma de pago disponible: ${methods.map(p => p.label).join(', ')}.`, 'medium', 'missing_payment')
     else draft.payment_method = proposal.payment_method = payment.code
 

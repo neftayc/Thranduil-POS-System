@@ -246,7 +246,8 @@ test('ensayo real: «Dos cuadernos cuadriculados marca marking de 100 hojas.» �
   assert.equal(line.quantity, 2)
   assert.equal(line.confidence, 'high')
   assert.deepEqual(line.doubts, [])
-  assert.deepEqual(draft.doubts.map(d => d.code), ['missing_payment'], 'el dictado no dijo la forma de pago')
+  assert.equal(draft.payment_method, 'efectivo', 'el dictado no dijo la forma de pago: efectivo por defecto')
+  assert.deepEqual(draft.doubts, [])
 })
 
 test('una pista nunca empeora la elección: palabras ajenas no producen un «high» y no se usan en pedidos de varias líneas', async () => {
@@ -367,4 +368,14 @@ test('dictado en características: «plumones para pisar» → pizarra (o duda e
     if (d.confidence === 'high') assert.ok(!/papel/i.test(d.best.doc.name), text)
     assert.ok(search.tiedWithBest(d).every(c => /Pizarra/.test(c.doc.name)), text)
   }
+})
+
+test('pago por defecto: «dos cartulinas blancas» sin pago → borrador con efectivo y sin duda de pago; «transferencia» se respeta', async () => {
+  const catalog = { ...catalogFrom(snapshot), paymentMethods: async () => [{ code: 'efectivo', label: 'Efectivo' }, { code: 'transferencia', label: 'Transferencia' }] }
+  const draft = await makeHybridDraftBuilder(interpreterReturning({ ...sale('cartulina blanca', 2), payment_method: null }).interpret, catalog)(['dos cartulinas blancas'], null)
+  assert.equal(draft.payment_method, 'efectivo')
+  assert.deepEqual(draft.doubts, [])
+  assert.equal(draft.items[0].confidence, 'high')
+  const transfer = await makeHybridDraftBuilder(interpreterReturning({ ...sale('cartulina blanca', 2), payment_method: 'transferencia' }).interpret, catalog)(['dos cartulinas blancas por transferencia'], null)
+  assert.equal(transfer.payment_method, 'transferencia')
 })

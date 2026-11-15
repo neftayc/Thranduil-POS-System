@@ -85,7 +85,7 @@ test('selector: prefijo fijo cacheado por versión del catálogo; el consolidado
 
 test('reglas y ejemplos en el prefijo: cantidad antes del producto, códigos de modelo, dictado de marcas, efectivo por defecto', () => {
   const system = sel.selectorSystemPrompt(catalog)
-  for (const rule of [/cantidad va SIEMPRE ANTES del producto/, /060, 123, «de 250»/, /iconza/, /de cartel/, /margen/, /efectivo/, /NO agrega atributos/, /negación/]) assert.match(system, rule)
+  for (const rule of [/la cantidad va SIEMPRE PRIMERO/, /060, 123, «de 250»/, /iconza/, /de cartel/, /margen/, /efectivo/, /NO agrega atributos/, /negación/]) assert.match(system, rule)
   assert.match(system, /Ejemplos aprendidos/)
   // The learned examples never repeat a benchmark dictation.
   for (const c of golden.cases) for (const m of c.messages) assert.ok(!system.includes(m), `el ejemplo repite ${c.id}`)
@@ -150,4 +150,35 @@ test('verificación determinista: no baja lo que está bien (precio dictado, mar
   assert.equal(sel.modelCodes('azul 0.60'), 'azul 060')
   assert.equal(sel.modelCodes('cero treinta y dos'), '032')
   assert.equal(sel.modelCodes('mina 0.5'), 'mina 0.5')
+})
+
+test('regla del dueño: la cantidad va primero (dígitos o palabras); un número después del nombre es descripción', () => {
+  const q = sel.leadingQuantity
+  assert.equal(q('Cartulina blanco'), null, 'sin número delante (el modelo pone 1)')
+  assert.equal(q('5 papeles a4 arcohiries'), 5)
+  assert.equal(q('10 plumons FC 123 Jumbo'), 10)
+  assert.equal(q('cinco cartulinas negras'), 5)
+  assert.equal(q('una goma en barra, la icona'), 1)
+  assert.equal(q('Diez cartulinas negras'), 10)
+  assert.equal(q('veinte y cinco hojas bond'), 25)
+  assert.equal(q('y 3 lapiceros'), 3)
+  assert.equal(q('cuaderno 100 hojas'), null)
+  assert.equal(q('plumones FC 123 Jumbo'), null)
+  assert.equal(q('media docena de lápices'), null, 'la docena la decide el modelo (presentación)')
+  // The opening number wins over a quantity the model read from a model code.
+  const c = sel.toConsolidated(output([
+    line({ phrase: '10 plumons FC 123 Jumbo', product_ref: ref('Plumón de Pizarra Acrílico Jumbo - 123'), quantity: 123 }),
+    line({ phrase: 'Cartulina blanco', product_ref: ref('Cartulina blanca'), quantity: null })
+  ]), catalog, ['Cartulina blanco. 5 papeles a4 arcohiries, 10 plumons FC 123 Jumbo'])
+  assert.deepEqual(c.lines.map(l => l.quantity), [10, 1])
+})
+
+test('ejemplo literal del dueño en el set (D11) y en el prompt la regla completa', () => {
+  const d11 = golden.cases.find(c => c.id === 'D11')
+  assert.equal(d11.messages[0], 'Cartulina blanco. 5 papeles a4 arcohiries, 10 plumons FC 123 Jumbo')
+  assert.deepEqual(d11.lines.map(l => [l.product || 'pregunta', l.quantity]), [['Cartulina blanca', 1], ['pregunta', 5], ['Plumón de Pizarra Acrílico Jumbo - 123', 10]])
+  // Two Arcoiris papers exist: asking is right; deciding the plain one is accepted until the owner validates.
+  assert.deepEqual(d11.lines[1].options, ['Papel Arcoiris', 'Papel Arcoiris  Color Pastel'])
+  const system = sel.selectorSystemPrompt(catalog)
+  for (const rule of [/la cantidad va SIEMPRE PRIMERO/, /en dígitos o en palabras/, /media docena/, /Sin número delante es 1/, /comas, puntos o «y»/, /pertenece al artículo que viene DESPUÉS/]) assert.match(system, rule)
 })

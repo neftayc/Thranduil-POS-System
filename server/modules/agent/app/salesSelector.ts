@@ -83,7 +83,8 @@ Cómo decides (como un vendedor que conoce su tienda):
 - Un atributo dicho que contradice al producto lo descarta: «en barra» ≠ líquida; otro código de modelo (060 ≠ 032) u otra medida (250 ≠ 21 g) es otro producto. Si lo dicho mezcla atributos de dos productos distintos (una línea de una marca con el código de modelo de otra), confianza "baja" con ambos como opciones.
 - Errores de dictado frecuentes: «margen», «marking», «markin» = Markin; «iconza», «icona» = Layconsa; «de cartel», «castel» = Faber-Castell; «para pisar» = de pizarra; «Sure Table» = Shurtape; «más hojas» puede ser «100 hojas». Un código de modelo coincide aunque se dicte distinto: «0.60», «0 60», «cero sesenta» = 060.
 - Los códigos de modelo o medida (060, 123, «de 250», «100 hojas») NO son cantidades.
-- Cantidad (regla del dueño): la cantidad va SIEMPRE ANTES del producto («dos cuadernos», «10 plumones», «5 papeles»). Sin número delante, o «un/una», es 1; un plural sin número («cuadernos») es 1. Un número DESPUÉS del inicio del nombre es descripción (modelo, medida, hojas): «cuaderno 100», «plumones FC 123».
+- Cantidad (regla del dueño): cada artículo es [cantidad opcional] + producto, y la cantidad va SIEMPRE PRIMERO, en dígitos o en palabras («5 papeles», «cinco papeles», «una goma», «media docena de lápices»). Sin número delante es 1 («cartulina blanca» = 1; un plural sin número también es 1). Todo número DESPUÉS del inicio del nombre es descripción (modelo, medida, hojas, gramos): «10 plumones FC 123 Jumbo» = 10 y el 123 es el modelo; «cuaderno 100» = 1 cuaderno de 100 hojas.
+- Los artículos se separan por comas, puntos o «y». Un número pertenece al artículo que viene DESPUÉS de él: en «cartulina blanca, 5 papeles», el 5 es de los papeles.
 - Cada mención con su propia cantidad delante es un artículo aparte: «papel lustre, em, dos papeles» = 1 × papel lustre y 2 × papeles (sin tipo → pregunta). Ignora muletillas («em», «a ver», «este»).
 - Presentación (unit): la dicha (caja, paquete, docena…) si existe en el producto; si no se dijo, null (unidad base).
 - Precio dictado («de un sol», «a 3 soles») va en price_said y sirve de PISTA: si varios productos compatibles difieren por precio, el que tiene ese precio. Nunca cambies el producto solo por precio si el tipo o las características no coinciden.
@@ -258,6 +259,26 @@ export const contradictions = (phrase: string, productId: string, catalog: Selec
  * no quantity → 1, no/unknown payment → efectivo when it was not said (a said but unknown
  * payment becomes a question).
  */
+const NUMBER_WORDS: Record<string, number> = {
+  un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+  once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19,
+  veinte: 20, veinticinco: 25, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90, cien: 100
+}
+/**
+ * The owner's rule: the quantity goes FIRST. Returns the number that opens the phrase (digits or
+ * words), or null when the phrase does not open with one (or opens with a dozen expression, whose
+ * presentation the model decides: «media docena», «una docena»).
+ */
+export const leadingQuantity = (phrase: string): number | null => {
+  const text = phrase.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/^\W*(?:vender|vende|vendo|tengo|quiero|dame|deme|y|e|tambien|mas)\s+/, '').trim()
+  if (/^(?:media|medio|un|una|\d+)\s+docenas?\b/.test(text)) return null
+  const digits = text.match(/^(\d+(?:[.,]\d+)?)\s+[a-z]/)
+  if (digits) return Number(digits[1].replace(',', '.'))
+  const word = text.match(/^([a-z]+)(?:\s+y\s+([a-z]+))?\s+[a-z]/)
+  if (!word || !(word[1] in NUMBER_WORDS)) return null
+  return NUMBER_WORDS[word[1]] + (word[2] && word[2] in NUMBER_WORDS && NUMBER_WORDS[word[2]] < 10 ? NUMBER_WORDS[word[2]] : 0)
+}
+
 /** Messages after the one that holds the phrase (the clarifications that came later). */
 const laterMessages = (phrase: string, messages: string[]) => {
   const key = normalizeText(phrase).slice(0, 40)
@@ -295,7 +316,10 @@ export const toConsolidated = (raw: SelectorModelOutput, catalog: SelectorCatalo
       if (productId && !options.includes(productId)) options.unshift(productId)
       question = question || `¿Cuál producto es «${clip(line.phrase, 80)}»?`
     } else question = null
-    const quantity = typeof line.quantity === 'number' && line.quantity > 0 && line.quantity <= 1000000 ? line.quantity : 1
+    // The number that opens the item is its quantity (owner's rule); a number after the product name never is.
+    const opening = leadingQuantity(line.phrase)
+    const quantity = opening !== null && opening > 0 ? opening
+      : typeof line.quantity === 'number' && line.quantity > 0 && line.quantity <= 1000000 ? line.quantity : 1
     return {
       phrase: clip(line.phrase, 500),
       product_id: productId,

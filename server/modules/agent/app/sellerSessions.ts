@@ -277,7 +277,10 @@ export const makeSellerSessions = (deps: {
       const code = normalizeUserCode(userCode)
       const mail = email.trim().toLowerCase()
       if (code.length !== 7 || !mail || !password) throw new IdentificationError('Completa el código, tu correo y tu contraseña.')
-      if (byIp.blocked(ip) || byEmail.blocked(mail)) throw new IdentificationError(TOO_MANY)
+      // Failures per email are counted per email+IP: knowing someone's email does not let a
+      // stranger lock that seller out from the shop. The message never reveals if the email exists.
+      const mailKey = `${mail}|${ip}`
+      if (byIp.blocked(ip) || byEmail.blocked(mailKey)) throw new IdentificationError(TOO_MANY)
       // One attempt per code at a time: failures are counted atomically (pending → approved/denied).
       return lock(`code:${code}`, async () => {
         const record = await deps.store.findIdentificationByCode(code)
@@ -290,7 +293,7 @@ export const makeSellerSessions = (deps: {
           tokens = await deps.auth.signIn(mail, password)
         } catch {
           byIp.fail(ip)
-          byEmail.fail(mail)
+          byEmail.fail(mailKey)
           const failures = record.failures + 1
           await deps.store.saveIdentification({ ...record, failures, status: failures >= MAX_APPROVAL_FAILURES ? 'denied' : 'pending' })
           throw new IdentificationError(failures >= MAX_APPROVAL_FAILURES
@@ -322,10 +325,14 @@ export const makeSellerSessions = (deps: {
       })
     },
 
-    /** Resolves X-Yachay-Session into a validated seller, or throws SellerRejectedError. */
+    /**
+     * Resolves X-Yachay-Session into a validated seller, or throws SellerRejectedError.
+     * name/role come from the CURRENT profile (checked on every request), never from approval
+     * time: a manager demoted to cashier loses manager permissions on the next request.
+     */
     async resolve(ref: string): Promise<ActiveSeller> {
       const session = await loadSession(ref)
-      const authorize = async () => {
+      const check = async () => {
         const latest = await loadSession(ref)
         const tokens = await tokensFor(latest.id)
         let profile: SellerProfile
@@ -335,10 +342,18 @@ export const makeSellerSessions = (deps: {
         checkProfile(profile)
         // Last check right before handing out the token: a revocation always wins.
         await loadSession(ref)
-        return tokens.access_token
+        return { token: tokens.access_token, profile }
       }
-      await authorize()
-      return { session_id: session.id, user_id: session.user_id, name: session.name, role: session.role, authorize }
+      const authorize = async () => (await check()).token
+      const { profile } = await check()
+      if (profile.role !== session.role || profile.name !== session.name) {
+        // Keep the POS list current; re-read under the session lock so a revocation is never lost.
+        await lock(`session:${session.id}`, async () => {
+          const latest = await deps.store.getSession(session.id)
+          if (latest && !latest.revoked_at) await deps.store.saveSession({ ...latest, role: profile.role, name: profile.name })
+        })
+      }
+      return { session_id: session.id, user_id: session.user_id, name: profile.name, role: profile.role, authorize }
     },
 
     async list() {

@@ -157,3 +157,30 @@ async def test_session_about_to_expire_is_not_accepted(pos_identified):
     fake.identification["ttl"] = 30
     with pytest.raises(ConnectorError, match="menos de un minuto"):
         await identify(service, fake)
+
+
+@pytest.mark.asyncio
+async def test_configured_public_origin_is_accepted_and_others_rejected(pos_identified):
+    import dataclasses
+    service, fake = pos_identified
+    service.systems["pos"] = dataclasses.replace(service.systems["pos"], verification_origin="https://pos.ejemplo.pe")
+    fake.start_override = {
+        "status": "requires_identification", "identification_id": "ident-secret-handle",
+        "user_code": "K7M-42Q", "verification_url": "https://pos.ejemplo.pe/vincular", "expires_in": 600,
+    }
+    assert (await service.select_system("pos"))["verification_url"] == "https://pos.ejemplo.pe/vincular"
+    fake.start_override["verification_url"] = "https://otro.ejemplo.pe/vincular"
+    with pytest.raises(ConnectorError, match="identificación inválida"):
+        await service.select_system("pos")
+
+
+@pytest.mark.asyncio
+async def test_statuses_the_pos_never_returns_are_rejected(pos_identified):
+    import httpx
+    service, fake = pos_identified
+    token = (await identify(service, fake))["selection_token"]
+    for status in ("requires_confirmation", "needs_clarification"):
+        service.client = httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda _req, s=status: httpx.Response(200, json={"status": s, "operation_id": "op-1"})))
+        with pytest.raises(ConnectorError, match="no reconocido"):
+            await service.send_instruction(token, "vende un lápiz", str(uuid.uuid4()))

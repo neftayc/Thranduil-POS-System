@@ -19,8 +19,10 @@ import httpx
 from .registry import System
 from .selection import MAX_REF, Selection, SelectionError, SelectionSigner
 
-STATUSES = {"completed", "requires_confirmation", "needs_clarification", "pending_review", "rejected", "pending"}
-FOLLOW_UP_STATUSES = {"requires_confirmation", "needs_clarification", "pending_review"}
+# Statuses the systems return (verified against the POS AgentResponse). The connector adds its own
+# {"status": "error"} for refusals and network failures; it never returns a system status it did not get.
+STATUSES = {"completed", "pending_review", "rejected", "pending"}
+FOLLOW_UP_STATUSES = {"pending_review"}
 MAX_CONTEXT_BYTES = 16000
 SESSION_HEADER = "X-Yachay-Session"
 IDENTIFICATION_PROTOCOL = "yachay-identification/1"
@@ -172,7 +174,7 @@ class Connector:
         expires_in = data.get("expires_in")
         if (data.get("status") != "requires_identification" or not isinstance(handle, str)
                 or not 1 <= len(handle) <= MAX_REF or not code or not isinstance(link, str)
-                or not _same_origin(link, system.identification_url)
+                or not any(_same_origin(link, allowed) for allowed in filter(None, (system.identification_url, system.verification_origin)))
                 or not isinstance(expires_in, int) or not 60 <= expires_in <= 900):
             raise ConnectorError("El sistema devolvió una identificación inválida")
         token, expires_at = self.signer.issue(system.id, "pending", handle, expires_in)

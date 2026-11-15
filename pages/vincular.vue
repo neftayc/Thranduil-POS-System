@@ -3,8 +3,9 @@
 // here with HIS/HER own POS user, never in the chat.
 useHead({ title: 'Vincular Claude · THRANDUIL' })
 
-const route = useRoute()
-const code = ref(String(route.query.code || '').toUpperCase().slice(0, 16))
+// No prefill from the URL: the POS never generates links with ?code=, so a prefilled code
+// could only come from someone else (device-flow phishing). The seller types the code.
+const code = ref('')
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -62,6 +63,7 @@ const approve = async () => {
           Claude (conector Yachay) pide registrar ventas <strong>a tu nombre</strong> hasta el final de la jornada.
           Aprueba solo si TÚ acabas de pedirlo y el código coincide con el que ves en Claude.
         </p>
+        <p class="ui-alert mt-3 text-sm" role="note">Solo aprueba un código que tú mismo pediste en Claude en este momento.</p>
 
         <form class="mt-5 space-y-4" @submit.prevent="approve">
           <div>

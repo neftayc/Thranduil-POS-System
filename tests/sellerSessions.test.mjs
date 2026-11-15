@@ -37,6 +37,7 @@ function fakeAuth() {
       },
       async refresh(refreshToken) {
         state.refreshes++
+        if (state.onRefreshStart) state.onRefreshStart()
         await new Promise(resolve => setTimeout(resolve, state.refreshDelay))
         if (state.failRefresh) throw new Error('revoked')
         const email = Object.keys(users).find(e => refreshToken.startsWith(`refresh-${e}-`))
@@ -211,8 +212,11 @@ test('A1: una revocación durante el refresh no se pierde y cierra los tokens nu
   const { session: ref } = await sessions.status(started.identification_id)
   const [listed] = await sessions.list()
   auth.state.refreshDelay = 50
+  // Wait for the refresh to actually START (no fixed sleep: resolve() reads files first).
+  const refreshStarted = new Promise(resolve => { auth.state.onRefreshStart = resolve })
   const resolving = sessions.resolve(ref).then(() => 'ok', err => err.message)
-  await new Promise(resolve => setTimeout(resolve, 5)) // refresh in flight
+  await refreshStarted // refresh in flight
+  auth.state.onRefreshStart = null
   assert.equal(auth.state.refreshes, 1)
   const revoked = await sessions.revoke(listed.id)
   assert.equal(revoked.revoked, true)
@@ -315,4 +319,52 @@ test('M4: /vincular puede mostrar la hora de la solicitud de un código pendient
   await assert.rejects(sessions.lookup('ZZZ-ZZZZ'), /no existe o venció/)
   now += 601_000
   await assert.rejects(sessions.lookup(started.user_code), /no existe o venció/)
+})
+
+// --- Correcciones de la revisión independiente (fase 3) ---
+
+test('el rol sale del perfil vigente en cada petición, no del momento de aprobar', async t => {
+  const { sessions, auth } = await setup(t)
+  auth.users['ana@tienda.pe'].role = 'manager'
+  const { approved } = await approveAna(sessions)
+  assert.equal(approved.seller.role, 'manager')
+  assert.equal((await sessions.resolve(approved.session)).role, 'manager')
+  auth.users['ana@tienda.pe'].role = 'cashier' // la bajan a cajera
+  const seller = await sessions.resolve(approved.session)
+  assert.equal(seller.role, 'cashier')
+  assert.equal((await sessions.list())[0].role, 'cashier')
+  auth.users['ana@tienda.pe'].name = 'Ana P. Ríos'
+  assert.equal((await sessions.resolve(approved.session)).name, 'Ana P. Ríos')
+})
+
+test('actualizar el rol nunca deshace una revocación', async t => {
+  const { sessions, auth } = await setup(t)
+  const { approved } = await approveAna(sessions)
+  const [listed] = await sessions.list()
+  auth.users['ana@tienda.pe'].role = 'manager'
+  // Revoke while resolve() is validating the profile (before it persists the new role).
+  auth.state.onProfile = async () => { auth.state.onProfile = null; await sessions.revoke(listed.id) }
+  await assert.rejects(sessions.resolve(approved.session), /revocada/)
+  assert.ok((await sessions.list())[0].revoked_at)
+})
+
+test('los fallos por correo se cuentan por correo+IP: un extraño no bloquea al vendedor', async t => {
+  const { sessions } = await setup(t, undefined, { perEmail: 3, perIp: 1000 })
+  for (let i = 0; i < 3; i++) {
+    const s = await sessions.start(LINK)
+    await assert.rejects(sessions.approve(s.user_code, 'ana@tienda.pe', 'mala', '203.0.113.9'), /incorrectos/)
+  }
+  const fromAttacker = await sessions.start(LINK)
+  await assert.rejects(sessions.approve(fromAttacker.user_code, 'ana@tienda.pe', 'clave-ana', '203.0.113.9'), /Demasiados intentos/)
+  // The same message for an email that does not exist: nothing is revealed.
+  for (let i = 0; i < 3; i++) {
+    const s = await sessions.start(LINK)
+    await assert.rejects(sessions.approve(s.user_code, 'noexiste@tienda.pe', 'x', '203.0.113.9'), /incorrectos/)
+  }
+  const ghost = await sessions.start(LINK)
+  await assert.rejects(sessions.approve(ghost.user_code, 'noexiste@tienda.pe', 'x', '203.0.113.9'), /Demasiados intentos/)
+  // From the shop's IP, Ana can still link.
+  const fromShop = await sessions.start(LINK)
+  const ok = await sessions.approve(fromShop.user_code, 'ana@tienda.pe', 'clave-ana', '192.168.1.20')
+  assert.equal(ok.name, 'Ana Pérez')
 })

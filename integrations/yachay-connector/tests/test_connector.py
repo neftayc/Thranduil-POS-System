@@ -36,7 +36,7 @@ async def test_instructions_forwarded_as_is_without_price_logic(connector):
     assert request["type"] == "instruction"
     assert request["request_id"] == rid
     assert "items" not in request
-    assert result["system_response"]["status"] == "requires_confirmation"
+    assert result["system_response"]["status"] == "pending_review"
 
 
 @pytest.mark.asyncio

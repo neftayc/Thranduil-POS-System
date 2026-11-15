@@ -9,6 +9,7 @@ import { makeFileAgentStore } from '../modules/agent/infra/fileAgentStore'
 import { makeFileSellerSessionStore } from '../modules/agent/infra/fileSellerSessionStore'
 import { makeOpenAIOrderInterpreter } from '../modules/agent/infra/openaiOrderInterpreter'
 import { makeOpenAIProductSelector } from '../modules/agent/infra/openaiProductSelector'
+import { reservedFromOperations } from '../modules/agent/app/reservations'
 import { embeddingModelName, makeOpenAIEmbedder } from '../modules/agent/infra/openaiEmbeddings'
 import { makeSupabaseAgentCatalog, searchAutoindexIntervalMs } from '../modules/agent/infra/supabaseAgentCatalog'
 import { makeSupabaseSaleExecutor } from '../modules/agent/infra/supabaseSaleExecutor'
@@ -89,14 +90,17 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   const embeddingModel = embeddingModelName(String(config.posAgentEmbeddingModel || ''))
   const { dryRun, autoindex } = getAgentModes(event)
   const catalog = getCatalog(key, embeddingModel, autoindex, dryRun)
+  // Dry-run keeps its own idempotency records and simulated reservations, apart from the real ones.
+  const store = makeFileAgentStore(dryRun ? join(String(config.posAgentStorageDir), 'dry-run') : String(config.posAgentStorageDir))
   const agent = makeSalesAgent({
-    // Dry-run keeps its own idempotency records and simulated reservations, apart from the real ones.
-    store: makeFileAgentStore(dryRun ? join(String(config.posAgentStorageDir), 'dry-run') : String(config.posAgentStorageDir)),
+    store,
     // Agent 1 (AI): interpretation + hybrid search (vectors + text + exact attributes) → sale-draft/1.
     // Catalog questions are answered by process 2 as information (completed, kind catalog_answer), never as a sale.
     // The context selector (same model) only orders equally compatible options; it never invents or upgrades.
     buildDraft: makeHybridDraftBuilder(makeOpenAIOrderInterpreter(key, String(config.posAgentModel)), catalog, {
-      answerCatalogQuestions: true, selector: makeOpenAIProductSelector(key, String(config.posAgentModel))
+      answerCatalogQuestions: true, selector: makeOpenAIProductSelector(key, String(config.posAgentModel)),
+      // «¿cuántos quedan?» discounts units held by ventas por confirmar (same store as process 2).
+      reservedStock: async () => reservedFromOperations(await store.listOperations(), Date.now())
     }),
     // Process 2 (deterministic).
     validate: makeDraftValidator(catalog),

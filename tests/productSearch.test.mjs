@@ -419,3 +419,39 @@ test('la cantidad que el intérprete dejó al inicio de la query no entra en la 
   assert.equal(result.proposal.items[0].confidence, 'high')
   assert.equal(result.proposal.items[0].name, 'Cuaderno Markin # 100 h')
 })
+
+// ------------------------------------------------------------ corrections (independent review, 15 nov)
+
+test('corrección stock: «¿cuántos quedan?» descuenta las unidades reservadas en ventas por confirmar', async () => {
+  const markin = byName('Cuaderno Markin # 100 h')
+  const ask = { intent: 'catalog_query', items: [{ query: 'cuaderno markin cuadriculado 100', sku: null, quantity: null, unit: null, product_id: null }], payment_method: null, customer_query: null, question: null }
+  const base = catalogFrom(snapshot)
+  const five = { ...base, getProducts: async ids => (await base.getProducts(ids)).map(p => ({ ...p, stock: p.id === markin.id ? 5 : p.stock })) }
+  const held = await makeCatalogAnswerer(five, { reservedStock: async () => new Map([[markin.id, 3]]) })(ask)
+  assert.match(held.message, /Cuaderno Markin # 100 h \(Layconsa\): S\/ 4\.50 por unidad, quedan 2 unidad disponibles \(5 en stock, 3 reservadas en ventas por confirmar\)/)
+  const row = held.result.answers[0].products.find(p => p.product_id === markin.id)
+  assert.deepEqual([row.stock, row.reserved, row.available], [5, 3, 2])
+  const all = await makeCatalogAnswerer(five, { reservedStock: async () => new Map([[markin.id, 5]]) })(ask)
+  assert.match(all.message, /sin unidades disponibles \(5 en stock, 5 reservadas/)
+  // If the reservations cannot be read, it says the number does not discount them (never overstates silently).
+  const unknown = await makeCatalogAnswerer(five, { reservedStock: async () => { throw new Error('store') } })(ask)
+  assert.match(unknown.message, /quedan 5 unidad en stock \(sin descontar ventas por confirmar\)/)
+})
+
+test('corrección precio mayorista: sin cantidad de la IA («doce lapiceros…») cotiza con 12 como el proceso 2 y queda venta directa', async () => {
+  const pilot = byName('Lapicero pilot azul')
+  // Tiered price: from 12 units the wholesale price applies.
+  const catalog = catalogFrom(snapshot, { quote: async (p, qty, unit) => ({ unit_name: unit || p.unit, price: qty >= 12 ? 0.8 : 1, factor: 1, currency: 'PEN' }) })
+  const order = sale('lapicero pilot azul', null)
+  const draft = await makeHybridDraftBuilder(interpreterReturning(order).interpret, catalog)(['doce lapiceros pilot azul, efectivo'], null)
+  const [line] = draft.items
+  assert.equal(line.product_id, pilot.id)
+  assert.equal(line.price_unit, 0.8, 'precio del tramo mayorista, no el minorista de 1 unidad')
+  const decision = await makeDraftValidator(catalog)(draft, new Map())
+  assert.equal(decision.kind, 'direct', JSON.stringify(decision.reasons || decision))
+  assert.equal(decision.sale.items[0].qty, 12)
+  assert.equal(decision.sale.total, 9.6)
+  // Without a written quantity it is still 1 at the retail price.
+  const one = await makeHybridDraftBuilder(interpreterReturning(sale('lapicero pilot azul', null)).interpret, catalog)(['lapicero pilot azul, efectivo'], null)
+  assert.equal(one.items[0].price_unit, 1)
+})

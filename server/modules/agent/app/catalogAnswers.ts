@@ -4,6 +4,7 @@ import { makeProductMatcher, matchQuery, type AgentCatalog } from './prepareSale
 import { closestCandidates } from './productSearch'
 
 const money = (value: number) => `S/ ${value.toFixed(2)}`
+const round = (value: number) => Number(value.toFixed(4))
 
 /**
  * Answers catalog questions ("¿tenemos cuadernos Marking cuadriculados?", "¿cuánto cuesta?",
@@ -11,9 +12,13 @@ const money = (value: number) => `S/ ${value.toFixed(2)}`
  * resolve_sale_item_pricing and live stock. Nothing is invented; unknown values are said so.
  * Sales reports with calculations are out of scope (they come from predefined queries).
  */
-export const makeCatalogAnswerer = (catalog: AgentCatalog) => {
+export const makeCatalogAnswerer = (catalog: AgentCatalog, options: { reservedStock?: () => Promise<Map<string, number>> } = {}) => {
   const match = makeProductMatcher(catalog)
   return async (input: Interpretation) => {
+    // Units held by ventas por confirmar are not available (same rule process 2 applies to sell).
+    let reserved = new Map<string, number>()
+    let reservationsUnknown = false
+    try { if (options.reservedStock) reserved = await options.reservedStock() } catch { reservationsUnknown = true }
     const lines: string[] = []
     const answers: Array<Record<string, unknown>> = []
     if (!input.items.length) {
@@ -39,8 +44,13 @@ export const makeCatalogAnswerer = (catalog: AgentCatalog) => {
           if (Number.isFinite(quote.price) && quote.price >= 0 && quote.currency === 'PEN') price = quote.price > 0 ? { unit_name: quote.unit_name, price: quote.price } : null
         } catch { /* price unknown: say so, never guess */ }
         const stock = Number.isFinite(product.stock) ? product.stock : null
-        parts.push(`${product.name}${product.brand ? ` (${product.brand})` : ''}: ${price ? `${money(price.price)} por ${price.unit_name}` : 'precio no disponible'}, ${stock === null ? 'stock no disponible' : stock > 0 ? `quedan ${stock} ${product.unit}` : 'agotado'}`)
-        found.push({ product_id: product.id, name: product.name, sku: product.sku, brand: product.brand, unit: product.unit, stock, price: price?.price ?? null, price_unit: price?.unit_name ?? null, exact: decision.best?.doc.id === product.id && decision.confidence === 'high' })
+        const held = reserved.get(product.id) || 0
+        const available = stock === null ? null : round(stock - held)
+        const stockText = available === null ? 'stock no disponible'
+          : held > 0 ? `${available > 0 ? `quedan ${available} ${product.unit} disponibles` : 'sin unidades disponibles'} (${stock} en stock, ${round(held)} reservadas en ventas por confirmar)`
+            : available > 0 ? `quedan ${available} ${product.unit}${reservationsUnknown ? ' en stock (sin descontar ventas por confirmar)' : ''}` : 'agotado'
+        parts.push(`${product.name}${product.brand ? ` (${product.brand})` : ''}: ${price ? `${money(price.price)} por ${price.unit_name}` : 'precio no disponible'}, ${stockText}`)
+        found.push({ product_id: product.id, name: product.name, sku: product.sku, brand: product.brand, unit: product.unit, stock, reserved: round(held), available, price: price?.price ?? null, price_unit: price?.unit_name ?? null, exact: decision.best?.doc.id === product.id && decision.confidence === 'high' })
       }
       const head = decision.confidence === 'high' ? 'Sí, tenemos' : `Para «${item.query}» encontré`
       lines.push(`${head}: ${parts.join('; ')}.`)

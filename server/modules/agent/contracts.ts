@@ -95,6 +95,8 @@ export type SaleDraft = {
   customer_id: string | null; payment_method: string; items: DraftItem[]; total: number; currency: string
 }
 /** unit_cost is present only for roles that may see costs (owner/manager). */
+export type PriceReviewItem = { product_id: string; name: string; qty: number; unit_name: string; list_price: number; price_unit: number; below_cost: boolean }
+export type PriceReview = { status: 'pending' | 'approved' | 'adjusted'; sale_reference: string | null; seller_id: string; created_at: string; items: PriceReviewItem[] }
 export type PriceAlert = { product_id: string; name: string; price_unit: number; unit_cost?: number; level: 'below_cost' }
 /** Informational notes for the seller (quantity defaulted, price changed) and price alerts. Never block. */
 export type DecisionNotes = { notes: string[]; price_alerts: PriceAlert[] }
@@ -117,6 +119,11 @@ export type Operation = {
   /** Sale actually sent (or to be sent) to create_sale. */
   draft?: SaleDraft
   reasons?: ReviewReason[]
+  /**
+   * Sale REGISTERED with a dictated price ≠ list price: it is also queued for the price review
+   * (validated later against the system price). The sale itself is not pending.
+   */
+  price_review?: PriceReview
   response?: AgentResponse
   reservations?: Reservation[]
   expires_at: number

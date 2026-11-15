@@ -1112,3 +1112,39 @@ test('el dictado «$1» se lee como un sol: es precio, no cantidad', async () =>
   assert.equal(result.kind, 'direct')
   assert.deepEqual([result.sale.items[0].qty, result.sale.items[0].price_unit], [2, 4])
 })
+
+// ---------------------------------------------------------------- revisión de precios (decisión del dueño)
+
+const { listPendingPriceReviews } = await jiti.import('../server/modules/agent/app/priceReview.ts')
+
+test('una venta registrada con precio distinto al de lista queda anotada en la revisión de precios', async t => {
+  const { run, dependencies, state, sent } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 3 })] })] })
+  withCost(state, 3.5)
+  const response = await run(instruction('vende 2 cuadernos A4 a 3 soles, efectivo'), CAJERO)
+  assert.equal(response.status, 'completed') // registered: the review never blocks the sale
+  assert.equal(sent.length, 1)
+  assert.equal(response.result.price_review, 'pending')
+  assert.match(response.message, /Quedó anotada en la revisión de precios/)
+  const reviews = await listPendingPriceReviews(dependencies.store)
+  assert.equal(reviews.length, 1)
+  assert.deepEqual({ ...reviews[0], created_at: 'x' }, {
+    status: 'pending', sale_reference: 'sale-1', seller_id: CAJERO.id, created_at: 'x', operation_id: response.operation_id, simulated: false,
+    items: [{ product_id: CUADERNO.id, name: CUADERNO.name, qty: 2, unit_name: 'unidad', list_price: 5, price_unit: 3, below_cost: true }]
+  })
+})
+
+test('sin precio dictado (o igual al de lista) no hay revisión de precios; en dry-run se marca como simulada', async t => {
+  const plain = await setup(t)
+  const response = await plain.run(instruction('vende 2 cuadernos A4, efectivo'))
+  assert.equal(response.result.price_review, null)
+  assert.doesNotMatch(response.message, /revisión de precios/)
+  const same = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 5 })] })] })
+  await same.run(instruction('vende 2 cuadernos A4 a 5 soles, efectivo'))
+  assert.deepEqual(await listPendingPriceReviews(plain.dependencies.store), [])
+  assert.deepEqual(await listPendingPriceReviews(same.dependencies.store), [])
+  const calls = { n: 0 }
+  const dry = await setup(t, { dryRun: true, execute: forbiddenExecute(calls), drafts: [draftOf({ items: [line({ price_said: 4 })] })] })
+  await dry.run(instruction('vende 2 cuadernos A4 a 4 soles, efectivo'), CAJERO)
+  const reviews = await listPendingPriceReviews(dry.dependencies.store)
+  assert.deepEqual([reviews.length, reviews[0].simulated, reviews[0].sale_reference, calls.n], [1, true, null, 0])
+})

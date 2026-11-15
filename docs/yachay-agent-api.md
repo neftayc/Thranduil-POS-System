@@ -283,6 +283,12 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   `20261115_create_sale_manual_price_any_role`**: sin ella `create_sale` rechaza el precio
   manual de un rol que no sea owner/manager y la venta queda por confirmar (`pos_rejected`).
   `price_override_not_allowed` ya no se usa.
+  La venta **queda registrada** y, además, **anotada en la revisión de precios** (decisión del
+  dueño): `operation.price_review` con `status: "pending"`, la referencia de la venta, el vendedor y,
+  por línea, precio de lista, precio vendido y si quedó bajo costo. La respuesta trae
+  `result.price_review: "pending"` y el aviso «Quedó anotada en la revisión de precios…».
+  `listPendingPriceReviews(store)` (`app/priceReview.ts`) las lista para la validación del mediodía y
+  del cierre (etapa 2). En la base se pueden cruzar con `sale_items.price_unit ≠ auto_price_unit`.
   Si el precio dictado queda **bajo el costo** (`avg_cost` de `product_catalog` × factor
   de la presentación) no se bloquea: `result.price_alerts` con `level: "below_cost"`. El
   costo solo se muestra a owner/manager («Alerta de precio: … bajo su costo S/ Z»); a otro rol,

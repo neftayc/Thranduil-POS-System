@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 const requireNuxt = createRequire(import.meta.resolve('nuxt/package.json'))
 const jiti = requireNuxt('jiti').createJiti(import.meta.url)
 const search = await jiti.import('../server/modules/agent/app/productSearch.ts')
-const { makeSalePreparer } = await jiti.import('../server/modules/agent/app/prepareSale.ts')
+const { makeSalePreparer, matchQuery } = await jiti.import('../server/modules/agent/app/prepareSale.ts')
 const { makeCatalogAnswerer } = await jiti.import('../server/modules/agent/app/catalogAnswers.ts')
 const { productDocument } = await jiti.import('../server/modules/agent/infra/openaiEmbeddings.ts')
 
@@ -408,4 +408,14 @@ test('buildDraft: con stock insuficiente un producto bien identificado sigue hig
   const decision = await makeDraftValidator({ ...catalog, getProduct: async id => ({ ...(await base.getProduct(id)), stock: 1 }) })(draft, new Map())
   assert.equal(decision.kind, 'review')
   assert.deepEqual(decision.reasons.map(r => r.code), ['insufficient_stock'], 'un solo motivo, sin duplicados')
+})
+
+test('la cantidad que el intérprete dejó al inicio de la query no entra en la búsqueda (no baja la seguridad)', async () => {
+  assert.equal(matchQuery({ query: 'dos cuadernos markin cuadriculado 100 a4', brand: null }), 'cuadernos markin cuadriculado 100 a4')
+  assert.equal(matchQuery({ query: 'media docena de lapiceros', brand: null }), 'lapiceros')
+  assert.equal(matchQuery({ query: '100 hojas bond', brand: null }), '100 hojas bond') // a description, kept
+  const prepare = makeSalePreparer(catalogFrom(snapshot))
+  const result = await prepare(sale('dos cuadernos markin cuadriculado 100 a4', 2), [], new Map())
+  assert.equal(result.proposal.items[0].confidence, 'high')
+  assert.equal(result.proposal.items[0].name, 'Cuaderno Markin # 100 h')
 })

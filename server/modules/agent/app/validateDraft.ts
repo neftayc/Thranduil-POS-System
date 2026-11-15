@@ -22,8 +22,8 @@ const NO_RESERVATION_DOUBTS = new Set(['ambiguous_product', 'product_not_found']
 export const PRICE_TOLERANCE = 0.005
 const EPSILON = 0.000001
 const MAX_QTY = 1000000
-/** Roles that create_sale lets change the list price (with a reason). Mirrors v_can_manual_discount. */
-export const PRICE_OVERRIDE_ROLES = new Set(['owner', 'manager'])
+/** Roles that may SEE product costs (below-cost alerts show the cost only to them). */
+export const COST_VISIBLE_ROLES = new Set(['owner', 'manager'])
 const money = (value: number) => `S/ ${value.toFixed(2)}`
 
 const doubtText: Record<string, string> = {
@@ -43,7 +43,8 @@ const doubtText: Record<string, string> = {
  *   DIRECT  ⇔ at least one line, and for EVERY line: product_id given, active, confidence "high",
  *             no doubts, valid quantity, official price resolved and equal to the draft price
  *             (when the draft had one) unless the SELLER dictated a price (then: grounded in the text and
- *             a role in PRICE_OVERRIDE_ROLES, sold at that price with a reason; else review). The quantity
+ *             sold DIRECTLY at that price for any seller role, with a reason; the list price is kept
+ *             for later validation). The quantity
  *             is the one the seller wrote, or 1 when none was said (resolveQuantity). A payment method that the SELLER wrote
  *             (draft.source_text, see grounding.ts), enough available stock (stock_on_hand − reservations of
  *             other pending sales); plus a valid payment method, a valid customer (or none) and
@@ -62,7 +63,7 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
   const reasons: ReviewReason[] = []
   const notes: string[] = []
   const priceAlerts: PriceAlert[] = []
-  const canOverridePrice = PRICE_OVERRIDE_ROLES.has(String(context.role || ''))
+  const canSeeCost = COST_VISIBLE_ROLES.has(String(context.role || ''))
   const items: DraftItem[] = []
   /** Items whose product was only proposed (ambiguous / not found): checked, but never reserved. */
   const unreservable = new Set<DraftItem>()
@@ -151,9 +152,9 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
       // A dictated price is the sale the seller is making, but only if the SELLER wrote it.
       if (!priceGrounded(draft.source_text, dictated, quantity)) {
         reasons.push({ code: 'price_unverified', line: n, message: `${label}: el precio ${money(dictated)} no aparece en el pedido del vendedor (lista ${money(official)}).`, detail: { price_said: dictated, list_price: official, ungrounded: true } })
-      } else if (!canOverridePrice) {
-        reasons.push({ code: 'price_override_not_allowed', line: n, message: `${label}: precio dictado ${money(dictated)} distinto al de lista ${money(official)}; tu rol no permite cambiar precios. Lo valida un encargado.`, detail: { price_said: dictated, list_price: official, role: context.role || null } })
       } else {
+        // Business rule (owner, 2026-11-15): any seller registers the price they dictate; it is
+        // validated later against the list price (kept as list_price / auto_price_unit).
         sold = dictated
         notes.push(`Precio modificado de ${product.name}: lista ${money(official)} → vendido ${money(dictated)}.`)
       }
@@ -169,13 +170,14 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
       product_id: product.id, name: product.name, qty: quantity, unit_name: quote.unit_name,
       price_unit: sold, factor: quote.factor, total: round(quantity * sold),
       ...(decided.ok && decided.defaulted ? { quantity_defaulted: true } : {}),
-      ...(sold !== official ? { list_price: official, manual_reason: `Precio dictado por voz (lista ${money(official)})` } : {})
+      ...(sold !== official ? { list_price: official, manual_reason: `Precio dictado por vendedor (lista ${money(official)})` } : {})
     }
     if (decided.ok && decided.defaulted) notes.push(`${product.name}: no se indicó cantidad, se toma 1 ${quote.unit_name}.`)
     // Below cost: never blocks, it is reported. Cost of the sold presentation = avg cost × factor.
     const unitCost = Number.isFinite(product.avg_cost) && (product.avg_cost as number) > 0 ? round((product.avg_cost as number) * quote.factor) : null
     if (sold !== official && unitCost !== null && sold < unitCost - PRICE_TOLERANCE) {
-      priceAlerts.push({ product_id: product.id, name: product.name, price_unit: sold, unit_cost: unitCost, level: 'below_cost' })
+      // The cost is shown only to owner/manager; other sellers just get «precio bajo».
+      priceAlerts.push({ product_id: product.id, name: product.name, price_unit: sold, ...(canSeeCost ? { unit_cost: unitCost } : {}), level: 'below_cost' })
     }
     items.push(item)
     if (line.doubts.some(doubt => NO_RESERVATION_DOUBTS.has(doubt.code))) unreservable.add(item)

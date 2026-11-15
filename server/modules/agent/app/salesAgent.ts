@@ -27,7 +27,9 @@ const alertText = (alerts: StockAlert[]) => alerts.length
 /** Notes (quantity defaulted, price changed) and below-cost alerts, appended to every answer. */
 const notesText = (extra: DecisionNotes) => [
   ...extra.notes.map(note => ` ${note}`),
-  ...extra.price_alerts.map(a => ` Alerta de precio: ${a.name} se vende a S/ ${a.price_unit.toFixed(2)}, bajo su costo S/ ${a.unit_cost.toFixed(2)}.`)
+  ...extra.price_alerts.map(a => a.unit_cost !== undefined
+    ? ` Alerta de precio: ${a.name} se vende a S/ ${a.price_unit.toFixed(2)}, bajo su costo S/ ${a.unit_cost.toFixed(2)}.`
+    : ` Alerta: precio bajo para ${a.name} (S/ ${a.price_unit.toFixed(2)}).`)
 ].join('')
 const NO_NOTES: DecisionNotes = { notes: [], price_alerts: [] }
 

@@ -275,14 +275,18 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   pero solo cuenta si el vendedor lo **escribió** como monto («a 4 soles», «s/ 4.50», «$4»
   —el dictado escribe «un sol» como «$1»—,
   «4 soles», o el total: «2 por 9 soles» → 4.50 c/u). Si no aparece: `price_unverified`.
-  Con rol `owner` o `manager` se registra **directo** a ese precio: se envía a `create_sale`
-  `price_unit` = dictado y `manual_discount_reason` = «Precio dictado por voz (lista S/ X)»
-  (la base guarda `auto_price_unit`, el precio vendido y el motivo), y la respuesta avisa
-  «Precio modificado de …: lista S/ X → vendido S/ Y». Con otro rol:
-  `price_override_not_allowed` (la base lo rechazaría igual; los permisos no cambian).
+  **Cualquier vendedor** (decisión del dueño, 2026-11-15) lo registra **directo** a ese precio,
+  para validarlo luego contra el precio del sistema: se envía a `create_sale` `price_unit` =
+  dictado y `manual_discount_reason` = «Precio dictado por vendedor (lista S/ X)» (la base
+  guarda `auto_price_unit`, el precio vendido y el motivo), y la respuesta avisa «Precio
+  modificado de …: lista S/ X → vendido S/ Y». **Requiere la migración
+  `20261115_create_sale_manual_price_any_role`**: sin ella `create_sale` rechaza el precio
+  manual de un rol que no sea owner/manager y la venta queda por confirmar (`pos_rejected`).
+  `price_override_not_allowed` ya no se usa.
   Si el precio dictado queda **bajo el costo** (`avg_cost` de `product_catalog` × factor
-  de la presentación) no se bloquea: `result.price_alerts` con `level: "below_cost"` y el
-  aviso «Alerta de precio: … bajo su costo S/ Z». Sin costo conocido no hay alerta;
+  de la presentación) no se bloquea: `result.price_alerts` con `level: "below_cost"`. El
+  costo solo se muestra a owner/manager («Alerta de precio: … bajo su costo S/ Z»); a otro rol,
+  sin `unit_cost`: «Alerta: precio bajo para …». Sin costo conocido no hay alerta;
 - el stock alcanza: `disponible = stock_on_hand − reservas de otras ventas por
   confirmar vigentes`, sumando las líneas repetidas en unidad base;
 - la cantidad y la forma de pago **las escribió el vendedor**: el proceso 2 las
@@ -313,7 +317,7 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 | `invalid_payment` | La forma de pago no existe en el POS. |
 | `invalid_customer` | El cliente indicado no existe. |
 | `pos_rejected` | `create_sale` respondió con error: no se registró nada. |
-| `price_override_not_allowed` | Precio dictado distinto al de lista y el rol del vendedor no permite cambiar precios (solo `owner`/`manager`). |
+| `price_override_not_allowed` | **Sin uso desde 2026-11-15** (cualquier vendedor registra el precio dictado). Se conserva para registros antiguos. |
 | `price_unverified` | El borrador trae un precio dictado que no aparece en el texto del vendedor (posible invención del modelo). |
 
 ### Reservas de ventas por confirmar
@@ -342,6 +346,25 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 Alertas: tras `completed` o `pending_review`, para cada producto afectado
 `disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`
 (de `product_catalog`). Un fallo al calcularlas nunca altera la venta.
+
+## Migración pendiente: precio manual para cualquier rol
+
+`create_sale` hoy exige rol owner/manager para cualquier precio distinto del automático. El cambio
+mínimo (decisión del dueño, 2026-11-15): el **precio manual** se permite a cualquier rol que pueda
+registrar ventas; los **descuentos** (`manual_discount_pct`, `manual_discount_amount`) siguen solo
+para owner/manager; el **motivo** sigue siendo obligatorio (el agente lo llena: «Precio dictado por
+vendedor (lista S/ X)»; en la pantalla del POS solo owner/manager cambian precios y ya escriben motivo).
+
+La migración se genera a partir de la definición **real** de la base, nunca de `schema.sql`:
+
+1. Solo lectura, en el SQL Editor de Supabase:
+   `select pg_get_functiondef('public.create_sale(uuid,text,jsonb)'::regprocedure);` → guardar en un `.sql`.
+2. `node scripts/create-sale-manual-price-migration.mjs <definicion-real.sql>` escribe
+   `supabase/migrations/20261115_create_sale_manual_price_any_role.sql` y
+   `supabase/rollbacks/20261115_create_sale_manual_price_any_role_down.sql` (exactamente la definición
+   real). Falla si el bloque de permisos no aparece exactamente una vez o si cambiaría algo más.
+3. Aplicarla es decisión del dueño. Sin ella, el precio dictado por un cajero queda por confirmar
+   (`pos_rejected`).
 
 ## Modo de solo validación (`POS_AGENT_DRY_RUN=1`)
 
@@ -391,6 +414,7 @@ compartido (sesiones incluidas); no desplegar así.
 ## Validación
 
 ```bash
+node scripts/agent-dry-run-e2e.mjs  # dry-run de punta a punta con mocks (sin base ni OpenAI)
 pnpm test:agent              # agente + sesiones de vendedor, con dobles; sin ventas reales
 node scripts/check-agent.mjs # POS en marcha: credencial, rechazo sin vendedor, inicio de vinculación
 ```

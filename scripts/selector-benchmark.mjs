@@ -14,7 +14,8 @@ import { createRequire } from 'node:module'
 dotenv.config({ quiet: true })
 const jiti = createRequire(import.meta.resolve('nuxt/package.json'))('jiti').createJiti(import.meta.url)
 const { makeSalesSelector } = await jiti.import('../server/modules/agent/app/salesSelector.ts')
-const { makeOpenAISelectorModel } = await jiti.import('../server/modules/agent/infra/openaiSalesSelector.ts')
+const { makeSalesReviewer } = await jiti.import('../server/modules/agent/app/salesReviewer.ts')
+const { makeOpenAISelectorModel, makeOpenAIReviewerModel } = await jiti.import('../server/modules/agent/infra/openaiSalesSelector.ts')
 const { makeHybridDraftBuilder } = await jiti.import('../server/modules/agent/app/draftBuilder.ts')
 const { makeOpenAIOrderInterpreter } = await jiti.import('../server/modules/agent/infra/openaiOrderInterpreter.ts')
 const { makeOpenAIProductSelector } = await jiti.import('../server/modules/agent/infra/openaiProductSelector.ts')
@@ -38,6 +39,8 @@ const models = (arg('models', 'gpt-5.4,gpt-5.4-mini')).split(',').map(s => s.tri
 const legacyModel = arg('legacy-model', process.env.POS_AGENT_MODEL || 'gpt-4o-mini')
 const runLegacy = !process.argv.includes('--no-legacy')
 const effort = arg('effort', null) // reasoning effort of the selector model (low by default)
+const review = !process.argv.includes('--no-review') // second AI pass (reviewer)
+const reviewEffort = arg('review-effort', null) // reasoning effort of the reviewer (low by default)
 
 const root = new URL('..', import.meta.url)
 const catalog = JSON.parse(fs.readFileSync(new URL('tests/fixtures/selector-catalog.json', root)))
@@ -74,7 +77,8 @@ const nameOf = id => catalog.products.find(p => p.id === id)?.name ?? (id ? `?${
 // ------------------------------------------------------------------ systems
 
 const llmSystem = model => {
-  const select = makeSalesSelector({ model: makeOpenAISelectorModel(key, model, effort ? { reasoningEffort: effort } : {}), catalog: async () => catalog })
+  const opts = effort ? { reasoningEffort: effort } : {}
+  const select = makeSalesSelector({ model: makeOpenAISelectorModel(key, model, opts), catalog: async () => catalog, ...(review ? { reviewer: makeSalesReviewer(makeOpenAIReviewerModel(key, model, reviewEffort ? { reasoningEffort: reviewEffort } : opts)) } : {}) })
   return async (messages, previous) => {
     const { consolidated, usage } = await select({ messages, previous })
     const price = PRICES[model]
@@ -147,11 +151,12 @@ const pair = (expected, got) => {
   return { pairs, extra: [...free] }
 }
 
-const judge = (e, g) => {
+const judge = (e, g, ambiguous = false) => {
   if (!g) return 'falta'
   const decided = !asks(g)
   if (!e.ask) {
-    if (!decided) return [g.product_id, ...(g.options || [])].some(id => expectedIds(e).includes(id)) ? 'pregunta_de_mas' : 'pregunta_sin_opcion_correcta'
+    // In an ambiguous case (owner's decision) asking with the right option among the options is correct.
+    if (!decided) return [g.product_id, ...(g.options || [])].some(id => expectedIds(e).includes(id)) ? (ambiguous || e.owner_check ? 'correcto' : 'pregunta_de_mas') : 'pregunta_sin_opcion_correcta'
     if (!expectedIds(e).includes(g.product_id)) return 'equivocado_alta'
     return Number(g.quantity) === Number(e.quantity) ? 'correcto' : 'cantidad_errada'
   }
@@ -165,7 +170,7 @@ const judge = (e, g) => {
 
 // ------------------------------------------------------------------ run
 
-const systems = [...(runLegacy ? [[`legacy (${legacyModel})`, legacySystem()]] : []), ...models.map(m => [`llm ${m}${effort ? ` (${effort})` : ''}`, llmSystem(m)])]
+const systems = [...(runLegacy ? [[`legacy (${legacyModel})`, legacySystem()]] : []), ...models.map(m => [`llm ${m}${effort ? ` (${effort})` : ''}${review ? ' + revisor' : ''}`, llmSystem(m)])]
 const report = []
 for (const [label, run] of systems) {
   const states = new Map()
@@ -179,14 +184,15 @@ for (const [label, run] of systems) {
     states.set(c.id, result.state)
     const decision = await stepThree(result.state, messages)
     const { pairs, extra } = pair(c.lines, result.lines)
-    const verdicts = c.lines.map((e, i) => judge(e, pairs[i] === null ? null : result.lines[pairs[i]]))
+    const ambiguous = Boolean(c.ambiguous || c.owner_check || (c.noise_of && cases.find(d => d.id === c.noise_of)?.ambiguous))
+    const verdicts = c.lines.map((e, i) => judge(e, pairs[i] === null ? null : result.lines[pairs[i]], ambiguous))
     const extraHigh = extra.filter(j => !asks(result.lines[j])).length
     // Invented price: a line carries price_said and the expected line has none (or another one).
     const inventedPrice = c.lines.reduce((n, e, i) => { const got = pairs[i] === null ? null : result.lines[pairs[i]]; return n + (got && got.price_said != null && got.price_said !== (e.price_said ?? null) ? 1 : 0) }, 0)
       + extra.filter(j => result.lines[j].price_said != null).length
     const payment = result.state?.payment_method ?? null
     const wrongPayment = payment !== null && payment !== (c.payment_method || 'efectivo') ? 1 : 0
-    const signature = JSON.stringify({ lines: result.lines.map(l => [l.product_id, l.quantity, asks(l) ? 'baja' : 'alta']).sort(), payment })
+    const signature = { payment, lines: result.lines.map(l => asks(l) ? { ask: true, ids: [l.product_id, ...(l.options || [])].filter(Boolean) } : { ask: false, id: l.product_id, q: Number(l.quantity) }) }
     const perfect = verdicts.every(v => v === 'correcto') && !extra.length && !wrongPayment
     const expectedDirect = !c.lines.some(l => l.ask && !l.also_ok)
     rows.push({ id: c.id, verdicts, extra: extra.length, extraHigh, usage: result.usage, error: result.error, lines: result.lines,
@@ -208,7 +214,16 @@ for (const [label, run] of systems) {
     // Wrong with «alta»: wrong product, wrong quantity or a payment that was not said.
     equivocados_alta: count('equivocado_alta') + count('cantidad_errada') + rows.reduce((n, r) => n + r.extraHigh + r.wrongPayment, 0),
     precio_inventado: rows.reduce((n, r) => n + r.inventedPrice, 0),
-    robustez_ruido: (() => { const noisy = rows.filter(r => cases.find(c => c.id === r.id).noise_of); const same = noisy.filter(r => { const base = rows.find(b => b.id === cases.find(c => c.id === r.id).noise_of); return base && base.signature === r.signature }); return noisy.length ? `${same.length}/${noisy.length}` : '—' })(),
+    robustez_ruido: (() => {
+      // Same result = same payment and the same lines: decided ones identical (product and quantity);
+      // questions count as the same when they offer at least one option in common.
+      const sameAs = (a, b) => a.payment === b.payment && a.lines.length === b.lines.length && a.lines.every(x => b.lines.some(y =>
+        x.ask ? y.ask && x.ids.some(id => y.ids.includes(id)) : !y.ask && y.id === x.id && y.q === x.q))
+      const noisy = rows.filter(r => cases.find(c => c.id === r.id).noise_of)
+      const same = noisy.filter(r => { const base = rows.find(b => b.id === cases.find(c => c.id === r.id).noise_of); return base && sameAs(base.signature, r.signature) })
+      return noisy.length ? `${same.length}/${noisy.length}` : '—'
+    })(),
+    omitidos: count('falta'),
     cantidad_errada: count('cantidad_errada'),
     preguntas_de_mas: count('pregunta_de_mas'),
     preguntas: rows.reduce((n, r) => n + r.lines.filter(asks).length, 0),
@@ -232,10 +247,14 @@ for (const [label, run] of systems) {
   })
 }
 
-console.log('\n| Sistema | Ventas directas en el paso 3 (esperadas) | Directas correctas | Directas EQUIVOCADAS | Equivocados con alta (producto, cantidad o pago) | Precio inventado | Robustez al ruido |')
-console.log('|---|---|---|---|---|---|---|')
-for (const r of report) console.log(`| ${r.sistema} | ${r.directas} (${r.directas_esperadas}) | ${r.directas_correctas} | ${r.directas_equivocadas} | ${r.equivocados_alta} | ${r.precio_inventado} | ${r.robustez_ruido} |`)
-console.log('\n| Sistema | Líneas correctas | Ventas perfectas | Equivocados con alta | Cantidad errada | Preguntas (esperadas) | Preguntas de más | Faltan / extra | Latencia mediana (máx) | Costo medio por llamada | Tokens entrada (caché) / salida |')
+console.log('\n| Sistema | Ventas directas en el paso 3 (esperadas) | Directas correctas | Directas EQUIVOCADAS | Equivocados con alta (producto, cantidad o pago) | Omitidos | Precio inventado | Robustez al ruido | Compuerta |')
+console.log('|---|---|---|---|---|---|---|---|---|')
+for (const r of report) {
+  const [same, total] = String(r.robustez_ruido).split('/').map(Number)
+  const gate = r.directas_equivocadas === 0 && r.equivocados_alta === 0 && r.omitidos === 0 && same === total ? 'PASA' : 'no pasa'
+  console.log(`| ${r.sistema} | ${r.directas} (${r.directas_esperadas}) | ${r.directas_correctas} | ${r.directas_equivocadas} | ${r.equivocados_alta} | ${r.omitidos} | ${r.precio_inventado} | ${r.robustez_ruido} | ${gate} |`)
+}
+console.log('\n| Sistema | Líneas correctas | Ventas perfectas | Equivocados con alta | Cantidad errada | Preguntas (esperadas) | Preguntas de más | Faltan / extra | Latencia mediana por venta (máx) | Costo medio por venta (todas las pasadas) | Tokens entrada (caché) / salida |')
 console.log('|---|---|---|---|---|---|---|---|---|---|---|')
 for (const r of report) {
   console.log(`| ${r.sistema} | ${r.lineas_correctas} | ${r.ventas_perfectas} | ${r.equivocados_alta} | ${r.cantidad_errada} | ${r.preguntas} (${r.preguntas_esperadas}) | ${r.preguntas_de_mas} | ${r.faltan} / ${r.lineas_extra} | ${r.latencia_mediana_s ?? '—'} s (${r.latencia_max_s ?? '—'} s) | ${r.costo_medio_usd === null ? 'n/d' : `US$ ${r.costo_medio_usd}`} | ${r.tokens_entrada_medio ?? '—'} (${r.tokens_cache_medio ?? '—'}) / ${r.tokens_salida_medio ?? '—'} |`)

@@ -364,6 +364,166 @@
     }
    ],
    "payment_method": "efectivo"
+  },
+  {
+   "id": "D12",
+   "ref": "c4d9a7e3",
+   "note": "Dictado real recibido por el POS: el dictado por voz convirtió «perdón» en «...». El vendedor corrigió «10 papel arcoíris» por «20 papel a color» → UNA línea de Papel Arcoiris con 20 (supuesto: «papel a color» corrige al mismo papel arcoíris; «a colores» es redundante).",
+   "messages": [
+    "5 cartulinas blancas, 2 lapiceros de 0,60, una cartulina negra, 2 plumones Jumbo Faber-Castell de 123, ...10 unidades de papel arcoíris a colores y 20 unidades de papel a color. 20 unidades de papel bond."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 5
+    },
+    {
+     "product": "Lapicero 060 - Azul, Rojo",
+     "quantity": 2
+    },
+    {
+     "product": "Cartulina Negra",
+     "quantity": 1
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Papel Arcoiris",
+     "quantity": 20
+    },
+    {
+     "product": "Papel Bond",
+     "quantity": 20
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D12p",
+   "ref": "c4d9a7e3",
+   "note": "El mismo dictado con «perdón» explícito.",
+   "messages": [
+    "5 cartulinas blancas, 2 lapiceros de 0,60, una cartulina negra, 2 plumones Jumbo Faber-Castell de 123, 10 unidades de papel arcoíris a colores, perdón, 20 unidades de papel a color. 20 unidades de papel bond."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 5
+    },
+    {
+     "product": "Lapicero 060 - Azul, Rojo",
+     "quantity": 2
+    },
+    {
+     "product": "Cartulina Negra",
+     "quantity": 1
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Papel Arcoiris",
+     "quantity": 20
+    },
+    {
+     "product": "Papel Bond",
+     "quantity": 20
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D13",
+   "note": "Autocorrección de cantidad con «no, mejor».",
+   "messages": [
+    "3 cuadernos layconsa teens cuadriculados, no, mejor 2 cuadernos teens cuadriculados, y un corrector en cinta"
+   ],
+   "lines": [
+    {
+     "product": "cuaderno layconsa teens # 100 h",
+     "quantity": 2
+    },
+    {
+     "product": "Corrector en Cinta",
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D14",
+   "note": "Autocorrección de cantidad con «digo».",
+   "messages": [
+    "4 siliconas en barra, digo, 6 siliconas en barra, y una cinta scotch delgada"
+   ],
+   "lines": [
+    {
+     "product": "Silicona en barrra",
+     "quantity": 6
+    },
+    {
+     "product": "Cinta scotch delgada",
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D15",
+   "note": "Autocorrección de producto con «en vez de».",
+   "messages": [
+    "en vez de 5 cartulinas negras ponle 5 cartulinas blancas, y 3 lapiceros Trilux azul"
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 5
+    },
+    {
+     "product": "Lapicero Trilux Azul-032",
+     "quantity": 3
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D16",
+   "note": "Autocorrección de producto con «perdón».",
+   "messages": [
+    "2 plumones Faber-Castell de papel W47, perdón, de pizarra Jumbo 123, y una cartulina fosforescente"
+   ],
+   "lines": [
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Cartulina Fosforescente",
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D17",
+   "note": "Autocorrección de cantidad con «...» (voz).",
+   "messages": [
+    "10 cartulinas negras... 12 cartulinas negras, y 2 borradores Oval x 30"
+   ],
+   "lines": [
+    {
+     "product": "Cartulina Negra",
+     "quantity": 12
+    },
+    {
+     "product": "Borrador Oval x 30",
+     "quantity": 2
+    }
+   ],
+   "payment_method": "efectivo"
   }
  ]
 }

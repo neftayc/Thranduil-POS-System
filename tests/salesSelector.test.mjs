@@ -119,37 +119,39 @@ test('golden-dictados.json: todos los productos esperados existen en el snapshot
   }
 })
 
-test('verificación determinista: una «alta» que contradice lo dicho baja a pregunta con opciones reales', () => {
-  const decide = (phrase, name, messages = [phrase], price = null) => sel.toConsolidated(output([line({ phrase, product_ref: ref(name), quantity: 1, price_said: price })]), catalog, messages).lines[0]
-  // Hard: another model code (060 ≠ 032). Soft: «Trilux» said and the 060 is not a Trilux.
-  for (const name of ['Lapicero Trilux Azul-032', 'Lapicero 060 - Azul, Rojo']) {
-    const l = decide('Un lapicero Trilux 060 azul', name)
-    assert.equal(l.confidence, 'baja', name)
-    assert.ok(l.options.length >= 2 && l.options.includes(byName(name).id))
-  }
-  // Soft: «blancas» said, the pick is «a colores» (a sibling is blanca).
-  assert.equal(decide('Dos cartulinas blancas', 'Cartulina a colores').confidence, 'baja')
-  // Tie: nothing distinguishes the cuadernos # 100 h → question with the tied ones.
-  const tie = decide('vender cuader a4 100 cuadriculado', 'Cuaderno Markin # 100 h')
-  assert.equal(tie.confidence, 'baja')
-  assert.ok(tie.options.includes(byName('cuaderno surco # 100 h').id))
+test('verificación de HECHOS: una «alta» que contradice un número, medida o tipo dicho baja a pregunta con opciones reales', () => {
+  const decide = (phrase, name, messages = [phrase]) => sel.toConsolidated(output([line({ phrase, product_ref: ref(name), quantity: 1 })]), catalog, messages).lines[0]
+  const trilux = decide('Un lapicero Trilux 060 azul', 'Lapicero Trilux Azul-032')
+  assert.equal(trilux.confidence, 'baja', '060 ≠ 032')
+  assert.ok(trilux.options.length >= 2 && trilux.options.includes(byName('Lapicero Trilux Azul-032').id))
+  assert.equal(decide('cuaderno markin cuadriculado 50 hojas', 'Cuaderno Markin # 100 h').confidence, 'baja', '50 ≠ 100 hojas')
+  assert.equal(decide('cuaderno markin triple renglón', 'Cuaderno Markin # 100 h').confidence, 'baja', 'triple renglón ≠ cuadriculado')
 })
 
-test('verificación determinista: no baja lo que está bien (precio dictado, marcas dictadas, código de modelo, aclaración explícita)', () => {
-  const decide = (phrase, name, messages = [phrase], price = null) => sel.toConsolidated(output([line({ phrase, product_ref: ref(name), quantity: 1, price_said: price })]), catalog, messages).lines[0]
-  assert.equal(decide('un lapicero Faber-Castell azul de un sol', 'Lapicero Trilux Azul-032', undefined, 1).confidence, 'alta', 'el único azul FC de S/ 1')
-  assert.equal(decide('un lapicero Faber-Castell azul', 'Lapicero Trilux Azul-032').confidence, 'baja', 'sin precio empata con el 060')
-  assert.equal(decide('2 plumones de cartel 123 de pizarra', 'Plumón de Pizarra Acrílico Jumbo - 123').confidence, 'alta', '«de cartel» = Castell')
-  assert.equal(decide('dos lapiceros así, azul 0.60', 'Lapicero 060 - Azul, Rojo').confidence, 'alta', '0.60 = 060')
-  assert.equal(decide('tres cartulinas a colores', 'Cartulina a colores').confidence, 'alta', 'no agrega nada no dicho; la de pliego A4 sí')
-  assert.equal(decide('5 siliconas en barra', 'Silicona en barrra').confidence, 'alta', 'la común, no la delgada')
-  // «para pisar» = pizarra contradicts the W47, unless a LATER clarification names it.
-  const M1 = 'dos plumones Faber-Castell para pisar'
-  assert.equal(decide(M1, 'Plumón de papel delgado  - W47').confidence, 'baja')
-  assert.equal(decide(M1, 'Plumón de papel delgado  - W47', [M1, 'En cuanto a los plumones, vamos a vender el W47.']).confidence, 'alta')
+test('el lenguaje lo interpreta la IA (decisión del dueño): sin reglas de palabras ni de empates en el código', () => {
+  const decide = (phrase, name, messages = [phrase]) => sel.toConsolidated(output([line({ phrase, product_ref: ref(name), quantity: 1 })]), catalog, messages).lines[0]
+  // Facts are fine → the code does not second-guess the AI's reading.
+  for (const [phrase, name] of [
+    ['2 plumones de cartel 123 de pizarra', 'Plumón de Pizarra Acrílico Jumbo - 123'],
+    ['dos lapiceros así, azul 0.60', 'Lapicero 060 - Azul, Rojo'],
+    ['tres cartulinas a colores', 'Cartulina a colores'],
+    ['5 siliconas en barra', 'Silicona en barrra'],
+    ['20 unidades de papel bond', 'Papel Bond'],
+    // Self-corrections and redundancies (real case c4d9a7e3 and variants).
+    ['20 unidades de papel a color', 'Papel Arcoiris'],
+    ['10 unidades de papel arcoíris a colores', 'Papel Arcoiris'],
+    ['2 plumones Faber-Castell de papel W47, perdón, de pizarra Jumbo 123', 'Plumón de Pizarra Acrílico Jumbo - 123']
+  ]) assert.equal(decide(phrase, name).confidence, 'alta', phrase)
   assert.equal(sel.modelCodes('azul 0.60'), 'azul 060')
   assert.equal(sel.modelCodes('cero treinta y dos'), '032')
   assert.equal(sel.modelCodes('mina 0.5'), 'mina 0.5')
+})
+
+test('autocorrecciones en el prompt y en los ejemplos aprendidos (no en el código)', () => {
+  const system = sel.selectorSystemPrompt(catalog)
+  for (const rule of [/perdón/, /no, mejor/, /digo/, /en vez de/, /«\.\.\.»/, /UNA sola línea/, /Redundancias/, /crayones jumbo de colores/]) assert.match(system, rule)
+  assert.match(system, /dos compases layconsa/)
+  assert.match(system, /no, mejor correctores de 9 ml/)
 })
 
 test('regla del dueño: la cantidad va primero (dígitos o palabras; misma lectura que el registrador, grounding.leadingQuantity)', () => {

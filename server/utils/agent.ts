@@ -16,7 +16,10 @@ import { makeSupabaseSaleExecutor } from '../modules/agent/infra/supabaseSaleExe
 import { makeSupabaseSellerAuth } from '../modules/agent/infra/supabaseSellerAuth'
 import { getSupabaseUserClient } from './supabase'
 import { SaleNotCommittedError } from '../modules/agent/contracts'
-import { memoizeByKey, resolveAgentModes } from '../modules/agent/app/runtimeModes'
+import { memoizeByKey, resolveAgentModes, resolveSelectorMode } from '../modules/agent/app/runtimeModes'
+import { makeConsolidatedRegistrar } from '../modules/agent/app/registrar'
+import { makeLlmSalesSelector } from '../modules/agent/infra/llmSalesSelector'
+import { makeCatalogAnswerer } from '../modules/agent/app/catalogAnswers'
 
 /** Dry-run / autoindex resolved at RUNTIME from every source (see runtimeModes.ts). */
 export const getAgentModes = (event?: H3Event) => resolveAgentModes(useRuntimeConfig(event) as any)
@@ -92,12 +95,19 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   const catalog = getCatalog(key, embeddingModel, autoindex, dryRun)
   // Dry-run keeps its own idempotency records and simulated reservations, apart from the real ones.
   const store = makeFileAgentStore(dryRun ? join(String(config.posAgentStorageDir), 'dry-run') : String(config.posAgentStorageDir))
+  // POS_AGENT_SELECTOR=llm: step 2 = selector agent (Agent 1, salesSelector.ts) → sale-consolidated/1 →
+  // step 3 = simplified registrar. Until the selector is wired here, llm falls back to the current
+  // builder (logged); the registrar is only active with llm. legacy: everything as before.
+  const selectorMode = resolveSelectorMode(config as any)
+  const selectorBuildDraft: null | ((messages: string[], previous: unknown) => Promise<unknown>) = selectorMode === 'llm' ? makeLlmSalesSelector({ apiKey: key, model: String(config.posAgentSelectorModel || ''), store, storeKey: dryRun ? 'dry-run' : 'real', answer: makeCatalogAnswerer(catalog, { reservedStock: async () => reservedFromOperations(await store.listOperations(), Date.now()) }) }) : null // ← Agent 1: sales selector (salesSelector.ts)
+  if (selectorMode === 'llm' && !selectorBuildDraft) console.warn('[agente de ventas] POS_AGENT_SELECTOR=llm sin selector conectado: se usa el camino actual (legacy).')
   const agent = makeSalesAgent({
     store,
+    ...(selectorMode === 'llm' ? { registrar: makeConsolidatedRegistrar(catalog) } : {}),
     // Agent 1 (AI): interpretation + hybrid search (vectors + text + exact attributes) → sale-draft/1.
     // Catalog questions are answered by process 2 as information (completed, kind catalog_answer), never as a sale.
     // The context selector (same model) only orders equally compatible options; it never invents or upgrades.
-    buildDraft: makeHybridDraftBuilder(makeOpenAIOrderInterpreter(key, String(config.posAgentModel)), catalog, {
+    buildDraft: selectorMode === 'llm' && selectorBuildDraft ? selectorBuildDraft : makeHybridDraftBuilder(makeOpenAIOrderInterpreter(key, String(config.posAgentModel)), catalog, {
       answerCatalogQuestions: true, selector: makeOpenAIProductSelector(key, String(config.posAgentModel)),
       // «¿cuántos quedan?» discounts units held by ventas por confirmar (same store as process 2).
       reservedStock: async () => reservedFromOperations(await store.listOperations(), Date.now())

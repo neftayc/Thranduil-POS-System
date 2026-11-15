@@ -159,8 +159,8 @@ const reviewCases = [
   ['unit_unclear', { items: [line({ unit: 'caja' })] }],
   ['price_changed', { items: [line({ price_unit: 4.5 })] }],
   ['insufficient_stock', { items: [line({ quantity: 21 })] }],
-  ['missing_payment', { payment_method: null }],
-  ['invalid_payment', { payment_method: 'trueque' }],
+  ['missing_payment', { source_text: 'vende 2 cuadernos A4, una parte con yape y otra en efectivo' }],
+  ['invalid_payment', { source_text: 'vende 2 cuadernos A4, pago con plin' }],
   ['invalid_customer', { customer_id: randomUUID() }]
 ]
 for (const [code, overrides] of reviewCases) {
@@ -173,12 +173,12 @@ for (const [code, overrides] of reviewCases) {
   })
 }
 
-test('solo falta la forma de pago: por confirmar con el stock reservado (no se asume efectivo)', async () => {
+test('sin forma de pago dicha: efectivo por defecto, venta directa y aviso', async () => {
   const { catalog } = makeCatalog()
-  const result = await makeDraftValidator(catalog)(draftOf({ payment_method: null }))
-  assert.equal(result.kind, 'review')
-  assert.deepEqual(result.reasons.map(r => r.code), ['missing_payment'])
-  assert.deepEqual(result.reservations, [{ product_id: CUADERNO.id, qty: 2 }])
+  const result = await makeDraftValidator(catalog)(draftOf({ payment_method: null, source_text: 'vende 2 cuadernos A4' }))
+  assert.equal(result.kind, 'direct')
+  assert.deepEqual([result.sale.payment_method, result.payment_defaulted], ['efectivo', true])
+  assert.deepEqual(result.notes, ['Pago: efectivo (por defecto).'])
 })
 
 test('precio cambiado: informa ambos precios y registra el oficial en la línea', async () => {
@@ -251,7 +251,7 @@ test('rechaza reutilizar request_id con contenido distinto', async t => {
 })
 
 test('otro vendedor no puede reutilizar el request_id ni continuar la operación', async t => {
-  const { run, counts } = await setup(t, { drafts: [draftOf({ payment_method: null })] })
+  const { run, counts } = await setup(t, { drafts: [draftOf({ items: [line({ confidence: 'medium' })] })] })
   const request = instruction()
   const review = await run(request, ANA)
   assert.equal(review.status, 'pending_review')
@@ -307,7 +307,7 @@ test('precio cambiado de punta a punta: queda por confirmar y no se envía a cre
 
 test('las reservas descuentan stock para otros vendedores: su venta queda por confirmar por stock', async t => {
   const { run, counts } = await setup(t, {
-    drafts: [draftOf({ items: [line({ quantity: 15 })], payment_method: null }), draftOf({ items: [line({ quantity: 6 })] })]
+    drafts: [draftOf({ items: [line({ quantity: 15, confidence: 'medium' })] }), draftOf({ items: [line({ quantity: 6 })] })]
   })
   const first = await run(instruction('vende 15 cuadernos'), ANA)
   assert.equal(first.status, 'pending_review')
@@ -320,7 +320,7 @@ test('las reservas descuentan stock para otros vendedores: su venta queda por co
 
 test('reserva vencida: deja de contar para otros pedidos y el seguimiento se rechaza', async t => {
   const { run, counts, clock, dependencies } = await setup(t, {
-    drafts: [draftOf({ items: [line({ quantity: 20 })], payment_method: null }), draftOf()]
+    drafts: [draftOf({ items: [line({ quantity: 20, confidence: 'medium' })] }), draftOf()]
   })
   const review = await run(instruction('vende 20 cuadernos'))
   assert.equal(review.status, 'pending_review')
@@ -338,7 +338,7 @@ test('reserva vencida: deja de contar para otros pedidos y el seguimiento se rec
 })
 
 test('una aclaración completa la venta por confirmar, la registra y libera la reserva', async t => {
-  const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ payment_method: null }), draftOf()] })
+  const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ items: [line({ confidence: 'medium' })] }), draftOf()] })
   const review = await run(instruction('vende dos cuadernos'))
   const completed = await run(follow(review.operation_id, 'pago efectivo'))
   assert.equal(completed.status, 'completed')
@@ -350,15 +350,15 @@ test('una aclaración completa la venta por confirmar, la registra y libera la r
 
 test('el agente 1 recibe el borrador previo en los seguimientos', async t => {
   const seen = []
-  const queue = [draftOf({ payment_method: null }), draftOf()]
+  const queue = [draftOf({ items: [line({ confidence: 'medium' })] }), draftOf()]
   const { run } = await setup(t, { buildDraft: async (messages, previous) => { seen.push([messages.length, previous ? previous.payment_method : 'none']); return queue.shift() } })
   const review = await run(instruction('vende dos cuadernos'))
   await run(follow(review.operation_id, 'efectivo'))
-  assert.deepEqual(seen, [[1, 'none'], [2, null]])
+  assert.deepEqual(seen, [[1, 'none'], [2, 'efectivo']])
 })
 
 test('cancelar libera la reserva; un seguimiento desconocido se rechaza', async t => {
-  const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ payment_method: null })] })
+  const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ items: [line({ confidence: 'medium' })] })] })
   assert.equal((await run(follow(randomUUID()))).status, 'rejected')
   const review = await run(instruction())
   const cancelled = await run(follow(review.operation_id, 'cancelar'))
@@ -461,7 +461,7 @@ test('alerta de stock bajo tras registrar, calculada después de la venta', asyn
 })
 
 test('la reserva de una venta por confirmar puede dejar el producto agotado y se avisa', async t => {
-  const { run } = await setup(t, { drafts: [draftOf({ items: [line({ quantity: 20 })], payment_method: null })] })
+  const { run } = await setup(t, { drafts: [draftOf({ items: [line({ quantity: 20, confidence: 'medium' })] })] })
   const response = await run(instruction())
   assert.equal(response.status, 'pending_review')
   assert.equal(response.result.alerts[0].level, 'out')
@@ -541,10 +541,11 @@ test('SaleProposal media: por confirmar con sus motivos y alternativas como cand
   assert.equal(counts.execute, 0)
 })
 
-test('SaleProposal con precio distinto al oficial o sin forma de pago queda por confirmar', async t => {
+test('SaleProposal: precio distinto al oficial → por confirmar; sin forma de pago → efectivo por defecto', async t => {
   const { run } = await setup(t, { drafts: [proposal({}, { price_unit: 4 }), proposal({ payment_method: null })] })
   assert.deepEqual(codes(await run(instruction('vende 2 cuadernos A4, efectivo'))), ['price_changed'])
-  assert.deepEqual(codes(await run(instruction('vende 2 cuadernos A4'))), ['missing_payment'])
+  const cash = await run(instruction('vende 2 cuadernos A4')) // no payment said → efectivo by default
+  assert.deepEqual([cash.status, cash.result.payment_method, cash.result.payment_defaulted], ['completed', 'efectivo', true])
 })
 
 test('SaleProposal general no segura con líneas seguras y sin dudas no pasa directo', () => {
@@ -590,13 +591,13 @@ test('dry-run: por confirmar con motivos y reserva simulada; aclaración, cancel
   const calls = { n: 0 }
   const { run, dependencies, clock } = await setup(t, {
     dryRun: true, execute: forbiddenExecute(calls),
-    drafts: [draftOf({ payment_method: null }), draftOf(), draftOf({ payment_method: null })]
+    drafts: [draftOf({ items: [line({ confidence: 'medium' })] }), draftOf(), draftOf({ items: [line({ confidence: 'medium' })] })]
   })
   const review = await run(instruction('vende dos cuadernos'))
   assert.equal(review.status, 'pending_review')
   assert.equal(review.result.dry_run, true)
   assert.equal(review.result.would_be, 'pending_review')
-  assert.deepEqual(codes(review), ['missing_payment'])
+  assert.deepEqual(codes(review), ['low_confidence'])
   assert.match(review.message, /^SIMULACIÓN/)
   assert.deepEqual((await dependencies.store.getOperation(review.operation_id)).reservations, [{ product_id: CUADERNO.id, qty: 2 }])
   const completed = await run(follow(review.operation_id, 'efectivo'))
@@ -658,7 +659,7 @@ test('pregunta de catálogo: completed informativo sin referencia, sin venta ni 
 })
 
 test('pregunta de catálogo dentro de una venta por confirmar no la altera; luego se puede completar', async t => {
-  const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ payment_method: null }), catalogAnswer('Quedan 18.'), draftOf()] })
+  const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ items: [line({ confidence: 'medium' })] }), catalogAnswer('Quedan 18.'), draftOf()] })
   const review = await run(instruction('vende dos cuadernos'))
   const before = await dependencies.store.getOperation(review.operation_id)
   const answer = await run(follow(review.operation_id, '¿cuántos quedan?'))
@@ -768,9 +769,10 @@ test('M1: la forma de pago debe estar en el texto del vendedor (código, etiquet
   assert.equal(paymentMentioned('2 cuadernos, yapeo', yape), true)
   assert.equal(paymentMentioned('cuaderno marca efectivoplus', efectivo), false) // whole words only
   const { catalog } = makeCatalog()
-  const invented = await makeDraftValidator(catalog)(draftOf({ source_text: 'vende 2 cuadernos A4' }))
-  assert.equal(invented.kind, 'review')
-  assert.deepEqual(invented.reasons.map(r => [r.code, r.detail?.ungrounded]), [['missing_payment', true]])
+  // The AI proposes Yape but the seller said no payment: ignored → efectivo by default.
+  const invented = await makeDraftValidator(catalog)(draftOf({ payment_method: 'yape', source_text: 'vende 2 cuadernos A4' }))
+  assert.equal(invented.kind, 'direct')
+  assert.deepEqual([invented.sale.payment_method, invented.payment_defaulted], ['efectivo', true])
 })
 
 test('M1: la cantidad debe estar escrita como cantidad, no tomada de la descripción del producto', async () => {
@@ -799,7 +801,7 @@ test('M1: el orquestador ignora el source_text del agente 1 y usa los mensajes r
   const { run, counts } = await setup(t, { drafts: [draftOf({ source_text: 'vende 2 cuadernos A4, pago efectivo' })] })
   const response = await run(instruction('vende cuadernos'))
   assert.equal(response.status, 'pending_review')
-  assert.deepEqual(codes(response), ['missing_payment', 'missing_quantity'])
+  assert.deepEqual(codes(response), ['missing_quantity']) // payment: efectivo by default
   assert.equal(counts.execute, 0)
 })
 
@@ -878,15 +880,14 @@ test('O2: result.reasons incluye el código de duda de cada línea (ambiguous_pr
     drafts: [draftOf({ items: [line({ confidence: 'medium', doubts: [{ code: 'ambiguous_product', note: 'Opciones: A; B.' }] })] })]
   })
   const response = await run(instruction('vende 2 cuadernos'))
-  // The draft says "efectivo" but the seller did not: missing_payment is flagged as ungrounded.
   assert.deepEqual(response.result.reasons.map(r => [r.code, r.line ?? null, r.doubt ?? null, r.ungrounded ?? false]), [
-    ['missing_payment', null, null, true],
     ['agent_doubt', 1, 'ambiguous_product', false],
     ['low_confidence', 1, null, false]
   ])
-  const invented = await setup(t, { drafts: [draftOf()] })
+  // An invented quantity is still flagged as ungrounded.
+  const invented = await setup(t, { drafts: [draftOf({ items: [line({ quantity: 3 })] })] })
   const grounded = await invented.run(instruction('vende 2 cuadernos'))
-  assert.deepEqual(grounded.result.reasons.map(r => [r.code, r.ungrounded]), [['missing_payment', true]])
+  assert.deepEqual(grounded.result.reasons.map(r => [r.code, r.ungrounded]), [['missing_quantity', true]])
 })
 
 test('O3: los mensajes de duda terminan con un solo punto', async () => {
@@ -1172,7 +1173,6 @@ const probeCases = [
   ['F precios cruzados', pd([pl({ quantity: 1, price_said: 5 }), pl({ product_id: CUA.id, quantity: 1, price_said: 1, query: 'cuaderno a4' })], 'un lapicero azul a 1 sol y un cuaderno a4 a 5 soles, efectivo'), 'price_unverified'],
   ['G cantidad tomada del pago', pd([pl({ quantity: 50 })], 'lapicero azul, pagó con 50, efectivo'), 'missing_quantity'],
   ['H cantidad 1 de otra línea', pd([pl({ quantity: 1 }), pl({ product_id: CUA.id, quantity: 3, query: 'cuaderno a4' })], 'un cuaderno a4 y 3 lapiceros azules, efectivo'), 'missing_quantity'],
-  ['I pago negado', pd([pl({ quantity: 1 })], 'un lapicero azul, no es yape, efectivo', 'yape'), 'missing_payment'],
   ['J precio oficial 0', pd([pl({ quantity: 1 })], 'un lapicero azul, efectivo'), 'price_unavailable', 0]
 ]
 for (const [name, draft, code, lapPrice] of probeCases) {
@@ -1232,7 +1232,7 @@ test('una cantidad no entera en una presentación por unidad va a revisión', as
 // ---------------------------------------------------------------- «no» suelto y lock
 
 test('un «no» suelto ya no anula la venta por confirmar; «cancelar» sí', async t => {
-  const { run, dependencies } = await setup(t, { drafts: [draftOf({ payment_method: null })] })
+  const { run, dependencies } = await setup(t, { drafts: [draftOf({ items: [line({ confidence: 'medium' })] })] })
   const review = await run(instruction('vende dos cuadernos A4'))
   const answer = await run(follow(review.operation_id, 'no'))
   assert.equal(answer.status, 'pending_review')
@@ -1294,4 +1294,63 @@ test('lock huérfano: se recupera si su proceso murió y no hay create_sale sin 
   // A lock held by a live process is never taken over.
   await writeFile(join(dir, 'processing.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() }))
   assert.equal((await run(instruction('vende dos cuadernos A4, efectivo ya'))).status, 'pending')
+})
+
+// ---------------------------------------------------------------- forma de pago: efectivo por defecto
+
+const payWith = async (text, aiPayment = null) => makeDraftValidator(makeCatalog().catalog)(draftOf({ payment_method: aiPayment, source_text: text }))
+
+test('pago: sin pago dicho → efectivo directo (payment_defaulted); la respuesta lo indica', async t => {
+  const result = await payWith('vende 2 cuadernos A4')
+  assert.deepEqual([result.kind, result.sale.payment_method, result.payment_defaulted], ['direct', 'efectivo', true])
+  const { run, sent } = await setup(t, { drafts: [draftOf({ payment_method: null })] })
+  const response = await run(instruction('vende 2 cuadernos A4'))
+  assert.equal(response.status, 'completed')
+  assert.equal(sent[0].payment_method, 'efectivo')
+  assert.equal(response.result.payment_defaulted, true)
+  assert.match(response.message, /Pago: efectivo \(por defecto\)\./)
+})
+
+test('pago: el que dice el vendedor (yape) se registra; «efectivo» dicho no es «por defecto»', async () => {
+  const yape = await payWith('vende 2 cuadernos A4, pago por yape', 'yape')
+  assert.deepEqual([yape.kind, yape.sale.payment_method, yape.payment_defaulted], ['direct', 'yape', false])
+  const dropped = await payWith('vende 2 cuadernos A4, yapeo') // the AI dropped it: the text decides
+  assert.equal(dropped.sale.payment_method, 'yape')
+  const cash = await payWith('vende 2 cuadernos A4, efectivo', 'efectivo')
+  assert.deepEqual([cash.sale.payment_method, cash.payment_defaulted], ['efectivo', false])
+})
+
+test('pago: «por transferencia» → transferencia', async () => {
+  const methods = [{ code: 'efectivo', label: 'Efectivo' }, { code: 'transferencia', label: 'Transferencia bancaria' }]
+  const catalog = { ...makeCatalog().catalog, paymentMethods: async () => methods }
+  const result = await makeDraftValidator(catalog)(draftOf({ payment_method: 'transferencia', source_text: 'vende 2 cuadernos A4, pago por transferencia' }))
+  assert.deepEqual([result.kind, result.sale.payment_method, result.payment_defaulted], ['direct', 'transferencia', false])
+})
+
+test('pago: «yape no, efectivo» → efectivo; «no es yape, efectivo» con la IA en yape → efectivo, nunca yape', async () => {
+  for (const [text, ai] of [['vende 2 cuadernos A4, yape no, efectivo', 'yape'], ['vende 2 cuadernos A4, no es yape, efectivo', 'yape']]) {
+    const result = await payWith(text, ai)
+    assert.deepEqual([result.kind, result.sale.payment_method], ['direct', 'efectivo'], text)
+  }
+  // Only negated: nothing said → efectivo by default.
+  const negated = await payWith('vende 2 cuadernos A4, no es yape', 'yape')
+  assert.deepEqual([negated.sale.payment_method, negated.payment_defaulted], ['efectivo', true])
+})
+
+test('pago: la IA propone yape que el vendedor no dijo → efectivo (nunca registra yape)', async t => {
+  const { run, sent } = await setup(t, { drafts: [draftOf({ payment_method: 'yape' })] })
+  const response = await run(instruction('vende 2 cuadernos A4'))
+  assert.equal(response.status, 'completed')
+  assert.equal(sent[0].payment_method, 'efectivo')
+  assert.equal(response.result.payment_defaulted, true)
+})
+
+test('pago: uno dicho que no está disponible, o varios distintos → por confirmar', async () => {
+  const plin = await payWith('vende 2 cuadernos A4, pago con plin', 'plin')
+  assert.deepEqual([plin.kind, plin.reasons.map(r => r.code)], ['review', ['invalid_payment']])
+  const both = await payWith('vende 2 cuadernos A4, mitad yape y mitad efectivo', 'yape')
+  assert.deepEqual([both.kind, both.reasons.map(r => r.code)], ['review', ['missing_payment']])
+  // agent 1's «falta la forma de pago» doubt is not a reason to review anymore.
+  const doubt = await makeDraftValidator(makeCatalog().catalog)(draftOf({ payment_method: null, doubts: [{ code: 'missing_payment' }], source_text: 'vende 2 cuadernos A4' }))
+  assert.equal(doubt.kind, 'direct')
 })

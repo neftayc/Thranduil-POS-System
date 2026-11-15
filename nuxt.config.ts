@@ -25,6 +25,9 @@ export default defineNuxtConfig({
     posAgentPublicUrl: process.env.POS_AGENT_PUBLIC_URL || '',
     posAgentReviewTtlHours: Number(process.env.POS_AGENT_REVIEW_TTL_HOURS || 48),
     posAgentModel: process.env.POS_AGENT_MODEL || 'gpt-4o-mini',
+    // Step 2 switch: legacy (current chain) by default; 'llm' = sales selector with the whole catalog in context.
+    posAgentSelector: process.env.POS_AGENT_SELECTOR || 'legacy',
+    posAgentSelectorModel: process.env.POS_AGENT_SELECTOR_MODEL || 'gpt-5.4-mini',
     posAgentEmbeddingModel: process.env.POS_AGENT_EMBEDDING_MODEL || 'text-embedding-3-small',
     // Validation-only mode for tests with real reads: never calls create_sale. Off by default.
     posAgentDryRun: ['1', 'true'].includes(String(process.env.POS_AGENT_DRY_RUN || '').trim().toLowerCase()),

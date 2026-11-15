@@ -1,0 +1,369 @@
+{
+ "version": 1,
+ "status": "PROPUESTA del supervisor (set-prueba-dictados-F0.md, 15 nov 2026). El dueño valida; los casos con owner_check=true son los que más necesitan su confirmación.",
+ "format": {
+  "product": "nombre EXACTO del catálogo (tests/fixtures/selector-catalog.json); brand opcional si hay homónimos",
+  "ask": "true = debe preguntar; options = productos aceptables en la pregunta (basta que la pregunta incluya uno)",
+  "also_ok": "alternativa también correcta mientras el dueño no valide (p. ej. decidir el producto en vez de preguntar)",
+  "follows": "el caso es una aclaración: se envía el dictado del caso anterior más este mensaje, con el consolidado previo"
+ },
+ "rules": [
+  "Sin número delante → 1 (la cantidad va siempre ANTES del producto).",
+  "Sin pago → efectivo.",
+  "Ningún producto equivocado con confianza alta."
+ ],
+ "cases": [
+  {
+   "id": "D1",
+   "messages": [
+    "vender cuader a4 100 cuadriculado"
+   ],
+   "lines": [
+    {
+     "ask": true,
+     "options": [
+      "Cuaderno Markin # 100 h",
+      "cuaderno layconsa estudiante # 100 h",
+      "cuaderno layconsa puppy # 100 h",
+      "cuaderno layconsa teens # 100 h",
+      "cuaderno surco # 100 h"
+     ],
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D2",
+   "messages": [
+    "Vender cuaderno markin cuadriculado 100 a4"
+   ],
+   "lines": [
+    {
+     "product": "Cuaderno Markin # 100 h",
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D3",
+   "messages": [
+    "Tres cinta masking Sure Table. Vender."
+   ],
+   "lines": [
+    {
+     "ask": true,
+     "options": [
+      "Cinta Masking Shurtape 1/2*15",
+      "Cinta Masking Shurtape 3/4*15",
+      "Cinta Masking Shurtape 1*15",
+      "Cinta Masking Shurtape 1 1/2*15",
+      "Cinta Masking Shurtape 2*15"
+     ],
+     "quantity": 3
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D4",
+   "owner_check": true,
+   "messages": [
+    "Un lápiz de $1. Vender."
+   ],
+   "lines": [
+    {
+     "ask": true,
+     "options": [
+      "Lapiz 2B",
+      "Lapiz 2B Titan",
+      "Lapiz Bicolor",
+      "Lapiz Chequeo Rojo",
+      "Lápiz Punzón",
+      "lapiz con diseño"
+     ],
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D5",
+   "messages": [
+    "5 siliconas en barra."
+   ],
+   "lines": [
+    {
+     "product": "Silicona en barrra",
+     "quantity": 5
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D6",
+   "owner_check": true,
+   "messages": [
+    "Cuadernos de 100 hojas, marca margen cuadriculado."
+   ],
+   "lines": [
+    {
+     "product": "Cuaderno Markin # 100 h",
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D6b",
+   "follows": "D6",
+   "messages": [
+    "Dos cuadernos cuadriculados marca marking de 100 hojas."
+   ],
+   "lines": [
+    {
+     "product": "Cuaderno Markin # 100 h",
+     "quantity": 2
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D7",
+   "owner_check": true,
+   "messages": [
+    "Dos cuadernos más hojas cuadriculado A4. A4."
+   ],
+   "lines": [
+    {
+     "ask": true,
+     "options": [
+      "Cuaderno Markin # 100 h",
+      "cuaderno layconsa estudiante # 100 h",
+      "cuaderno layconsa puppy # 100 h",
+      "cuaderno layconsa teens # 100 h",
+      "cuaderno surco # 100 h"
+     ],
+     "quantity": 2
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D7b",
+   "follows": "D7",
+   "messages": [
+    "Los cuadernos cuadriculados A4 de 100 hojas, marking."
+   ],
+   "lines": [
+    {
+     "product": "Cuaderno Markin # 100 h",
+     "quantity": 2
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D8",
+   "messages": [
+    "Dos cartulinas blancas, un lapicero Faber-Castell azul de un sol, un cartón cartulina, tres cartulinas a colores, dos plumones Faber-Castell para pisar."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 2
+    },
+    {
+     "product": "Lapicero Trilux Azul-032",
+     "quantity": 1
+    },
+    {
+     "product": "carton cartulina",
+     "quantity": 1
+    },
+    {
+     "product": "Cartulina a colores",
+     "quantity": 3
+    },
+    {
+     "ask": true,
+     "options": [
+      "Plumón de Pizarra Acrílico Jumbo - 123",
+      "Plumón de papel delgado  - W47"
+     ],
+     "quantity": 2,
+     "owner_check": true,
+     "also_ok": {
+      "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+      "quantity": 2
+     }
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D8b",
+   "follows": "D8",
+   "messages": [
+    "La cartulina es la cartulina a color. En ningún momento dijimos A4. En cuanto a los plumones, vamos a vender el W47."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 2
+    },
+    {
+     "product": "Lapicero Trilux Azul-032",
+     "quantity": 1
+    },
+    {
+     "product": "carton cartulina",
+     "quantity": 1
+    },
+    {
+     "product": "Cartulina a colores",
+     "quantity": 3
+    },
+    {
+     "product": "Plumón de papel delgado  - W47",
+     "quantity": 2
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D9",
+   "messages": [
+    "Un lapicero Trilux 060 azul, 5 cartulinas blancas, 2 cartulinas, 5 cartulinas negras, 2 plumones de cartel 123 de pizarra y una goma en barra, la icona."
+   ],
+   "lines": [
+    {
+     "ask": true,
+     "options": [
+      "Lapicero Trilux Azul-032",
+      "Lapicero 060 - Azul, Rojo"
+     ],
+     "quantity": 1
+    },
+    {
+     "product": "Cartulina blanca",
+     "quantity": 5
+    },
+    {
+     "ask": true,
+     "options": [
+      "Cartulina blanca",
+      "Cartulina a colores",
+      "Cartulina Negra",
+      "Cartulina Fosforescente",
+      "carton cartulina",
+      "cartulinas de pliego a color A4"
+     ],
+     "quantity": 2
+    },
+    {
+     "product": "Cartulina Negra",
+     "quantity": 5
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "ask": true,
+     "options": [
+      "Goma en barra 8 gr",
+      "Goma en barra 21Gr"
+     ],
+     "quantity": 1
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D10",
+   "owner_check": true,
+   "note": "Con la regla del dueño (cantidad antes del producto), «cartulinas a colores, em, dos cartulinas» son dos ítems.",
+   "messages": [
+    "Tengo cartulinas a colores, em, dos cartulinas, dos plumones Faber-Castell 123 Jumbo, silicona en barra delgada, dos lapiceros así, azul 0.60. ¿Y qué más? A ver un momento. Goma en barra, la iconza de 250. Diez cartulinas negras y 5 cartulinas fosforescentes."
+   ],
+   "lines": [
+    {
+     "product": "Cartulina a colores",
+     "quantity": 1
+    },
+    {
+     "ask": true,
+     "options": [
+      "Cartulina blanca",
+      "Cartulina a colores",
+      "Cartulina Negra",
+      "Cartulina Fosforescente",
+      "carton cartulina",
+      "cartulinas de pliego a color A4"
+     ],
+     "quantity": 2
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 2
+    },
+    {
+     "product": "Silicona delgada en barra",
+     "quantity": 1
+    },
+    {
+     "product": "Lapicero 060 - Azul, Rojo",
+     "quantity": 2
+    },
+    {
+     "ask": true,
+     "options": [
+      "Goma liquida 250g"
+     ],
+     "quantity": 1
+    },
+    {
+     "product": "Cartulina Negra",
+     "quantity": 10
+    },
+    {
+     "product": "Cartulina Fosforescente",
+     "quantity": 5
+    }
+   ],
+   "payment_method": "efectivo"
+  },
+  {
+   "id": "D11",
+   "note": "Ejemplo del dueño.",
+   "messages": [
+    "Cartulina blanco. 5 papeles a4 arcohiries, 10 plumons FC 123 Jumbo"
+   ],
+   "lines": [
+    {
+     "product": "Cartulina blanca",
+     "quantity": 1
+    },
+    {
+     "ask": true,
+     "options": [
+      "Papel Arcoiris",
+      "Papel Arcoiris  Color Pastel"
+     ],
+     "quantity": 5,
+     "also_ok": {
+      "product": "Papel Arcoiris",
+      "quantity": 5
+     }
+    },
+    {
+     "product": "Plumón de Pizarra Acrílico Jumbo - 123",
+     "quantity": 10
+    }
+   ],
+   "payment_method": "efectivo"
+  }
+ ]
+}

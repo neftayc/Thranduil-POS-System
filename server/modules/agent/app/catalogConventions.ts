@@ -33,6 +33,25 @@ export const SYNONYMS: Record<string, string[]> = {
 }
 
 /**
+ * Brand dictation errors (speech-to-text): brand → how it gets transcribed. Easy to extend.
+ * «plumones de cartel 123» = Faber-Castell; «goma en barra, la iconza» = Layconsa.
+ * Used by the sales selector's deterministic check (salesSelector.ts).
+ */
+export const BRAND_DICTATION: Record<string, string[]> = {
+  castell: ['de cartel', 'cartel', 'castel', 'castil', 'kastel'],
+  layconsa: ['laiconza', 'laiconsa', 'leiconza', 'iconza', 'iconsa', 'icona'],
+  markin: ['marking', 'margen']
+}
+/** Rewrites dictated brand forms to the catalog's brand word («de cartel» → castell). */
+export const fixBrandDictation = (text: string) => {
+  let out = text
+  for (const [brand, forms] of Object.entries(BRAND_DICTATION)) {
+    for (const form of forms) out = out.replace(new RegExp(`\\b${form.replace(/\s+/g, '\\s+')}\\b`, 'gi'), brand)
+  }
+  return out
+}
+
+/**
  * Ruling of notebooks and paper:
  *   «#» = cuadriculado (normalizeText rewrites # as cuadriculado)
  *   «triple renglón / reglón» = tres rayas (parsed as 'triple')

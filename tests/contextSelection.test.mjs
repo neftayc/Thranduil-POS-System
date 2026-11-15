@@ -235,7 +235,7 @@ test('ensayo real: «Cuadernos de 100 hojas, marca margen cuadriculado.» → Cu
   const text = 'Cuadernos de 100 hojas, marca margen cuadriculado.'
   const draft = await makeHybridDraftBuilder(interpreterReturning(lostBrand(null)).interpret, catalogFrom(snapshot))([text], null)
   assert.equal(draft.items[0].product_id, byName('Cuaderno Markin # 100 h').id)
-  assert.deepEqual(draft.items[0].doubts.map(d => d.code), ['missing_quantity'], 'solo falta la cantidad')
+  assert.deepEqual(draft.items[0].doubts.map(d => d.code), [], 'sin cantidad dicha se vende 1 (Proceso 2): no queda duda')
 })
 
 test('ensayo real: «Dos cuadernos cuadriculados marca marking de 100 hojas.» → 2 × Cuaderno Markin # 100 h', async () => {

@@ -18,6 +18,8 @@ import { getSupabaseUserClient } from './supabase'
 import { SaleNotCommittedError } from '../modules/agent/contracts'
 import { memoizeByKey, resolveAgentModes, resolveSelectorMode } from '../modules/agent/app/runtimeModes'
 import { makeConsolidatedRegistrar } from '../modules/agent/app/registrar'
+import { makeLlmSalesSelector } from '../modules/agent/infra/llmSalesSelector'
+import { makeCatalogAnswerer } from '../modules/agent/app/catalogAnswers'
 
 /** Dry-run / autoindex resolved at RUNTIME from every source (see runtimeModes.ts). */
 export const getAgentModes = (event?: H3Event) => resolveAgentModes(useRuntimeConfig(event) as any)
@@ -97,7 +99,7 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
   // step 3 = simplified registrar. Until the selector is wired here, llm falls back to the current
   // builder (logged); the registrar is only active with llm. legacy: everything as before.
   const selectorMode = resolveSelectorMode(config as any)
-  const selectorBuildDraft = null as null | ((messages: string[], previous: unknown) => Promise<unknown>) // ← Agent 1 wires makeSalesSelector here
+  const selectorBuildDraft: null | ((messages: string[], previous: unknown) => Promise<unknown>) = selectorMode === 'llm' ? makeLlmSalesSelector({ apiKey: key, model: String(config.posAgentSelectorModel || ''), store, storeKey: dryRun ? 'dry-run' : 'real', answer: makeCatalogAnswerer(catalog, { reservedStock: async () => reservedFromOperations(await store.listOperations(), Date.now()) }) }) : null // ← Agent 1: sales selector (salesSelector.ts)
   if (selectorMode === 'llm' && !selectorBuildDraft) console.warn('[agente de ventas] POS_AGENT_SELECTOR=llm sin selector conectado: se usa el camino actual (legacy).')
   const agent = makeSalesAgent({
     store,

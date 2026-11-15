@@ -19,6 +19,8 @@ const { makeHybridDraftBuilder } = await jiti.import('../server/modules/agent/ap
 const { makeOpenAIOrderInterpreter } = await jiti.import('../server/modules/agent/infra/openaiOrderInterpreter.ts')
 const { makeOpenAIProductSelector } = await jiti.import('../server/modules/agent/infra/openaiProductSelector.ts')
 const search = await jiti.import('../server/modules/agent/app/productSearch.ts')
+const { makeConsolidatedRegistrar } = await jiti.import('../server/modules/agent/app/registrar.ts')
+const { makeDraftValidator } = await jiti.import('../server/modules/agent/app/validateDraft.ts')
 
 const arg = (name, fallback = null) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : fallback }
 const verbose = process.argv.includes('-v')
@@ -44,6 +46,28 @@ const cases = golden.cases.filter(c => !only || only.has(c.id) || golden.cases.s
 
 // Names → ids (a name may match several products: any of them is accepted unless a brand is given).
 const idsOf = (name, brand) => catalog.products.filter(p => p.name === name && (!brand || p.brand === brand)).map(p => p.id)
+// Step 3 on the same snapshot: official price = the presentation price; stock = snapshot stock.
+const validationCatalog = {
+  getProduct: async id => { const p = catalog.products.find(x => x.id === id); return p ? { id: p.id, name: p.name, sku: '', brand: p.brand, unit: p.unit, stock: p.stock } : null },
+  paymentMethods: async () => catalog.payment_methods,
+  customerExists: async () => false,
+  quote: async (p, qty, unit) => {
+    const row = catalog.products.find(x => x.id === p.id)
+    const pres = row.presentations.find(x => x.unit === (unit || row.unit))
+    if (!pres || pres.price === null) throw new Error('sin precio')
+    return { unit_name: pres.unit, price: pres.price, factor: pres.factor, currency: 'PEN' }
+  }
+}
+const registrar = makeConsolidatedRegistrar(validationCatalog)
+const validator = makeDraftValidator(validationCatalog)
+const stepThree = async (state, messages) => {
+  if (!state) return null
+  try {
+    if (state.contract === 'sale-consolidated/1') return await registrar(state, messages.join('\n'), new Map(), { role: 'cashier' })
+    if (state.version === 'sale-draft/1') return await validator(state, new Map(), { role: 'cashier' })
+  } catch (error) { return { kind: 'error', reasons: [{ code: String(error?.message || error) }] } }
+  return null
+}
 const nameOf = id => catalog.products.find(p => p.id === id)?.name ?? (id ? `?${id.slice(0, 8)}` : '—')
 
 // ------------------------------------------------------------------ systems
@@ -152,12 +176,16 @@ for (const [label, run] of systems) {
     let result
     try { result = await run(messages, previous) } catch (error) { result = { state: null, lines: [], usage: { latency_ms: null, cost: null }, error: String(error?.message || error) } }
     states.set(c.id, result.state)
+    const decision = await stepThree(result.state, messages)
     const { pairs, extra } = pair(c.lines, result.lines)
     const verdicts = c.lines.map((e, i) => judge(e, pairs[i] === null ? null : result.lines[pairs[i]]))
     const extraHigh = extra.filter(j => !asks(result.lines[j])).length
-    rows.push({ id: c.id, verdicts, extra: extra.length, extraHigh, usage: result.usage, error: result.error, lines: result.lines })
+    const perfect = verdicts.every(v => v === 'correcto') && !extra.length
+    const expectedDirect = !c.lines.some(l => l.ask && !l.also_ok)
+    rows.push({ id: c.id, verdicts, extra: extra.length, extraHigh, usage: result.usage, error: result.error, lines: result.lines,
+      step3: decision?.kind ?? null, step3_reasons: (decision?.reasons || []).map(r => r.code), perfect, expectedDirect })
     const mark = verdicts.every(v => v === 'correcto') && !extra.length ? '✔' : verdicts.some(v => v === 'equivocado_alta' || v === 'cantidad_errada') || extraHigh ? '✘' : '~'
-    console.log(`${label.padEnd(22)} ${mark} ${c.id.padEnd(4)} ${verdicts.join(', ')}${extra.length ? ` +${extra.length} extra` : ''}${result.error ? ` ERROR ${result.error}` : ''}${result.usage.latency_ms ? ` (${(result.usage.latency_ms / 1000).toFixed(1)} s)` : ''}`)
+    console.log(`${label.padEnd(22)} ${mark} ${c.id.padEnd(4)} ${verdicts.join(', ')}${extra.length ? ` +${extra.length} extra` : ''}${result.error ? ` ERROR ${result.error}` : ''}${result.usage.latency_ms ? ` (${(result.usage.latency_ms / 1000).toFixed(1)} s)` : ''} → paso 3: ${decision?.kind ?? '—'}${decision?.reasons?.length ? ` [${[...new Set(decision.reasons.map(r => r.code))].join(', ')}]` : ''}`)
     if (verbose) for (const l of result.lines) console.log(`      ${l.confidence.padEnd(4)} ${String(l.quantity).padStart(3)} × ${nameOf(l.product_id)}  «${l.phrase}»${asks(l) ? `  ❓ ${(l.options || []).map(nameOf).join(' / ')}` : ''}`)
   }
   const all = rows.flatMap(r => r.verdicts)
@@ -185,10 +213,18 @@ for (const [label, run] of systems) {
     tokens_cache_medio: tok('cached_tokens').length ? Math.round(tok('cached_tokens').reduce((a, b) => a + b, 0) / tok('cached_tokens').length) : null,
     tokens_salida_medio: tok('output_tokens').length ? Math.round(tok('output_tokens').reduce((a, b) => a + b, 0) / tok('output_tokens').length) : null,
     ventas: sales.length,
+    directas: rows.filter(r => r.step3 === 'direct').length,
+    directas_correctas: rows.filter(r => r.step3 === 'direct' && r.perfect).length,
+    directas_equivocadas: rows.filter(r => r.step3 === 'direct' && !r.perfect).length,
+    directas_esperadas: rows.filter(r => r.expectedDirect).length,
+    frases_no_literales: rows.reduce((n, r) => n + r.step3_reasons.filter(x => x === 'phrase_not_in_order').length, 0),
     rows
   })
 }
 
+console.log('\n| Sistema | Ventas directas en el paso 3 (esperadas) | Directas correctas | Directas EQUIVOCADAS | Frases no literales |')
+console.log('|---|---|---|---|---|')
+for (const r of report) console.log(`| ${r.sistema} | ${r.directas} (${r.directas_esperadas}) | ${r.directas_correctas} | ${r.directas_equivocadas} | ${r.frases_no_literales} |`)
 console.log('\n| Sistema | Líneas correctas | Ventas perfectas | Equivocados con alta | Cantidad errada | Preguntas (esperadas) | Preguntas de más | Faltan / extra | Latencia mediana (máx) | Costo medio por llamada | Tokens entrada (caché) / salida |')
 console.log('|---|---|---|---|---|---|---|---|---|---|---|')
 for (const r of report) {

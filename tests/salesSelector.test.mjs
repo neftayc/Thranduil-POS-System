@@ -15,7 +15,7 @@ const byName = name => catalog.products.find(p => p.name === name) || assert.fai
 const { toRef } = sel.referencesFor(catalog.products)
 const ref = name => toRef.get(byName(name).id)
 const line = (over = {}) => ({ phrase: 'x', product_ref: null, quantity: null, unit: null, price_said: null, confidence: 'alta', reason: 'r', question: null, options: [], ...over })
-const output = (lines, over = {}) => ({ lines, payment_method: 'efectivo', payment_phrase: null, questions: [], ...over })
+const output = (lines, over = {}) => ({ intent: 'venta', lines, payment_method: 'efectivo', payment_phrase: null, questions: [], ...over })
 
 test('catálogo compacto: agrupado por tipo, con referencia corta, presentaciones con precio y stock; sin uuids ni costos', () => {
   const text = sel.catalogText(catalog)
@@ -152,7 +152,7 @@ test('verificación determinista: no baja lo que está bien (precio dictado, mar
   assert.equal(sel.modelCodes('mina 0.5'), 'mina 0.5')
 })
 
-test('regla del dueño: la cantidad va primero (dígitos o palabras); un número después del nombre es descripción', () => {
+test('regla del dueño: la cantidad va primero (dígitos o palabras; misma lectura que el registrador, grounding.leadingQuantity)', () => {
   const q = sel.leadingQuantity
   assert.equal(q('Cartulina blanco'), null, 'sin número delante (el modelo pone 1)')
   assert.equal(q('5 papeles a4 arcohiries'), 5)
@@ -160,11 +160,10 @@ test('regla del dueño: la cantidad va primero (dígitos o palabras); un número
   assert.equal(q('cinco cartulinas negras'), 5)
   assert.equal(q('una goma en barra, la icona'), 1)
   assert.equal(q('Diez cartulinas negras'), 10)
-  assert.equal(q('veinte y cinco hojas bond'), 25)
-  assert.equal(q('y 3 lapiceros'), 3)
   assert.equal(q('cuaderno 100 hojas'), null)
   assert.equal(q('plumones FC 123 Jumbo'), null)
-  assert.equal(q('media docena de lápices'), null, 'la docena la decide el modelo (presentación)')
+  assert.equal(q('media docena de lápices'), 6, 'sin presentación: 6 unidades')
+  assert.equal(q('media docena de lápices', 'docena'), 0.5, 'en docenas: media docena')
   // The opening number wins over a quantity the model read from a model code.
   const c = sel.toConsolidated(output([
     line({ phrase: '10 plumons FC 123 Jumbo', product_ref: ref('Plumón de Pizarra Acrílico Jumbo - 123'), quantity: 123 }),
@@ -181,4 +180,73 @@ test('ejemplo literal del dueño en el set (D11) y en el prompt la regla complet
   assert.deepEqual(d11.lines[1].options, ['Papel Arcoiris', 'Papel Arcoiris  Color Pastel'])
   const system = sel.selectorSystemPrompt(catalog)
   for (const rule of [/la cantidad va SIEMPRE PRIMERO/, /en dígitos o en palabras/, /media docena/, /Sin número delante es 1/, /comas, puntos o «y»/, /pertenece al artículo que viene DESPUÉS/]) assert.match(system, rule)
+})
+
+// ------------------------------------------------------------ wiring with process 2 (buildDraft + registrar)
+
+const { makeConsolidatedRegistrar } = await jiti.import('../server/modules/agent/app/registrar.ts')
+const { saleConsolidatedSchema } = await jiti.import('../server/modules/agent/contracts.ts')
+// Validation catalog from the snapshot (official price = the presentation price).
+const validationCatalog = {
+  getProduct: async id => { const p = catalog.products.find(x => x.id === id); return p ? { id: p.id, name: p.name, sku: '', brand: p.brand, unit: p.unit, stock: p.stock } : null },
+  paymentMethods: async () => catalog.payment_methods,
+  customerExists: async () => false,
+  quote: async (p, qty, unit) => {
+    const row = catalog.products.find(x => x.id === p.id)
+    const pres = row.presentations.find(x => x.unit === (unit || row.unit))
+    if (!pres || pres.price === null) throw new Error('sin precio')
+    return { unit_name: pres.unit, price: pres.price, factor: pres.factor, currency: 'PEN' }
+  }
+}
+const mockModel = out => async () => ({ output: out, usage: { input_tokens: 1, cached_tokens: 0, output_tokens: 1, latency_ms: 1, model: 'mock' } })
+
+test('buildDraft del selector: consolidado con el esquema de contracts.ts; el registrador lo deja como venta DIRECTA (D11 del dueño)', async () => {
+  const text = 'Cartulina blanco. 5 papeles a4 arcohiries, 10 plumons FC 123 Jumbo'
+  const build = sel.makeSelectorBuildDraft({ catalog: async () => catalog, model: mockModel(output([
+    line({ phrase: 'Cartulina blanco', product_ref: ref('Cartulina blanca'), quantity: 1 }),
+    line({ phrase: '5 papeles a4 arcohiries', product_ref: ref('Papel Arcoiris'), quantity: 5 }),
+    line({ phrase: '10 plumons FC 123 Jumbo', product_ref: ref('Plumón de Pizarra Acrílico Jumbo - 123'), quantity: 123 })
+  ])) })
+  const consolidated = await build([text], null)
+  assert.equal(saleConsolidatedSchema.safeParse(consolidated).success, true)
+  assert.deepEqual(consolidated.lines.map(l => l.quantity), [1, 5, 10], 'el 123 es el modelo, la cantidad es la que va primero')
+  const decision = await makeConsolidatedRegistrar(validationCatalog)(consolidated, text, new Map())
+  assert.equal(decision.kind, 'direct', JSON.stringify(decision.reasons || ''))
+  assert.equal(decision.sale.payment_method, 'efectivo')
+  assert.equal(decision.sale.total, 0.5 + 5 * 0.1 + 10 * 5)
+})
+
+test('buildDraft del selector: una pregunta de catálogo nunca es venta; «cancelar» y lo ajeno no llevan líneas', async () => {
+  const answered = []
+  const answer = async query => { answered.push(query); return { message: 'Sí, tenemos…', result: { answers: [] } } }
+  const ask = sel.makeSelectorBuildDraft({ catalog: async () => catalog, answer, model: mockModel(output([line({ phrase: 'colores faber', product_ref: ref('Caja de Colores Grande x12'), confidence: 'baja' })], { intent: 'pregunta' })) })
+  const reply = await ask(['¿tienen colores faber?'], null)
+  assert.equal(reply.kind, 'catalog_answer')
+  assert.equal(answered[0].items[0].query, 'colores faber')
+  const cancel = await sel.makeSelectorBuildDraft({ catalog: async () => catalog, model: mockModel(output([], { intent: 'cancelar' })) })(['cancela todo'], null)
+  assert.deepEqual([cancel.version, cancel.intent, cancel.items.length], ['sale-draft/1', 'cancel', 0])
+  const other = await sel.makeSelectorBuildDraft({ catalog: async () => catalog, model: mockModel(output([], { intent: 'otro' })) })(['¿cuánto vendimos hoy?'], null)
+  assert.equal(other.intent, 'unsupported')
+})
+
+test('buildDraft del selector: en una aclaración recibe el consolidado previo (y descarta un borrador legacy)', async () => {
+  const seen = []
+  const model = async (_s, user) => { seen.push(JSON.parse(user)); return mockModel(output([line({ phrase: 'dos cuadernos marking cuadriculados', product_ref: ref('Cuaderno Markin # 100 h'), quantity: 2 })]))() }
+  const build = sel.makeSelectorBuildDraft({ catalog: async () => catalog, model })
+  const first = await build(['dos cuadernos marking cuadriculados'], null)
+  await build(['dos cuadernos marking cuadriculados', 'con yape'], first)
+  await build(['x'], { version: 'sale-draft/1', intent: 'sale', items: [] })
+  assert.equal(seen[0].consolidado_previo, null)
+  assert.equal(seen[1].consolidado_previo.lines[0].product_id, ref('Cuaderno Markin # 100 h'))
+  assert.equal(seen[2].consolidado_previo, null)
+})
+
+test('aclaración con otra cantidad: la frase pasa a ser el fragmento que dice esa cantidad (lo exige el registrador)', async () => {
+  const D6 = 'Cuadernos de 100 hojas, marca margen cuadriculado.', D6b = 'Dos cuadernos cuadriculados marca marking de 100 hojas.'
+  const build = sel.makeSelectorBuildDraft({ catalog: async () => catalog, model: mockModel(output([line({ phrase: D6, product_ref: ref('Cuaderno Markin # 100 h'), quantity: 2 })])) })
+  const consolidated = await build([D6, D6b], null)
+  assert.equal(consolidated.lines[0].quantity, 2)
+  assert.equal(consolidated.lines[0].phrase, 'Dos cuadernos cuadriculados marca marking de 100 hojas')
+  const decision = await makeConsolidatedRegistrar(validationCatalog)(consolidated, [D6, D6b].join('\n'), new Map())
+  assert.equal(decision.kind, 'direct', JSON.stringify(decision.reasons || ''))
 })

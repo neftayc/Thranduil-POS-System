@@ -7,8 +7,13 @@ Un solo agente de razonamiento recibe el dictado literal y entrega el **consolid
 | Variable | Valor | Efecto |
 |---|---|---|
 | `POS_AGENT_SELECTOR` | `legacy` (por defecto) | El sistema actual, sin cambios |
-| `POS_AGENT_SELECTOR` | `llm` | El selector nuevo (lo conecta el registrador del paso 3) |
-| `POS_AGENT_SELECTOR_MODEL` | `gpt-5.4-mini` (por defecto) | Modelo del selector, elegido con el benchmark |
+| `POS_AGENT_SELECTOR` | `llm` | El selector nuevo y el registrador simplificado del paso 3 |
+| `POS_AGENT_SELECTOR_MODEL` | `gpt-5.4` (por defecto) | Modelo del selector; ganó el benchmark con 0 equivocados |
+
+**Conexión:** en `server/utils/agent.ts`, `selectorBuildDraft = makeLlmSalesSelector(...)` (`infra/llmSalesSelector.ts`). Devuelve `buildDraft(messages, previous)` con tres salidas posibles:
+- el consolidado (esquema `saleConsolidatedSchema` de `contracts.ts`);
+- una respuesta de catálogo, cuando el mensaje es una pregunta (nunca se vende);
+- un sale-draft/1 sin líneas, para cancelar o para lo que no es una venta.
 
 ## Entrada (en este orden, para la caché de prompts)
 
@@ -28,7 +33,9 @@ El catálogo se lee **solo leyendo** (`infra/supabaseSelectorCatalog.ts`) y se g
 
 ## Reglas del negocio (en el prompt)
 
-- La cantidad va antes del producto. Sin número, o con «un/una», es 1. Un número después del nombre es descripción (060, 123, «de 250», «100 hojas»).
+- La cantidad va siempre primero, en dígitos o en palabras. Sin número delante es 1. Un número después del nombre es descripción (060, 123, «de 250», «100 hojas»). Los artículos se separan por comas, puntos o «y».
+- La cantidad la fija el código, no el modelo: el número con que abre la frase, leído con la misma función que el registrador (`grounding.leadingQuantity`).
+- Si la frase no dice su cantidad (una aclaración con otra cantidad), se usa el único fragmento del dictado que la dice.
 - Sin pago → efectivo.
 - Errores de dictado: margen o marking → Markin; iconza o icona → Layconsa; de cartel → Castell; para pisar → pizarra; 0.60 o «cero sesenta» → 060.
 - El precio dictado sirve de pista.
@@ -57,6 +64,14 @@ Los archivos del benchmark:
 - `node scripts/selector-catalog-snapshot.mjs`: snapshot de solo lectura del catálogo real en `tests/fixtures/selector-catalog.json`.
 - `node scripts/selector-benchmark.mjs [--models a,b] [--no-legacy] [--cases D8,D8b] [-v]`: corre el set y guarda el detalle en `.data/selector-benchmark/`.
 - `tests/fixtures/golden-dictados.json`: el set, con las propuestas del supervisor. El dueño lo valida.
+
+**De punta a punta con el paso 3**, 15 nov 2026. El consolidado pasa por el registrador del Proceso 2 y el legacy por el validador actual:
+
+| Sistema | Ventas directas (esperadas: 8) | Directas correctas | Directas equivocadas |
+|---|---|---|---|
+| legacy (gpt-4o-mini) | 2 | 2 | 0 (1 en otra corrida) |
+| gpt-5.4 | **8** | **8** | **0** |
+| gpt-5.4-mini | 5 | 5 | 0 (1 en otra corrida) |
 
 Resultado del 15 nov 2026 (14 casos, 36 líneas; prompt sin frases del set):
 

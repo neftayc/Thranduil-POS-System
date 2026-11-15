@@ -3,7 +3,7 @@ import {
   AgentBusyError, AgentConflictError, AgentForbiddenError, SaleNotCommittedError, SaleRejectedByPosError,
   catalogAnswerSchema,
   type AgentResponse, type AgentSeller, type DraftItem, type Instruction, type Operation,
-  type DecisionNotes, type Reservation, type ReviewReason, type SaleDraftV1, type SalesAgentDependencies, type StockAlert
+  type DecisionNotes, type PriceReview, type Reservation, type ReviewReason, type SaleDraftV1, type SalesAgentDependencies, type StockAlert
 } from '../contracts'
 import { parseAgentDraft } from './proposalAdapter'
 
@@ -32,6 +32,18 @@ const notesText = (extra: DecisionNotes) => [
     : ` Alerta: precio bajo para ${a.name} (S/ ${a.price_unit.toFixed(2)}).`)
 ].join('')
 const NO_NOTES: DecisionNotes = { notes: [], price_alerts: [] }
+
+/** Lines sold at a dictated price ≠ list price: queued for the price review (the sale stays registered). */
+const priceReviewFor = (items: DraftItem[], extra: DecisionNotes, reference: string | null, sellerId: string, at: number): PriceReview | undefined => {
+  const changed = items.filter(item => item.list_price !== undefined)
+  if (!changed.length) return undefined
+  const below = new Set(extra.price_alerts.map(a => a.product_id))
+  return {
+    status: 'pending', sale_reference: reference, seller_id: sellerId, created_at: new Date(at).toISOString(),
+    items: changed.map(item => ({ product_id: item.product_id, name: item.name, qty: item.qty, unit_name: item.unit_name, list_price: item.list_price!, price_unit: item.price_unit, below_cost: below.has(item.product_id) }))
+  }
+}
+const reviewText = (review?: PriceReview) => review ? ' Quedó anotada en la revisión de precios para validarla contra el precio del sistema.' : ''
 
 const holdAll = (items: DraftItem[]): Reservation[] => {
   const totals = new Map<string, number>()
@@ -220,11 +232,12 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       if (deps.dryRun) {
         // Validation only: create_sale is never called. Alerts are computed as if the sale had happened.
         op.state = 'simulated'
+        op.price_review = priceReviewFor(op.draft.items, decision, null, seller.id, now())
         const alerts = await alertsFor(op.draft.items.map(i => i.product_id), holdAll(op.draft.items), op.id)
         return finish({
           status: 'rejected', operation_id: id,
-          message: `Con datos reales se habría registrado directamente por S/ ${op.draft.total.toFixed(2)}.${notesText(decision)}${alertText(alerts)}`,
-          result: { would_be: 'completed', reference: null, total: op.draft.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts }
+          message: `Con datos reales se habría registrado directamente por S/ ${op.draft.total.toFixed(2)}.${notesText(decision)}${reviewText(op.price_review)}${alertText(alerts)}`,
+          result: { would_be: 'completed', reference: null, total: op.draft.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts, price_review: op.price_review ? 'pending' : null }
         })
       }
       try {
@@ -234,11 +247,12 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
           await deps.store.saveOperation(op!)
         })
         op.state = 'completed'
+        op.price_review = priceReviewFor(op.draft.items, decision, result.saleId, seller.id, now())
         const alerts = await alertsFor(op.draft.items.map(i => i.product_id))
         return await finish({
           status: 'completed', operation_id: id,
-          message: `Venta registrada correctamente (referencia ${result.saleId}).${notesText(decision)}${alertText(alerts)}`,
-          result: { reference: result.saleId, total: result.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts }
+          message: `Venta registrada correctamente (referencia ${result.saleId}).${notesText(decision)}${reviewText(op.price_review)}${alertText(alerts)}`,
+          result: { reference: result.saleId, total: result.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts, price_review: op.price_review ? 'pending' : null }
         })
       } catch (error) {
         // A storage error after receiving the receipt must not report a failed sale.

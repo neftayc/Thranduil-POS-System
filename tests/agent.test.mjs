@@ -950,65 +950,6 @@ test('cantidad: «cuaderno 100 hojas a4» es 1 (el 100 es descripción), aunque 
   assert.deepEqual(priced.reasons.map(r => r.code), ['missing_quantity'])
 })
 
-test('precio dictado: owner o manager → venta directa con ese precio, motivo para create_sale y aviso', async t => {
-  for (const seller of [OWNER, MANAGER]) {
-    const { run, sent } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4 })] })] })
-    const response = await run(instruction('vende 2 cuadernos A4 a 4 soles, efectivo'), seller)
-    assert.equal(response.status, 'completed', seller.role)
-    assert.deepEqual(
-      [sent[0].items[0].price_unit, sent[0].items[0].list_price, sent[0].items[0].manual_reason, sent[0].total],
-      [4, 5, 'Precio dictado por vendedor (lista S/ 5.00)', 8]
-    )
-    assert.match(response.message, /Precio modificado de .*: lista S\/ 5\.00 → vendido S\/ 4\.00/)
-  }
-})
-
-test('precio dictado como total («2 por 9 soles») se toma como 4.50 cada uno', async t => {
-  const { run, sent } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4.5 })] })] })
-  assert.equal((await run(instruction('vende 2 cuadernos A4 por 9 soles, efectivo'), OWNER)).status, 'completed')
-  assert.equal(sent[0].items[0].price_unit, 4.5)
-})
-
-test('precio dictado por un cajero (o un rol sin especificar) → venta directa a ese precio, con lista y motivo', async t => {
-  for (const seller of [CAJERO, ANA]) {
-    const { run, sent } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4 })] })] })
-    const response = await run(instruction('vende 2 cuadernos A4 a 4 soles, efectivo'), seller)
-    assert.equal(response.status, 'completed', String(seller.role))
-    assert.deepEqual([sent[0].items[0].price_unit, sent[0].items[0].list_price, sent[0].items[0].manual_reason], [4, 5, 'Precio dictado por vendedor (lista S/ 5.00)'])
-    assert.match(response.message, /Precio modificado de .*: lista S\/ 5\.00 → vendido S\/ 4\.00/)
-    assert.doesNotMatch(JSON.stringify(response), /price_override_not_allowed/)
-  }
-})
-
-test('precio bajo costo vendido por un cajero: alerta «precio bajo» SIN mostrar el costo', async t => {
-  const { run, state } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 3 })] })] })
-  withCost(state, 3.5)
-  const response = await run(instruction('vende 2 cuadernos A4 a 3 soles, efectivo'), CAJERO)
-  assert.equal(response.status, 'completed')
-  assert.deepEqual(response.result.price_alerts, [{ product_id: CUADERNO.id, name: CUADERNO.name, price_unit: 3, level: 'below_cost' }])
-  assert.match(response.message, /Alerta: precio bajo para .* \(S\/ 3\.00\)/)
-  assert.doesNotMatch(JSON.stringify(response), /3\.5|costo/)
-})
-
-test('precio dictado bajo el costo: no bloquea; se registra y se alerta «precio bajo costo»', async t => {
-  const { run, sent, state } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 3 })] })] })
-  withCost(state, 3.5)
-  const response = await run(instruction('vende 2 cuadernos A4 a 3 soles, efectivo'), OWNER)
-  assert.equal(response.status, 'completed')
-  assert.equal(sent[0].items[0].price_unit, 3)
-  assert.deepEqual(response.result.price_alerts, [{ product_id: CUADERNO.id, name: CUADERNO.name, price_unit: 3, unit_cost: 3.5, level: 'below_cost' }])
-  assert.match(response.message, /Alerta de precio: .* se vende a S\/ 3\.00, bajo su costo S\/ 3\.50/)
-  // Cost per presentation = avg cost × factor (docena = 12 × 3.5 = 42).
-  const { catalog, state: s2 } = makeCatalog()
-  withCost(s2, 3.5)
-  const dozen = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: 1, unit: 'docena', price_unit: 60, price_said: 40 })], source_text: 'una docena de cuadernos a 40 soles, efectivo' }), new Map(), { role: 'owner' })
-  assert.equal(dozen.price_alerts[0].unit_cost, 42)
-  // Without a known cost there is no alert (and no block).
-  const unknown = await makeDraftValidator(makeCatalog().catalog)(draftOf({ items: [line({ price_said: 1 })], source_text: 'vende 2 cuadernos a 1 sol, efectivo' }), new Map(), { role: 'owner' })
-  assert.equal(unknown.kind, 'direct')
-  assert.deepEqual(unknown.price_alerts, [])
-})
-
 test('precio no dictado: se usa el oficial; price_changed sigue igual; un precio inventado por el modelo no cuenta', async t => {
   const official = await setup(t, { drafts: [draftOf({ items: [line({ price_unit: null, price_said: null })] })] })
   assert.equal((await official.run(instruction('vende 2 cuadernos A4, efectivo'), OWNER)).status, 'completed')
@@ -1037,18 +978,6 @@ test('el ejecutor envía manual_discount_reason a create_sale solo cuando el pre
     { product_id: CUADERNO.id, qty: 2, unit_name: 'unidad', price_unit: 5 }
   ])
 })
-
-test('dry-run con precio dictado y cantidad por defecto: would_be completed con las notas, sin create_sale', async t => {
-  const calls = { n: 0 }
-  const { run } = await setup(t, { dryRun: true, execute: forbiddenExecute(calls), drafts: [draftOf({ items: [line({ quantity: null, price_said: 4 })] })] })
-  const response = await run(instruction('vende cuaderno A4 a 4 soles, efectivo'), OWNER)
-  assert.equal(response.result.would_be, 'completed')
-  assert.equal(response.result.total, 4)
-  assert.equal(response.result.notes.length, 2)
-  assert.equal(calls.n, 0)
-})
-
-// ---------------------------------------------------------------- cantidades en palabras (ensayo real)
 
 test('palabras: «dos cuadernos markin», «tres cintas masking», «una goma en barra», «media docena de lapiceros» = 6, «cuaderno 100 hojas» = 1', async () => {
   const cases = [
@@ -1102,6 +1031,105 @@ test('palabras: «uno» o un número dentro del nombre del producto no cuenta co
   assert.equal(units.sale.items[0].qty, 12)
 })
 
+
+// ---------------------------------------------------------------- precio dictado: opción A (por confirmar, el revisor aprueba)
+
+const { listPendingPriceReviews } = await jiti.import('../server/modules/agent/app/priceReview.ts')
+
+test('precio dictado distinto al de lista → por confirmar (price_modified) para owner, manager, cajero y rol sin especificar', async t => {
+  for (const seller of [OWNER, MANAGER, CAJERO, ANA]) {
+    const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4 })] })] })
+    const response = await run(instruction('vende 2 cuadernos A4 a 4 soles, efectivo'), seller)
+    assert.equal(response.status, 'pending_review', String(seller.role))
+    assert.deepEqual(codes(response), ['price_modified'])
+    assert.match(response.message, /precio dictado S\/ 4\.00 distinto al de lista S\/ 5\.00: queda por confirmar; el revisor la aprueba/)
+    assert.equal(counts.execute, 0) // never registered
+    const op = await dependencies.store.getOperation(response.operation_id)
+    assert.equal(op.state, 'review')
+    // The reservation is created, and the dictated and list prices are kept per line for the reviewer.
+    assert.deepEqual(op.reservations, [{ product_id: CUADERNO.id, qty: 2 }])
+    assert.deepEqual([response.result.items[0].price_unit, response.result.items[0].list_price, response.result.items[0].manual_reason], [4, 5, 'Precio dictado por vendedor (lista S/ 5.00)'])
+    assert.equal(response.result.price_review, 'pending')
+  }
+})
+
+test('precio dictado igual al de lista → venta directa (sin revisión); sin precio dictado → igual que antes', async t => {
+  const same = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 5 })] })] })
+  const response = await same.run(instruction('vende 2 cuadernos A4 a 5 soles, efectivo'), CAJERO)
+  assert.equal(response.status, 'completed')
+  assert.equal(same.sent[0].items[0].price_unit, 5)
+  assert.equal(same.sent[0].items[0].manual_reason, undefined)
+  assert.equal(response.result.price_review, undefined)
+  const none = await setup(t)
+  assert.equal((await none.run(instruction('vende 2 cuadernos A4, efectivo'), OWNER)).status, 'completed')
+  assert.deepEqual(await listPendingPriceReviews(none.dependencies.store), [])
+})
+
+test('precio dictado como total («2 por 9 soles») = 4.50 c/u, por confirmar', async t => {
+  const { run } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4.5 })] })] })
+  const response = await run(instruction('vende 2 cuadernos A4 por 9 soles, efectivo'), OWNER)
+  assert.deepEqual(codes(response), ['price_modified'])
+  assert.equal(response.result.items[0].price_unit, 4.5)
+})
+
+test('precio dictado bajo el costo: por confirmar + alerta; el costo solo lo ve owner/manager', async t => {
+  const owner = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 3 })] })] })
+  withCost(owner.state, 3.5)
+  const forOwner = await owner.run(instruction('vende 2 cuadernos A4 a 3 soles, efectivo'), OWNER)
+  assert.deepEqual(codes(forOwner), ['price_modified'])
+  assert.deepEqual(forOwner.result.price_alerts, [{ product_id: CUADERNO.id, name: CUADERNO.name, price_unit: 3, unit_cost: 3.5, level: 'below_cost' }])
+  assert.match(forOwner.message, /bajo su costo S\/ 3\.50/)
+  const cashier = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 3 })] })] })
+  withCost(cashier.state, 3.5)
+  const forCashier = await cashier.run(instruction('vende 2 cuadernos A4 a 3 soles, efectivo'), CAJERO)
+  assert.deepEqual(codes(forCashier), ['price_modified'])
+  assert.deepEqual(forCashier.result.price_alerts, [{ product_id: CUADERNO.id, name: CUADERNO.name, price_unit: 3, level: 'below_cost' }])
+  assert.match(forCashier.message, /Alerta: precio bajo para .* \(S\/ 3\.00\)/)
+  assert.doesNotMatch(JSON.stringify(forCashier), /3\.5|costo/)
+  // Cost of the presentation = avg cost × factor (docena: 12 × 3.5 = 42), owner view.
+  const { catalog, state } = makeCatalog()
+  withCost(state, 3.5)
+  const dozen = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: 1, unit: 'docena', price_unit: 60, price_said: 40 })], source_text: 'una docena de cuadernos a 40 soles, efectivo' }), new Map(), { role: 'owner' })
+  assert.equal(dozen.price_alerts[0].unit_cost, 42)
+})
+
+test('revisión de precios: lista las ventas POR CONFIRMAR con precio modificado (no registradas) y deja de listarlas al vencer', async t => {
+  const { run, dependencies, clock, counts } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4 })] })] })
+  const response = await run(instruction('vende 2 cuadernos A4 a 4 soles, efectivo'), CAJERO)
+  const reviews = await listPendingPriceReviews(dependencies.store, clock.now)
+  assert.equal(reviews.length, 1)
+  assert.deepEqual({ ...reviews[0], created_at: 'x', expires_at: 'y' }, {
+    status: 'pending', sale_reference: null, seller_id: CAJERO.id, created_at: 'x', expires_at: 'y', operation_id: response.operation_id,
+    items: [{ product_id: CUADERNO.id, name: CUADERNO.name, qty: 2, unit_name: 'unidad', list_price: 5, price_unit: 4, below_cost: false }]
+  })
+  assert.equal(counts.execute, 0)
+  // 48 h later the reservation is released and it leaves the list; the operation file is kept (audit).
+  clock.now += 48 * 3600e3 + 1
+  assert.deepEqual(await listPendingPriceReviews(dependencies.store, clock.now), [])
+  const op = await dependencies.store.getOperation(response.operation_id)
+  assert.deepEqual([op.price_review.items[0].price_unit, op.proposal.items[0].price_said], [4, 4])
+})
+
+test('si el vendedor retira el precio dictado en una aclaración, la venta se registra a precio de lista y sale de la revisión', async t => {
+  const { run, dependencies, sent } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4 })] }), draftOf()] })
+  const review = await run(instruction('vende 2 cuadernos A4 a 4 soles, efectivo'), CAJERO)
+  const done = await run(follow(review.operation_id, 'mejor a precio de lista, 2 cuadernos, efectivo'), CAJERO)
+  assert.equal(done.status, 'completed')
+  assert.equal(sent[0].items[0].price_unit, 5)
+  assert.equal((await dependencies.store.getOperation(review.operation_id)).price_review, undefined)
+  assert.deepEqual(await listPendingPriceReviews(dependencies.store), [])
+})
+
+test('dry-run con precio dictado distinto y cantidad por defecto: would_be pending_review, sin create_sale', async t => {
+  const calls = { n: 0 }
+  const { run } = await setup(t, { dryRun: true, execute: forbiddenExecute(calls), drafts: [draftOf({ items: [line({ quantity: null, price_said: 4 })] })] })
+  const response = await run(instruction('vende cuaderno A4 a 4 soles, efectivo'), OWNER)
+  assert.equal(response.result.would_be, 'pending_review')
+  assert.deepEqual(codes(response), ['price_modified'])
+  assert.equal(response.result.items[0].qty, 1)
+  assert.equal(calls.n, 0)
+})
+
 test('el dictado «$1» se lee como un sol: es precio, no cantidad', async () => {
   const { moneyMentions } = await jiti.import('../server/modules/agent/app/grounding.ts')
   assert.deepEqual(moneyMentions('Un lápiz de $1. Vender.'), [1])
@@ -1109,42 +1137,6 @@ test('el dictado «$1» se lee como un sol: es precio, no cantidad', async () =>
   assert.equal(quantityResolver('dos cuadernos a $4.50', null, 'cuaderno', [], { singleLine: true }).quantity, 2)
   const { catalog } = makeCatalog()
   const result = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: null, price_said: 4 })], source_text: 'dos cuadernos a $4, efectivo' }), new Map(), { role: 'owner' })
-  assert.equal(result.kind, 'direct')
-  assert.deepEqual([result.sale.items[0].qty, result.sale.items[0].price_unit], [2, 4])
-})
-
-// ---------------------------------------------------------------- revisión de precios (decisión del dueño)
-
-const { listPendingPriceReviews } = await jiti.import('../server/modules/agent/app/priceReview.ts')
-
-test('una venta registrada con precio distinto al de lista queda anotada en la revisión de precios', async t => {
-  const { run, dependencies, state, sent } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 3 })] })] })
-  withCost(state, 3.5)
-  const response = await run(instruction('vende 2 cuadernos A4 a 3 soles, efectivo'), CAJERO)
-  assert.equal(response.status, 'completed') // registered: the review never blocks the sale
-  assert.equal(sent.length, 1)
-  assert.equal(response.result.price_review, 'pending')
-  assert.match(response.message, /Quedó anotada en la revisión de precios/)
-  const reviews = await listPendingPriceReviews(dependencies.store)
-  assert.equal(reviews.length, 1)
-  assert.deepEqual({ ...reviews[0], created_at: 'x' }, {
-    status: 'pending', sale_reference: 'sale-1', seller_id: CAJERO.id, created_at: 'x', operation_id: response.operation_id, simulated: false,
-    items: [{ product_id: CUADERNO.id, name: CUADERNO.name, qty: 2, unit_name: 'unidad', list_price: 5, price_unit: 3, below_cost: true }]
-  })
-})
-
-test('sin precio dictado (o igual al de lista) no hay revisión de precios; en dry-run se marca como simulada', async t => {
-  const plain = await setup(t)
-  const response = await plain.run(instruction('vende 2 cuadernos A4, efectivo'))
-  assert.equal(response.result.price_review, null)
-  assert.doesNotMatch(response.message, /revisión de precios/)
-  const same = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 5 })] })] })
-  await same.run(instruction('vende 2 cuadernos A4 a 5 soles, efectivo'))
-  assert.deepEqual(await listPendingPriceReviews(plain.dependencies.store), [])
-  assert.deepEqual(await listPendingPriceReviews(same.dependencies.store), [])
-  const calls = { n: 0 }
-  const dry = await setup(t, { dryRun: true, execute: forbiddenExecute(calls), drafts: [draftOf({ items: [line({ price_said: 4 })] })] })
-  await dry.run(instruction('vende 2 cuadernos A4 a 4 soles, efectivo'), CAJERO)
-  const reviews = await listPendingPriceReviews(dry.dependencies.store)
-  assert.deepEqual([reviews.length, reviews[0].simulated, reviews[0].sale_reference, calls.n], [1, true, null, 0])
+  assert.deepEqual(result.reasons.map(r => r.code), ['price_modified']) // grounded: "$4" counts as a dictated price
+  assert.deepEqual([result.items[0].qty, result.items[0].price_unit], [2, 4])
 })

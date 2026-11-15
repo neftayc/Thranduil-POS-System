@@ -43,8 +43,8 @@ const doubtText: Record<string, string> = {
  *   DIRECT  ⇔ at least one line, and for EVERY line: product_id given, active, confidence "high",
  *             no doubts, valid quantity, official price resolved and equal to the draft price
  *             (when the draft had one) unless the SELLER dictated a price (then: grounded in the text and
- *             sold DIRECTLY at that price for any seller role, with a reason; the list price is kept
- *             for later validation). The quantity
+ *             it equals the list price; a different one sends the sale to REVIEW with price_modified,
+ *             for every role — a reviewer approves it at that price). The quantity
  *             is the one the seller wrote, or 1 when none was said (resolveQuantity). A payment method that the SELLER wrote
  *             (draft.source_text, see grounding.ts), enough available stock (stock_on_hand − reservations of
  *             other pending sales); plus a valid payment method, a valid customer (or none) and
@@ -153,10 +153,15 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
       if (!priceGrounded(draft.source_text, dictated, quantity)) {
         reasons.push({ code: 'price_unverified', line: n, message: `${label}: el precio ${money(dictated)} no aparece en el pedido del vendedor (lista ${money(official)}).`, detail: { price_said: dictated, list_price: official, ungrounded: true } })
       } else {
-        // Business rule (owner, 2026-11-15): any seller registers the price they dictate; it is
-        // validated later against the list price (kept as list_price / auto_price_unit).
+        // Business rule (owner, 2026-11-15, option A): a dictated price different from the list price
+        // is NEVER registered directly, for any role. The sale stays "por confirmar" (stock reserved)
+        // and a reviewer (owner/manager) approves it at that price. Both prices are kept per line.
         sold = dictated
-        notes.push(`Precio modificado de ${product.name}: lista ${money(official)} → vendido ${money(dictated)}.`)
+        reasons.push({
+          code: 'price_modified', line: n,
+          message: `${label}: precio dictado ${money(dictated)} distinto al de lista ${money(official)}: queda por confirmar; el revisor la aprueba.`,
+          detail: { price_said: dictated, list_price: official }
+        })
       }
     } else if (line.price_said === null && line.price_unit !== null && Math.abs(line.price_unit - official) > PRICE_TOLERANCE) {
       // Not dictated: the price agent 1 saw differs from the official one.

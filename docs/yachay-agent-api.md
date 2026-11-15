@@ -271,28 +271,24 @@ Se registra **directo** a nombre del vendedor identificado solo si:
 - **precio**: el oficial de `resolve_sale_item_pricing` (con el cliente, si lo hay), que
   debe coincidir con `price_unit` del borrador (tolerancia S/ 0.005); si no, `price_changed`.
   Si el borrador no trae precio, se usa el oficial;
-- **precio dictado** (`price_said` distinto del de lista): es la venta que hace el vendedor,
-  pero solo cuenta si el vendedor lo **escribió** como monto («a 4 soles», «s/ 4.50», «$4»
-  —el dictado escribe «un sol» como «$1»—,
-  «4 soles», o el total: «2 por 9 soles» → 4.50 c/u). Si no aparece: `price_unverified`.
-  **Cualquier vendedor** (decisión del dueño, 2026-11-15) lo registra **directo** a ese precio,
-  para validarlo luego contra el precio del sistema: se envía a `create_sale` `price_unit` =
-  dictado y `manual_discount_reason` = «Precio dictado por vendedor (lista S/ X)» (la base
-  guarda `auto_price_unit`, el precio vendido y el motivo), y la respuesta avisa «Precio
-  modificado de …: lista S/ X → vendido S/ Y». **Requiere la migración
-  `20261115_create_sale_manual_price_any_role`**: sin ella `create_sale` rechaza el precio
-  manual de un rol que no sea owner/manager y la venta queda por confirmar (`pos_rejected`).
+- **precio dictado** (`price_said`): solo cuenta si el vendedor lo **escribió** como monto
+  («a 4 soles», «s/ 4.50», «4 soles», «$4» —el dictado escribe «un sol» como «$1»—, o el total:
+  «2 por 9 soles» → 4.50 c/u). Si no aparece: `price_unverified`. Igual al de lista: no cambia
+  nada. **Distinto al de lista** (decisión del dueño, 2026-11-15, opción A): para **todos los
+  roles**, owner incluido, la venta **no se registra**: queda **por confirmar** (`price_modified`,
+  «Precio dictado S/ Y distinto al de lista S/ X: queda por confirmar; el revisor la aprueba»),
+  con su stock reservado como cualquier venta por confirmar. Un revisor (owner/manager, que ya
+  tiene precio manual en `create_sale`) la aprueba luego a ese precio: **no hace falta migración**.
+  La operación guarda por línea el precio dictado (`items[].price_unit`), el de lista
+  (`items[].list_price`) y el motivo (`manual_reason`, «Precio dictado por vendedor (lista S/ X)»),
+  y en `operation.price_review` (`status: "pending"`, vendedor, líneas con lista, dictado y si
+  queda bajo costo). `result.price_review: "pending"`. `listPendingPriceReviews(store)`
+  (`app/priceReview.ts`) lista las vigentes para la futura pantalla de revisión (etapa 2).
   `price_override_not_allowed` ya no se usa.
-  La venta **queda registrada** y, además, **anotada en la revisión de precios** (decisión del
-  dueño): `operation.price_review` con `status: "pending"`, la referencia de la venta, el vendedor y,
-  por línea, precio de lista, precio vendido y si quedó bajo costo. La respuesta trae
-  `result.price_review: "pending"` y el aviso «Quedó anotada en la revisión de precios…».
-  `listPendingPriceReviews(store)` (`app/priceReview.ts`) las lista para la validación del mediodía y
-  del cierre (etapa 2). En la base se pueden cruzar con `sale_items.price_unit ≠ auto_price_unit`.
-  Si el precio dictado queda **bajo el costo** (`avg_cost` de `product_catalog` × factor
-  de la presentación) no se bloquea: `result.price_alerts` con `level: "below_cost"`. El
-  costo solo se muestra a owner/manager («Alerta de precio: … bajo su costo S/ Z»); a otro rol,
-  sin `unit_cost`: «Alerta: precio bajo para …». Sin costo conocido no hay alerta;
+  Si el precio dictado queda **bajo el costo** (`avg_cost` de `product_catalog` × factor de la
+  presentación), además hay una alerta (`result.price_alerts`, `level: "below_cost"`). El costo
+  solo se muestra a owner/manager («Alerta de precio: … bajo su costo S/ Z»); a otro rol, sin
+  `unit_cost`: «Alerta: precio bajo para …». Sin costo conocido no hay alerta;
 - el stock alcanza: `disponible = stock_on_hand − reservas de otras ventas por
   confirmar vigentes`, sumando las líneas repetidas en unidad base;
 - la cantidad y la forma de pago **las escribió el vendedor**: el proceso 2 las
@@ -323,7 +319,8 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 | `invalid_payment` | La forma de pago no existe en el POS. |
 | `invalid_customer` | El cliente indicado no existe. |
 | `pos_rejected` | `create_sale` respondió con error: no se registró nada. |
-| `price_override_not_allowed` | **Sin uso desde 2026-11-15** (cualquier vendedor registra el precio dictado). Se conserva para registros antiguos. |
+| `price_modified` | Precio dictado (escrito por el vendedor) distinto al de lista: por confirmar para todos los roles; un revisor la aprueba a ese precio. |
+| `price_override_not_allowed` | **Sin uso desde 2026-11-15**. Se conserva para registros antiguos. |
 | `price_unverified` | El borrador trae un precio dictado que no aparece en el texto del vendedor (posible invención del modelo). |
 
 ### Reservas de ventas por confirmar
@@ -340,37 +337,18 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 ### Respuestas
 
 - `completed`: `result.reference` (id de la venta), `total`, `currency`, `items`
-  (precio vendido; `list_price` y `manual_reason` si se dictó otro precio;
-  `quantity_defaulted` si se tomó 1), `alerts`, `notes` (cantidad por defecto, precio
-  modificado) y `price_alerts` (precio bajo costo).
+  (precio de lista; `quantity_defaulted` si se tomó 1), `alerts`, `notes` (cantidad por defecto) y
+  `price_alerts`.
 - `pending_review`: `result.reference` (id de la operación), `reasons`
   (`[{ code, line?, message, doubt?, ungrounded? }]`: `doubt` es el código de duda del
   agente 1, p. ej. `ambiguous_product`; `ungrounded` indica que el vendedor no escribió
   la cantidad, la forma de pago o el precio), `pending` (texto), `items`, `reservations`,
-  `review_expires_at`, `alerts`, `notes`, `price_alerts`.
+  `review_expires_at`, `alerts`, `notes`, `price_alerts`, `price_review` (`"pending"` si hay
+  precio dictado distinto al de lista; `items[].list_price` y `items[].price_unit` = dictado).
 
 Alertas: tras `completed` o `pending_review`, para cada producto afectado
 `disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`
 (de `product_catalog`). Un fallo al calcularlas nunca altera la venta.
-
-## Migración pendiente: precio manual para cualquier rol
-
-`create_sale` hoy exige rol owner/manager para cualquier precio distinto del automático. El cambio
-mínimo (decisión del dueño, 2026-11-15): el **precio manual** se permite a cualquier rol que pueda
-registrar ventas; los **descuentos** (`manual_discount_pct`, `manual_discount_amount`) siguen solo
-para owner/manager; el **motivo** sigue siendo obligatorio (el agente lo llena: «Precio dictado por
-vendedor (lista S/ X)»; en la pantalla del POS solo owner/manager cambian precios y ya escriben motivo).
-
-La migración se genera a partir de la definición **real** de la base, nunca de `schema.sql`:
-
-1. Solo lectura, en el SQL Editor de Supabase:
-   `select pg_get_functiondef('public.create_sale(uuid,text,jsonb)'::regprocedure);` → guardar en un `.sql`.
-2. `node scripts/create-sale-manual-price-migration.mjs <definicion-real.sql>` escribe
-   `supabase/migrations/20261115_create_sale_manual_price_any_role.sql` y
-   `supabase/rollbacks/20261115_create_sale_manual_price_any_role_down.sql` (exactamente la definición
-   real). Falla si el bloque de permisos no aparece exactamente una vez o si cambiaría algo más.
-3. Aplicarla es decisión del dueño. Sin ella, el precio dictado por un cajero queda por confirmar
-   (`pos_rejected`).
 
 ## Modo de solo validación (`POS_AGENT_DRY_RUN=1`)
 

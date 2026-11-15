@@ -40,13 +40,14 @@ const cases = [
   ['cantidad en palabras y la IA la pierde', 'dos cuadernos markin cuadriculados 100 a4, efectivo', order(null, null), 'cashier', 'completed', r => r.result.items[0].qty === 2],
   ['cantidad dentro de la descripción', 'dos cuadernos markin cuadriculados 100 a4, efectivo', order(null, null, 'efectivo', 'dos ' + MARKIN), 'cashier', 'completed', r => r.result.items[0].qty === 2],
   ['100 hojas (la IA propone 100)', 'vende cuaderno markin cuadriculado 100 hojas a4, efectivo', order(100, null), 'cashier', 'completed', r => r.result.items[0].qty === 1],
-  ['precio dictado, owner', 'vende 2 cuadernos markin cuadriculados 100 a4 a 4 soles, yape', order(2, 4, 'yape'), 'owner', 'completed', r => r.result.items[0].price_unit === 4 && r.result.items[0].list_price === 4.5],
-  ['precio dictado, cajero', 'vende 2 cuadernos markin cuadriculados 100 a4 a 4 soles, yape', order(2, 4, 'yape'), 'cashier', 'completed', r => r.result.items[0].price_unit === 4],
-  ['bajo costo, manager (ve el costo)', 'vende 2 cuadernos markin cuadriculados 100 a4 a 3 soles, efectivo', order(2, 3), 'manager', 'completed', r => r.result.price_alerts[0]?.unit_cost === 3.2],
-  ['bajo costo, cajero (no ve el costo)', 'vende 2 cuadernos markin cuadriculados 100 a4 a 3 soles, efectivo', order(2, 3), 'cashier', 'completed', r => r.result.price_alerts[0] && r.result.price_alerts[0].unit_cost === undefined && !/3\.20/.test(r.message)],
+  ['precio dictado distinto, owner → por confirmar', 'vende 2 cuadernos markin cuadriculados 100 a4 a 4 soles, yape', order(2, 4, 'yape'), 'owner', 'pending_review', r => r.result.reasons.some(x => x.code === 'price_modified') && r.result.items[0].price_unit === 4 && r.result.items[0].list_price === 4.5 && r.result.reservations.length === 1],
+  ['precio dictado distinto, cajero → por confirmar', 'vende 2 cuadernos markin cuadriculados 100 a4 a 4 soles, yape', order(2, 4, 'yape'), 'cashier', 'pending_review', r => r.result.reasons.some(x => x.code === 'price_modified')],
+  ['precio dictado igual al de lista → directo', 'vende 2 cuadernos markin cuadriculados 100 a4 a 4.50 soles, yape', order(2, 4.5, 'yape'), 'cashier', 'completed', r => r.result.items[0].price_unit === 4.5],
+  ['bajo costo, manager (ve el costo)', 'vende 2 cuadernos markin cuadriculados 100 a4 a 3 soles, efectivo', order(2, 3), 'manager', 'pending_review', r => r.result.price_alerts[0]?.unit_cost === 3.2],
+  ['bajo costo, cajero (no ve el costo)', 'vende 2 cuadernos markin cuadriculados 100 a4 a 3 soles, efectivo', order(2, 3), 'cashier', 'pending_review', r => r.result.price_alerts[0] && r.result.price_alerts[0].unit_cost === undefined && !/3\.20/.test(r.message)],
   ['precio inventado por el modelo', 'vende 2 cuadernos markin cuadriculados 100 a4, efectivo', order(2, 4), 'owner', 'pending_review', r => r.result.reasons.some(x => x.code === 'price_unverified')],
   ['precio no dictado', 'vende 2 cuadernos markin cuadriculados 100 a4, efectivo', order(2, null), 'cashier', 'completed', r => r.result.items[0].price_unit === 4.5],
-  ['«$1» del dictado es un sol', 'vende 2 cuadernos markin cuadriculados 100 a4 a $4, efectivo', order(2, 4), 'cashier', 'completed', r => r.result.items[0].price_unit === 4]
+  ['«$4» del dictado es precio (4 soles) → por confirmar', 'vende 2 cuadernos markin cuadriculados 100 a4 a $4, efectivo', order(2, 4), 'cashier', 'pending_review', r => r.result.reasons.some(x => x.code === 'price_modified') && r.result.items[0].qty === 2]
 ]
 let ok = 0, fail = 0, sales = 0
 for (const [name, text, interpretation, role, expected, check] of cases) {

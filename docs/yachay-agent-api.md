@@ -20,8 +20,13 @@ La aplicación Nuxt expone HTTP al conector Python. El servidor MCP vive en
    ejemplo `7RX-PXP9`, válido 10 minutos.
 4. **Iniciar sesión en el POS.** El vendedor abre el enlace, escribe el código, su
    correo y su contraseña **en la página del POS** (nunca en el chat) y aprueba.
-5. Le dice a Claude «listo»; Claude llama `check_identification` y recibe
-   «Sesión activa como Ana Pérez (cashier)». La sesión dura hasta las 23:59 (hora de
+5. **Emparejar con el número.** Al aprobar, la página muestra un número de 3
+   dígitos. El vendedor se lo dice a Claude («472»); Claude llama
+   `check_identification` con ese número y recibe «Sesión activa como Ana Pérez
+   (cashier)». El número solo aparece en la página del vendedor: si un tercero pidió
+   el código desde su propio Claude y engañó al vendedor para aprobarlo, no puede
+   terminar la vinculación (3 intentos y 5 minutos; si no, se anula y la sesión se
+   revoca). La sesión dura hasta las 23:59 (hora de
    Lima) y el propietario puede revocarla en *Usuarios → Sesiones de Claude*.
 6. **Dictar el pedido**: «2 cuadernos A4 de 100 hojas cuadriculados Marca A, pago
    efectivo».
@@ -127,7 +132,9 @@ Solo para el conector (`Authorization: Bearer <POS_AGENT_TOKEN>`).
 ```json
 { "protocol": "yachay-identification/1", "action": "status", "identification_id": "<opaco>" }
 ```
-→ `pending` | `denied` | `expired` | `{ "status": "approved", "session": "<opaco>", "seller": { "name": "Ana Pérez", "role": "cashier" }, "expires_at": 1762920000 }`
+→ `pending` | `requires_match` | `denied` | `expired`. Tras aprobar en `/vincular`, se
+repite `status` con `"match_code": "472"` (el número que la página mostró al vendedor):
+`match_mismatch` (`attempts_left`) o `{ "status": "approved", "session": "<opaco>", "seller": { "name": "Ana Pérez", "role": "cashier" }, "expires_at": 1762920000 }`, entregado una sola vez.
 
 El conector exige que `verification_url` tenga el mismo origen que su
 `identification_url` configurada. Si defines `POS_AGENT_PUBLIC_URL` (enlace público,

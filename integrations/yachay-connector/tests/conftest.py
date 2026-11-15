@@ -62,7 +62,7 @@ class FakePOS:
 
     def __init__(self):
         self.seen: list[httpx.Request] = []
-        self.identification = {"status": "pending", "session": "sess-ana", "name": "Ana Pérez", "role": "cashier", "ttl": 8 * 3600}
+        self.identification = {"status": "pending", "session": "sess-ana", "name": "Ana Pérez", "role": "cashier", "ttl": 8 * 3600, "match": "472"}
         self.start_override: dict | None = None
         self.operations: dict[str, str] = {}
 
@@ -84,6 +84,10 @@ class FakePOS:
             state = self.identification
             if state["status"] != "approved":
                 return httpx.Response(200, json={"status": state["status"]})
+            if "match_code" not in body:
+                return httpx.Response(200, json={"status": "requires_match"})
+            if body["match_code"] != state["match"]:
+                return httpx.Response(200, json={"status": "match_mismatch", "attempts_left": 2})
             return httpx.Response(200, json={
                 "status": "approved", "session": state["session"],
                 "seller": {"name": state["name"], "role": state["role"]},

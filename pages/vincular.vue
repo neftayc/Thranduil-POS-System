@@ -10,7 +10,7 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
-const done = ref<{ name: string; role: string; expires_at: string } | null>(null)
+const done = ref<{ name: string; role: string; expires_at: string; match_code: string } | null>(null)
 
 // Show WHEN this code was requested, so a seller can spot a code that is not theirs.
 const requestedAt = ref('')
@@ -38,11 +38,11 @@ const approve = async () => {
   error.value = ''
   loading.value = true
   try {
-    const res = await $fetch<{ seller: { name: string; role: string }; expires_at: string }>('/api/agent/identification/approve', {
+    const res = await $fetch<{ seller: { name: string; role: string }; expires_at: string; match_code: string }>('/api/agent/identification/approve', {
       method: 'POST',
       body: { user_code: code.value, email: email.value, password: password.value }
     })
-    done.value = { ...res.seller, expires_at: res.expires_at }
+    done.value = { ...res.seller, expires_at: res.expires_at, match_code: res.match_code }
   } catch (err: any) {
     error.value = err?.data?.statusMessage || 'No se pudo completar la vinculación.'
   } finally {
@@ -88,12 +88,14 @@ const approve = async () => {
         <div v-if="error" class="ui-alert-error mt-4" role="alert">{{ error }}</div>
       </template>
       <template v-else>
-        <h2 class="mt-6 text-2xl font-display text-slate-800">Listo, {{ done.name }}</h2>
-        <p class="mt-2 text-sm text-slate-500">
-          Claude queda vinculado como {{ roleLabel[done.role] || done.role }} hasta
+        <h2 class="mt-6 text-2xl font-display text-slate-800">Último paso, {{ done.name }}</h2>
+        <p class="mt-2 text-sm text-slate-500">Escribe este número en el chat de Claude para terminar la vinculación:</p>
+        <p class="mt-4 text-center font-mono text-5xl font-bold tracking-[0.4em] text-slate-800" aria-label="Número para Claude">{{ done.match_code }}</p>
+        <p class="mt-4 text-sm text-slate-500">
+          Tienes 5 minutos. Claude quedará vinculado como {{ roleLabel[done.role] || done.role }} hasta
           {{ new Date(done.expires_at).toLocaleString('es-PE', { timeZone: 'America/Lima' }) }}.
-          Vuelve a Claude y dile que ya aprobaste el código.
         </p>
+        <p class="ui-alert mt-3 text-sm" role="note">Este número es solo para TU chat de Claude. Si alguien te lo pide por mensaje o llamada, no se lo des: quiere vender a tu nombre.</p>
         <p class="mt-4 text-xs text-slate-400">El propietario o el gerente pueden revocar esta vinculación en Usuarios.</p>
       </template>
     </section>

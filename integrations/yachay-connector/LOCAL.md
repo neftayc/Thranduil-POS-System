@@ -35,7 +35,7 @@ python3.12 -m venv .venv
 2. El vendedor abre en Claude Code (app de escritorio) la **carpeta de vendedores**, copia de [`workspace-vendedor/`](workspace-vendedor/README.md) fuera del repositorio (por ejemplo `~/Ventas`). Trae el MCP `yachay-pos` y un `CLAUDE.md` que abre el sistema en cada conversación. No abrir la carpeta del repositorio: expone código y `.env`.
 3. En su primer mensaje («hola», «vamos a vender»), Claude llama `list_systems` y `select_system("pos")` y muestra un enlace (`http://127.0.0.1:3000/vincular`) y un código como `7RX-PXP9`.
 4. El vendedor abre el enlace, escribe el código, su correo y su contraseña **del POS** y aprueba. Nunca escribe la contraseña en el chat.
-5. Dice «listo»; Claude llama `check_identification` y responde «Sesión activa como Ana Pérez (cashier)».
+5. La página le muestra un número de 3 dígitos. Dice «listo, el número es 472»; Claude llama `check_identification` con ese número y responde «Sesión activa como Ana Pérez (cashier)».
 6. Dicta el pedido. Claude lo envía literal con `send_instruction` y un UUID nuevo.
 7. El POS responde `completed` + referencia (venta registrada a su nombre) o `pending_review` + referencia (venta por confirmar, no registrada, stock reservado). Si hay stock bajo o agotado, Claude lo avisa.
 
@@ -53,7 +53,7 @@ La prueba predeterminada verifica: handshake MCP, las seis herramientas, que `se
 
 1. `list_systems` enumera el POS.
 2. `select_system("pos")` → `requires_identification` con `verification_url`, `user_code` y un `selection_token` provisional.
-3. `check_identification(token)` → `pending_identification` mientras no se apruebe; luego `selected` con el `selection_token` definitivo, `seller` y `prepared_context`.
+3. `check_identification(token)` → `pending_identification` mientras no se apruebe; luego `requires_match`. `check_identification(token, match_code)` con el número que muestra la página → `selected` con el `selection_token` definitivo, `seller` y `prepared_context` (o `match_mismatch`).
 4. `send_instruction(token, texto, request_id)` con un UUID nuevo por pedido.
 5. Si el POS responde `pending` o hay timeout, repetir **la misma llamada con el mismo UUID y el mismo texto**.
 6. Para completar o anular una venta por confirmar: `respond_to_system(token, operation_id, texto, request_id_nuevo)`.

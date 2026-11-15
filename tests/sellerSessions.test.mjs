@@ -9,7 +9,7 @@ const requireNuxt = createRequire(import.meta.resolve('nuxt/package.json'))
 const { createJiti } = requireNuxt('jiti')
 const jiti = createJiti(import.meta.url)
 const {
-  makeSellerSessions, makeSealer, endOfWorkdayLima, IdentificationError, SellerRejectedError, MAX_APPROVAL_FAILURES
+  makeSellerSessions, makeSealer, endOfWorkdayLima, IdentificationError, SellerRejectedError, MAX_APPROVAL_FAILURES, MAX_MATCH_FAILURES
 } = await jiti.import('../server/modules/agent/app/sellerSessions.ts')
 const { makeFileSellerSessionStore } = await jiti.import('../server/modules/agent/infra/fileSellerSessionStore.ts')
 
@@ -70,9 +70,9 @@ async function setup(t, now = () => Date.now(), limits) {
 
 async function approveAna(sessions) {
   const started = await sessions.start(LINK)
-  await sessions.approve(started.user_code.toLowerCase(), 'ana@tienda.pe', 'clave-ana')
-  const approved = await sessions.status(started.identification_id)
-  return { started, approved }
+  const page = await sessions.approve(started.user_code.toLowerCase(), 'ana@tienda.pe', 'clave-ana')
+  const approved = await sessions.status(started.identification_id, page.match_code)
+  return { started, approved, page }
 }
 
 test('inicia con enlace propio, código corto y vencimiento; queda pendiente hasta aprobar', async t => {
@@ -208,8 +208,8 @@ test('A1: una revocación durante el refresh no se pierde y cierra los tokens nu
   const { sessions, auth } = await setup(t)
   auth.state.ttl = 30 // the stored access token is about to expire: resolve() must refresh
   const started = await sessions.start(LINK)
-  await sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')
-  const { session: ref } = await sessions.status(started.identification_id)
+  const page = await sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')
+  const { session: ref } = await sessions.status(started.identification_id, page.match_code)
   const [listed] = await sessions.list()
   auth.state.refreshDelay = 50
   // Wait for the refresh to actually START (no fixed sleep: resolve() reads files first).
@@ -304,7 +304,8 @@ test('B1: un código crea una sola sesión y se entrega una sola vez aunque haya
   const approvals = await Promise.allSettled([1, 2, 3].map(() => sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')))
   assert.equal(approvals.filter(r => r.status === 'fulfilled').length, 1)
   assert.equal((await sessions.list()).length, 1)
-  const polls = await Promise.all([1, 2, 3].map(() => sessions.status(started.identification_id)))
+  const match = approvals.find(r => r.status === 'fulfilled').value.match_code
+  const polls = await Promise.all([1, 2, 3].map(() => sessions.status(started.identification_id, match)))
   assert.equal(polls.filter(p => p.status === 'approved').length, 1)
   assert.equal(polls.filter(p => p.status === 'expired').length, 2)
 })
@@ -367,4 +368,52 @@ test('los fallos por correo se cuentan por correo+IP: un extraño no bloquea al 
   const fromShop = await sessions.start(LINK)
   const ok = await sessions.approve(fromShop.user_code, 'ana@tienda.pe', 'clave-ana', '192.168.1.20')
   assert.equal(ok.name, 'Ana Pérez')
+})
+
+// --- Emparejamiento con número (antiphishing) ---
+
+test('tras aprobar, la sesión solo se entrega con el número que muestra la página', async t => {
+  const { sessions } = await setup(t)
+  const started = await sessions.start(LINK)
+  const page = await sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')
+  assert.match(page.match_code, /^\d{3}$/)
+  // The phisher's chat polls without the number: nothing is delivered.
+  assert.deepEqual(await sessions.status(started.identification_id), { status: 'requires_match' })
+  const ok = await sessions.status(started.identification_id, page.match_code)
+  assert.equal(ok.status, 'approved')
+  assert.ok((await sessions.resolve(ok.session)).user_id)
+  assert.deepEqual(await sessions.status(started.identification_id, page.match_code), { status: 'expired' })
+})
+
+test('3 números equivocados anulan la solicitud y revocan la sesión creada', async t => {
+  const { sessions } = await setup(t)
+  const started = await sessions.start(LINK)
+  const page = await sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')
+  const wrong = page.match_code === '100' ? '101' : '100'
+  for (let left = MAX_MATCH_FAILURES - 1; left > 0; left--) {
+    assert.deepEqual(await sessions.status(started.identification_id, wrong), { status: 'match_mismatch', attempts_left: left })
+  }
+  assert.deepEqual(await sessions.status(started.identification_id, wrong), { status: 'denied' })
+  assert.deepEqual(await sessions.status(started.identification_id, page.match_code), { status: 'denied' })
+  const [session] = await sessions.list()
+  assert.ok(session.revoked_at, 'la sesión creada al aprobar queda revocada')
+})
+
+test('si nadie escribe el número a tiempo, la solicitud vence y la sesión se revoca', async t => {
+  let now = Date.now()
+  const { sessions } = await setup(t, () => now)
+  const started = await sessions.start(LINK)
+  const page = await sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')
+  now += 301_000
+  assert.deepEqual(await sessions.status(started.identification_id, page.match_code), { status: 'expired' })
+  assert.ok((await sessions.list())[0].revoked_at)
+})
+
+test('el número no se guarda en claro', async t => {
+  const { sessions, dir } = await setup(t)
+  const started = await sessions.start(LINK)
+  const page = await sessions.approve(started.user_code, 'ana@tienda.pe', 'clave-ana')
+  const record = JSON.parse(await readFile(join(dir, `identification-${started.identification_id.split('.')[0]}.json`), 'utf8'))
+  assert.equal(record.match_code, undefined)
+  assert.notEqual(record.match_hash, page.match_code)
 })

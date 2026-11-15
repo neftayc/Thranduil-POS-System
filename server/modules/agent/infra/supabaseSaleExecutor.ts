@@ -45,7 +45,11 @@ export const makeSupabaseSaleExecutor = (authorize: () => Promise<string>, rpc: 
     answer = await Promise.race([rpc(token, {
       p_customer_id: draft.customer_id,
       p_payment_method: draft.payment_method,
-      p_items: draft.items.map(item => ({ product_id: item.product_id, qty: item.qty, unit_name: item.unit_name, price_unit: item.price_unit }))
+      // A price different from the list price needs manual_discount_reason (owner/manager only, enforced by create_sale).
+      p_items: draft.items.map(item => ({
+        product_id: item.product_id, qty: item.qty, unit_name: item.unit_name, price_unit: item.price_unit,
+        ...(item.manual_reason ? { manual_discount_reason: item.manual_reason } : {})
+      }))
     }), timeout])
   } finally {
     if (timer) clearTimeout(timer)

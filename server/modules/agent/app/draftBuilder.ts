@@ -22,6 +22,7 @@ export const toSaleDraft = (proposal: SaleProposal, sourceText: string, intent: 
       quantity: line.qty,
       unit: line.unit,
       price_unit: line.price_unit,
+      price_said: line.price_said ?? null,
       confidence: high ? 'high' as const : line.confidence === 'high' ? 'medium' as const : line.confidence,
       doubts: line.doubts.slice(0, MAX.doubts),
       query: line.query.slice(0, MAX.query)

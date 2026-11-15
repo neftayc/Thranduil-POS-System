@@ -36,8 +36,9 @@ está **seguro** (registra sin preguntar) y cuándo no (queda por confirmar).
 4. **Precio y stock en vivo**: `resolve_sale_item_pricing` y `product_catalog`.
    Precio S/ 0, presentación sin precio o stock insuficiente bajan la línea a `medium`.
 5. **Borrador para el proceso 2** (`app/draftBuilder.ts`, `buildDraft(messages, previous)`):
-   sale-draft/1 con `product_id` (solo de candidatos reales), `candidates`, `quantity`,
-   `unit` pedida, `price_unit` visto, `confidence` y dudas codificadas. En una
+   sale-draft/1 con `product_id` (solo de candidatos reales), `candidates`, `quantity`
+   (null si no se dijo: el proceso 2 toma 1), `unit` pedida, `price_unit` visto,
+   `price_said` (precio dictado por el vendedor, o null), `confidence` y dudas codificadas. En una
    aclaración, el intérprete solo puede elegir IDs de los candidatos del borrador previo.
    El proceso 2 vuelve a verificar todo y decide registrar o dejar por confirmar.
 

@@ -33,6 +33,8 @@ export const saleDraftSchema = z.object({
     quantity: z.number().nullable(),
     unit: z.string().trim().min(1).max(60).nullable(),
     price_unit: z.number().nullable(),
+    /** Unit price the SELLER dictated ("a 3 soles"), or null. Only counts if it is in the seller's text. */
+    price_said: z.number().positive().max(1000000).nullable().default(null),
     confidence: z.enum(['high', 'medium', 'low']),
     doubts: z.array(doubtSchema).max(10).default([]),
     query: z.string().max(500).default('')
@@ -60,7 +62,9 @@ export const REVIEW_REASONS = [
   'missing_payment',      // no payment method (cash is never assumed)
   'invalid_payment',      // payment method not in payment_method_catalog (active)
   'invalid_customer',     // customer_id does not exist
-  'pos_rejected'          // create_sale answered with an error: nothing was registered
+  'pos_rejected',         // create_sale answered with an error: nothing was registered
+  'price_override_not_allowed', // dictated price ≠ list price and the seller's role cannot change prices
+  'price_unverified'      // the draft carries a dictated price that the seller's text does not contain
 ] as const
 export type ReviewReasonCode = typeof REVIEW_REASONS[number]
 export type ReviewReason = { code: ReviewReasonCode; line?: number; message: string; detail?: Record<string, unknown> }
@@ -72,21 +76,32 @@ export type AgentResponse = {
   message: string
   result?: Record<string, unknown>
 }
-export type Product = { id: string; name: string; sku: string; brand: string | null; unit: string; stock: number }
+export type Product = { id: string; name: string; sku: string; brand: string | null; unit: string; stock: number; /** avg cost per base unit, when known */ avg_cost?: number | null }
 export type StockLevel = { id: string; name: string; unit: string; stock: number; min_stock: number }
 export type StockAlert = { product_id: string; name: string; unit: string; available: number; min_stock: number; level: 'low' | 'out' }
 export type Reservation = { product_id: string; qty: number }
 /** A line verified by process 2 (official price, base-unit factor). */
 export type DraftItem = {
   product_id: string; name: string; qty: number; unit_name: string; price_unit: number; factor: number; total: number
+  /** The seller did not say a quantity: 1 by default. */
+  quantity_defaulted?: boolean
+  /** List price when the seller dictated a different price (price_unit = dictated price). */
+  list_price?: number
+  /** manual_discount_reason sent to create_sale when price_unit ≠ list price. */
+  manual_reason?: string
 }
 /** What is sent to create_sale. Only built when every check passed. */
 export type SaleDraft = {
   customer_id: string | null; payment_method: string; items: DraftItem[]; total: number; currency: string
 }
+export type PriceAlert = { product_id: string; name: string; price_unit: number; unit_cost: number; level: 'below_cost' }
+/** Informational notes for the seller (quantity defaulted, price changed) and price alerts. Never block. */
+export type DecisionNotes = { notes: string[]; price_alerts: PriceAlert[] }
 export type DraftDecision =
-  | { kind: 'direct'; sale: SaleDraft; items: DraftItem[] }
-  | { kind: 'review'; reasons: ReviewReason[]; items: DraftItem[]; reservations: Reservation[] }
+  | ({ kind: 'direct'; sale: SaleDraft; items: DraftItem[] } & DecisionNotes)
+  | ({ kind: 'review'; reasons: ReviewReason[]; items: DraftItem[]; reservations: Reservation[] } & DecisionNotes)
+/** Who is selling: the role decides whether a dictated price may differ from the list price. */
+export type ValidationContext = { role?: string | null }
 
 export type Operation = {
   id: string
@@ -124,7 +139,7 @@ export interface AgentStore {
 export class AgentBusyError extends Error {}
 export class AgentConflictError extends Error {}
 export class AgentForbiddenError extends Error {}
-export type AgentSeller = { id: string }
+export type AgentSeller = { id: string; role?: string | null }
 export interface SalesAgentDependencies {
   store: AgentStore
   /**
@@ -133,7 +148,7 @@ export interface SalesAgentDependencies {
    */
   buildDraft(messages: string[], previous: SaleDraftV1 | null): Promise<unknown>
   /** PROCESS 2 (deterministic): re-verifies the draft and decides direct vs review. */
-  validate(draft: SaleDraftV1, reserved: Map<string, number>): Promise<DraftDecision>
+  validate(draft: SaleDraftV1, reserved: Map<string, number>, context?: ValidationContext): Promise<DraftDecision>
   execute(draft: SaleDraft, beforeCommit: () => Promise<void>): Promise<{ saleId: string; total: number }>
   stockLevels?(productIds: string[]): Promise<StockLevel[]>
   /** How long a "venta por confirmar" keeps its stock reservation (default 48 h). */

@@ -209,6 +209,7 @@ Cada mensaje pasa por dos procesos separados:
     "quantity": 2,                  // null si el pedido no dice cuántas
     "unit": "docena | null",        // null = unidad base
     "price_unit": 5.0,              // precio que vio el agente 1 (solo para comparar)
+    "price_said": null,             // precio unitario que DICTÓ el vendedor («a 4 soles»), o null
     "confidence": "high",           // high | medium | low
     "doubts": [{ "code": "ambiguous_product", "note": "…" }],
     "query": "2 cuadernos A4"
@@ -256,9 +257,32 @@ Se registra **directo** a nombre del vendedor identificado solo si:
 
 - hay al menos una línea y **cada** línea tiene `product_id` de un producto que
   existe y está activo, seguridad `high`, ninguna duda y una cantidad válida;
-- el precio oficial se resuelve con `resolve_sale_item_pricing` (con el cliente,
-  si lo hay) y coincide con `price_unit` del borrador (tolerancia S/ 0.005). Si el
-  borrador no trae precio, se usa el oficial. **Siempre** se envía el oficial;
+- **cantidad**: la que escribió el vendedor; **si no dijo cantidad, es 1** (aviso «no se
+  indicó cantidad, se toma 1»; `items[].quantity_defaulted`). También es 1 si el modelo
+  tomó un número de la descripción («cuaderno 100 hojas a4» → 1). Las cantidades en palabras
+  cuentan («dos», «tres», «quince», «veinticinco», «treinta y cinco», «cien», «una docena»,
+  «media docena» = 6 unidades, o 0.5 si la presentación es docena). Si la IA deja la cantidad
+  al inicio de la descripción («dos cuadernos markin…») se separa de ella; en un pedido de
+  **una línea**, si la IA no puso cantidad y el vendedor escribió exactamente una, se toma esa
+  («dos cuadernos» → 2). Va a revisión
+  (`missing_quantity`) si el modelo propone una cantidad que el vendedor no escribió, o si
+  el vendedor escribió una cantidad (distinta de 1) que ninguna línea recoge (por ejemplo,
+  el modelo la perdió): nunca se vende 1 en silencio en ese caso;
+- **precio**: el oficial de `resolve_sale_item_pricing` (con el cliente, si lo hay), que
+  debe coincidir con `price_unit` del borrador (tolerancia S/ 0.005); si no, `price_changed`.
+  Si el borrador no trae precio, se usa el oficial;
+- **precio dictado** (`price_said` distinto del de lista): es la venta que hace el vendedor,
+  pero solo cuenta si el vendedor lo **escribió** como monto («a 4 soles», «s/ 4.50», «$4»
+  —el dictado escribe «un sol» como «$1»—,
+  «4 soles», o el total: «2 por 9 soles» → 4.50 c/u). Si no aparece: `price_unverified`.
+  Con rol `owner` o `manager` se registra **directo** a ese precio: se envía a `create_sale`
+  `price_unit` = dictado y `manual_discount_reason` = «Precio dictado por voz (lista S/ X)»
+  (la base guarda `auto_price_unit`, el precio vendido y el motivo), y la respuesta avisa
+  «Precio modificado de …: lista S/ X → vendido S/ Y». Con otro rol:
+  `price_override_not_allowed` (la base lo rechazaría igual; los permisos no cambian).
+  Si el precio dictado queda **bajo el costo** (`avg_cost` de `product_catalog` × factor
+  de la presentación) no se bloquea: `result.price_alerts` con `level: "below_cost"` y el
+  aviso «Alerta de precio: … bajo su costo S/ Z». Sin costo conocido no hay alerta;
 - el stock alcanza: `disponible = stock_on_hand − reservas de otras ventas por
   confirmar vigentes`, sumando las líneas repetidas en unidad base;
 - la cantidad y la forma de pago **las escribió el vendedor**: el proceso 2 las
@@ -266,8 +290,8 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   La forma de pago debe aparecer por código, etiqueta o alias (`efectivo`, `al contado`,
   `yapeo`, `plin`, `visa`…); la cantidad, como número o palabra («dos», «una docena»,
   «media docena»), sin contar los números que describen el producto («100 hojas»,
-  «30 cm», «a4»). Si la cantidad solo coincide con un número de la descripción, va a
-  revisión. Si no, `missing_payment` / `missing_quantity` con `detail.ungrounded`;
+  «30 cm», «a4») ni los montos («a 3 soles»). Si no, `missing_payment` /
+  `missing_quantity` con `detail.ungrounded`;
 - la forma de pago existe y está activa en `payment_method_catalog`, y el cliente
   (si se indicó) existe;
 - el agente 1 no reportó dudas generales.
@@ -289,6 +313,8 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 | `invalid_payment` | La forma de pago no existe en el POS. |
 | `invalid_customer` | El cliente indicado no existe. |
 | `pos_rejected` | `create_sale` respondió con error: no se registró nada. |
+| `price_override_not_allowed` | Precio dictado distinto al de lista y el rol del vendedor no permite cambiar precios (solo `owner`/`manager`). |
+| `price_unverified` | El borrador trae un precio dictado que no aparece en el texto del vendedor (posible invención del modelo). |
 
 ### Reservas de ventas por confirmar
 
@@ -304,12 +330,14 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 ### Respuestas
 
 - `completed`: `result.reference` (id de la venta), `total`, `currency`, `items`
-  (precio oficial), `alerts`.
+  (precio vendido; `list_price` y `manual_reason` si se dictó otro precio;
+  `quantity_defaulted` si se tomó 1), `alerts`, `notes` (cantidad por defecto, precio
+  modificado) y `price_alerts` (precio bajo costo).
 - `pending_review`: `result.reference` (id de la operación), `reasons`
   (`[{ code, line?, message, doubt?, ungrounded? }]`: `doubt` es el código de duda del
   agente 1, p. ej. `ambiguous_product`; `ungrounded` indica que el vendedor no escribió
-  la cantidad o la forma de pago), `pending` (texto), `items`, `reservations`,
-  `review_expires_at`, `alerts`.
+  la cantidad, la forma de pago o el precio), `pending` (texto), `items`, `reservations`,
+  `review_expires_at`, `alerts`, `notes`, `price_alerts`.
 
 Alertas: tras `completed` o `pending_review`, para cada producto afectado
 `disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`

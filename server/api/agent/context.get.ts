@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
         'Usa un UUID nuevo por mensaje. En un reintento reutiliza exactamente el mismo request_id y contenido. pending no significa venta realizada.',
         'Solo completed con referencia acredita una venta registrada. Conserva la referencia que devuelve el POS.',
         'Un completed con result.kind = "catalog_answer" solo responde una consulta del catálogo (existencia, precio o stock): NO es una venta.',
+        'Si no se indica la cantidad, el POS vende 1. Si el vendedor dicta un precio («a 4 soles»), inclúyelo literal en el texto: solo owner o manager pueden vender a un precio distinto del de lista; para otros roles queda por confirmar.',
         'Si no se indica un cliente específico, se registra una venta al público sin cliente asociado.'
       ],
       capabilities: ['register_sale', 'pending_review_sale', 'cancel_sale', 'stock_alerts'],

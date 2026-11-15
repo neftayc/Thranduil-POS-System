@@ -108,7 +108,8 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
       const label = `Artículo ${index + 1}`
       const line: ProposalItem = {
         line: index + 1, query: item.query, product_id: null, name: null, sku: null, brand: null,
-        qty: item.quantity, unit: item.unit?.trim() || null, unit_name: null, factor: null, price_unit: null, total: null, stock_available: null,
+        qty: item.quantity, unit: item.unit?.trim() || null, unit_name: null, factor: null, price_unit: null,
+        price_said: typeof item.price === 'number' && item.price > 0 ? item.price : null, total: null, stock_available: null,
         confidence: 'low', match_score: 0, reasons: [], doubts: [], alternatives: []
       }
       proposal.items.push(line)
@@ -169,20 +170,22 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
         line.stock_available = round(product.stock - (reserved.get(product.id) || 0), 4)
         if (!candidates.some(p => p.id === product!.id)) candidates.push(product)
       }
-      if (item.quantity === null || !Number.isFinite(item.quantity) || item.quantity <= 0 || item.quantity > 1000000) {
+      // No quantity said → 1 (business rule). The line keeps qty null so process 2 records the default.
+      if (item.quantity !== null && (!Number.isFinite(item.quantity) || item.quantity <= 0 || item.quantity > 1000000)) {
         line.qty = null
-        lineDoubt('¿cuántas unidades o presentaciones deseas vender? Separa la cantidad del número de hojas u otros atributos.', product ? 'medium' : 'low', 'missing_quantity')
+        lineDoubt('la cantidad indicada no es válida. Separa la cantidad del número de hojas u otros atributos.', product ? 'medium' : 'low', 'missing_quantity')
         continue
       }
+      const quantity = item.quantity ?? 1
       if (!product) continue
       try {
-        const quote = await catalog.quote(product, item.quantity, item.unit, draft.customer_id)
+        const quote = await catalog.quote(product, quantity, item.unit, draft.customer_id)
         if (!Number.isFinite(quote.price) || quote.price < 0 || !Number.isFinite(quote.factor) || quote.factor <= 0 || quote.currency !== 'PEN') throw new Error('Cotización inválida')
-        Object.assign(line, { unit_name: quote.unit_name, factor: quote.factor, price_unit: quote.price, total: round(item.quantity * quote.price, 4) })
+        Object.assign(line, { unit_name: quote.unit_name, factor: quote.factor, price_unit: quote.price, total: round(quantity * quote.price, 4) })
         // A zero price is almost always a catalog gap: never register it without review.
         if (quote.price === 0) lineDoubt(`${product.name} tiene precio S/ 0.00 en el catálogo. Confirma el precio.`)
         if (line.confidence === 'high') {
-          draft.items.push({ product_id: product.id, name: product.name, qty: item.quantity, unit_name: quote.unit_name, price_unit: quote.price, factor: quote.factor, total: line.total! })
+          draft.items.push({ product_id: product.id, name: product.name, qty: quantity, unit_name: quote.unit_name, price_unit: quote.price, factor: quote.factor, total: line.total! })
         }
       } catch {
         lineDoubt(`no pude cotizar la presentación solicitada para ${product.name}. Indica una presentación válida.`, 'medium', 'unit_unclear')
@@ -192,7 +195,7 @@ export const makeSalePreparer = (catalog: AgentCatalog) => {
     // Stock per product across lines (base units), against what other ventas por confirmar hold.
     const needed = new Map<string, number>()
     for (const line of proposal.items) {
-      if (line.product_id && line.qty && line.factor) needed.set(line.product_id, (needed.get(line.product_id) || 0) + line.qty * line.factor)
+      if (line.product_id && line.factor) needed.set(line.product_id, (needed.get(line.product_id) || 0) + (line.qty ?? 1) * line.factor)
     }
     // In buildDraft the stock is decided by process 2 (insufficient_stock): not repeated here as a doubt.
     for (const [id, qty] of context.checkStock === false ? [] : needed) {

@@ -93,7 +93,7 @@ export const REVIEW_REASONS = [
   'pos_rejected',         // create_sale answered with an error: nothing was registered
   'price_override_not_allowed', // NOT USED since 2026-11-15 (kept for old records)
   'unit_unclear',         // the presentation (caja, docena…) the AI proposed was not said by the seller
-  'phrase_not_in_order',  // (registrar) the line's phrase is not in the dictation: possible hallucination
+  'phrase_not_in_order',  // (retired) literal-phrase guard of the registrar; kept so stored operations still parse
   'selector_question',    // (registrar) the selector asks the seller something (low confidence, no product, question)
   'price_modified',       // dictated price ≠ list price: always por confirmar; a reviewer approves it at that price
   'price_unverified'      // the draft carries a dictated price that the seller's text does not contain

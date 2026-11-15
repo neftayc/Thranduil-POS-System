@@ -1,4 +1,4 @@
-import { leadingQuantity, normalizeText, quantityFitsUnit } from './grounding'
+import { normalizeText, quantityFitsUnit } from './grounding'
 import { COST_VISIBLE_ROLES, PRICE_TOLERANCE, type ValidationCatalog } from './validateDraft'
 import type { DraftDecision, DraftItem, PriceAlert, Product, Reservation, ReviewReason, SaleConsolidated, ValidationContext } from '../contracts'
 
@@ -17,15 +17,18 @@ export const phraseInDictation = (dictation: string, phrase: string) => {
  * STEP 3 — simplified registrar (POS_AGENT_SELECTOR=llm). The selector agent (step 2) already
  * understood the order; this only checks what is needed to register it, with facts from the POS:
  *   1. product_id exists and is active; the presentation (unit) is valid for it (it can be priced);
- *   2. quantity > 0, whole in presentations sold by unit (a dozen allows 0.5); it must equal the
- *      number the phrase starts with («10 plumones…» → 10), or 1 if the phrase starts with none;
+ *   2. quantity present, > 0 and whole in presentations sold by unit (a dozen allows 0.5). The
+ *      selector's quantity is accepted as is: reading it from the words is step 2's job;
  *   3. OFFICIAL price (resolve_sale_item_pricing); price_said ≠ list → price_modified (option A);
  *      official 0 → price_unavailable;
  *   4. available stock (minus reservations) and an active payment method;
- *   5. anti-hallucination guard: each line's phrase (and a non-cash payment's phrase) is in the dictation;
+ *   5. a non-cash payment's phrase is in the dictation (the owner's rule: never Yape/transfer unless said);
  *   6. confidence «baja», no product_id, or a question → por confirmar with the question and options.
  * Everything OK → DIRECT (create_sale). Otherwise → REVIEW with reservation, as in the legacy path.
  * It does NOT re-interpret the text (no quantity attribution, dozens, negations…): that is step 2.
+ * Nor does it require each line's phrase to be a literal fragment of the dictation: voice dictation
+ * leaves punctuation and self-corrections («, ...10 unidades…») that a literal match rejects, and the
+ * selector can only point at real catalog ids, which are verified here (Ref. c4d9a7e3).
  */
 export const makeConsolidatedRegistrar = (catalog: ValidationCatalog) => async (
   consolidated: SaleConsolidated,
@@ -49,12 +52,6 @@ export const makeConsolidatedRegistrar = (catalog: ValidationCatalog) => async (
     const n = index + 1
     const label = `Artículo ${n} («${line.phrase.slice(0, 80)}»)`
 
-    // 5. Anti-hallucination: the line must come from what the seller said.
-    if (!phraseInDictation(dictation, line.phrase)) {
-      reasons.push({ code: 'phrase_not_in_order', line: n, message: `${label}: esa frase no aparece en el pedido del vendedor.`, detail: { phrase: line.phrase, ungrounded: true } })
-      continue
-    }
-
     // 6. The selector is not sure, or asks something: the seller answers (with options).
     const doubtful = line.confidence === 'baja' || !line.product_id || Boolean(line.question)
     if (doubtful) {
@@ -74,23 +71,14 @@ export const makeConsolidatedRegistrar = (catalog: ValidationCatalog) => async (
     }
     products.set(product.id, product)
 
-    // 2. Quantity. Owner's rule: «la cantidad siempre va primero» — a cheap guard against an invented
-    // quantity without re-reading the text: the phrase's leading number must be the quantity; a phrase
-    // without one means 1.
-    const lead = leadingQuantity(line.phrase, line.unit)
-    const quantity = line.quantity ?? lead ?? 1
-    if (quantity !== (lead ?? 1)) {
+    // 2. Quantity: the selector's, as is (it already applied «la cantidad va primero» and «sin número = 1»).
+    // Only a missing or impossible quantity blocks.
+    const quantity = line.quantity
+    if (quantity === null || !Number.isFinite(quantity) || quantity <= 0 || quantity > MAX_QTY) {
       reasons.push({
-        code: 'missing_quantity', line: n, detail: { quantity, phrase_quantity: lead ?? 1, ungrounded: true },
-        message: lead === null
-          ? `${label}: la frase no dice una cantidad (sería 1) y se propuso ${quantity}.`
-          : `${label}: la frase dice ${lead} y se propuso ${quantity}.`
+        code: 'missing_quantity', line: n, detail: { quantity },
+        message: quantity === null ? `${label}: falta la cantidad.` : `${label}: la cantidad ${quantity} no es válida.`
       })
-      continue
-    }
-    if (line.quantity === null && lead === null) notes.push(`${product.name}: no se indicó cantidad, se toma 1.`)
-    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > MAX_QTY) {
-      reasons.push({ code: 'missing_quantity', line: n, message: `${label}: la cantidad ${quantity} no es válida.`, detail: { quantity } })
       continue
     }
 
@@ -127,7 +115,6 @@ export const makeConsolidatedRegistrar = (catalog: ValidationCatalog) => async (
     const item: DraftItem = {
       product_id: product.id, name: product.name, qty: quantity, unit_name: quote.unit_name,
       price_unit: sold, factor: quote.factor, total: round(quantity * sold),
-      ...(line.quantity === null ? { quantity_defaulted: true } : {}),
       ...(sold !== official ? { list_price: official, manual_reason: `Precio dictado por vendedor (lista ${money(official)})` } : {})
     }
     const unitCost = Number.isFinite(product.avg_cost) && (product.avg_cost as number) > 0 ? round((product.avg_cost as number) * quote.factor) : null

@@ -3,6 +3,7 @@ import type {
   Confidence, OrderInterpretation as Interpretation, ProposalAlternative, ProposalItem, SaleProposal
 } from './agent1Contracts'
 import { explicitChoice } from './sellerChoice'
+import { resolveQuantity } from './grounding'
 import { clarifiedChoice, withContextSelection, type ProductSelector } from './contextSelection'
 import { descriptionWithoutQuantity } from './grounding'
 import { applyConventions, brandVocabulary, closestCandidates, decideMatch, reasonsFor, tiedWithBest, type MatchDecision, type RetrievedDoc } from './productSearch'
@@ -78,7 +79,7 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
    * `context.lineOptions[i]` = options shown for line i: a clarification («es el Markin») resolves it.
    */
   return async (input: Interpretation, previousCandidates: Product[], reserved: Map<string, number> = new Map(),
-    context: { lastMessage?: string; offered?: Product[]; checkStock?: boolean; lineOptions?: Product[][]; hints?: string[] } = {}) => {
+    context: { lastMessage?: string; offered?: Product[]; checkStock?: boolean; lineOptions?: Product[][]; hints?: string[]; sourceText?: string } = {}) => {
     const candidates: Product[] = []
     // Options listed to the seller in THIS answer, numbered in this order.
     const offered: Product[] = []
@@ -205,7 +206,12 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
         lineDoubt('la cantidad indicada no es válida. Separa la cantidad del número de hojas u otros atributos.', product ? 'medium' : 'low', 'missing_quantity')
         continue
       }
-      const quantity = item.quantity ?? 1
+      // Quote with the quantity process 2 will decide (same rule: resolveQuantity), so a dropped
+      // quantity («doce lapiceros…») is priced at the wholesale tier too, not at 1.
+      const others = input.items.filter((_, i) => i !== index).map(other => other.quantity).filter((q): q is number => q !== null)
+      const decided = context.sourceText === undefined ? null
+        : resolveQuantity(context.sourceText, item.quantity, item.query, others, { singleLine: input.items.length === 1, unit: item.unit })
+      const quantity = decided?.ok ? decided.quantity : item.quantity ?? 1
       if (!product) continue
       try {
         const quote = await catalog.quote(product, quantity, item.unit, draft.customer_id)

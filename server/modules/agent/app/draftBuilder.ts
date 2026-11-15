@@ -55,10 +55,10 @@ const emptyDraft = (intent: SaleDraftV1['intent'], sourceText: string): SaleDraf
 export const makeHybridDraftBuilder = (
   interpret: OrderInterpreter,
   catalog: AgentCatalog,
-  options: { answerCatalogQuestions?: boolean; selector?: ProductSelector } = {}
+  options: { answerCatalogQuestions?: boolean; selector?: ProductSelector; reservedStock?: () => Promise<Map<string, number>> } = {}
 ) => {
   const prepare = makeSalePreparer(catalog, { selector: options.selector })
-  const answer = makeCatalogAnswerer(catalog)
+  const answer = makeCatalogAnswerer(catalog, { reservedStock: options.reservedStock })
   return async (messages: string[], previous: SaleDraftV1 | null): Promise<SaleDraftV1 | CatalogAnswer> => {
     const sourceText = messages.join('\n')
     const previousItems = previous?.items || []
@@ -92,7 +92,7 @@ export const makeHybridDraftBuilder = (
     const lineOptions = parsed.items.length === previousItems.length
       ? previousItems.map(line => choosing(line) ? products.filter(p => p.id === line.product_id || line.candidates.includes(p.id)) : [])
       : undefined
-    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered, checkStock: false, lineOptions, hints: spokenHints(sourceText, parsed) })
+    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered, checkStock: false, lineOptions, hints: spokenHints(sourceText, parsed), sourceText })
     return toSaleDraft(proposal, sourceText)
   }
 }

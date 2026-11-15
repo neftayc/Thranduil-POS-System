@@ -6,7 +6,7 @@
     "dev": "nuxt dev --host",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "test:agent": "node --test tests/agent.test.mjs tests/sellerSessions.test.mjs tests/productSearch.test.mjs tests/contextSelection.test.mjs",
+    "test:agent": "node --test --test-concurrency=1 tests/agent.test.mjs tests/sellerSessions.test.mjs tests/productSearch.test.mjs tests/contextSelection.test.mjs",
     "eval:search": "node scripts/eval/hybrid-search.mjs",
     "index:products": "node scripts/index-product-search.mjs"
   },

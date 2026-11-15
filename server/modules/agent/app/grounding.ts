@@ -174,6 +174,18 @@ const quantityMentionsIn = (words: string[]): QuantityMention[] => {
 const valueIn = (mention: QuantityMention, dozenPresentation: boolean) =>
   mention.dozens !== null && dozenPresentation ? mention.dozens : mention.units
 
+/**
+ * Quantity at the START of a phrase («10 plumones…», «dos cuadernos», «media docena de lapiceros»),
+ * in the line's presentation (dozens when sold by the dozen). null when the phrase does not start
+ * with a quantity («cuaderno markin», «100 hojas bond» — a measure, not a quantity).
+ */
+export const leadingQuantity = (phrase: string, unit: string | null = null): number | null => {
+  const words = tokens(phrase)
+  const first = quantityMentionsIn(words)[0]
+  if (!first || first.start !== 0) return null
+  return valueIn(first, /docena/.test(tokens(unit || '').join(' ')))
+}
+
 /** Quantities the seller wrote, counted per value (in base units). Kept for callers and tests. */
 export const quantityMentions = (text: string) => {
   const counts = new Map<number, number>()

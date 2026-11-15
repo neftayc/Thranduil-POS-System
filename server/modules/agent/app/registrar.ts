@@ -1,4 +1,4 @@
-import { normalizeText, quantityFitsUnit } from './grounding'
+import { leadingQuantity, normalizeText, quantityFitsUnit } from './grounding'
 import { COST_VISIBLE_ROLES, PRICE_TOLERANCE, type ValidationCatalog } from './validateDraft'
 import type { DraftDecision, DraftItem, PriceAlert, Product, Reservation, ReviewReason, SaleConsolidated, ValidationContext } from '../contracts'
 
@@ -17,7 +17,8 @@ export const phraseInDictation = (dictation: string, phrase: string) => {
  * STEP 3 — simplified registrar (POS_AGENT_SELECTOR=llm). The selector agent (step 2) already
  * understood the order; this only checks what is needed to register it, with facts from the POS:
  *   1. product_id exists and is active; the presentation (unit) is valid for it (it can be priced);
- *   2. quantity > 0, whole in presentations sold by unit (a dozen allows 0.5); none given → 1;
+ *   2. quantity > 0, whole in presentations sold by unit (a dozen allows 0.5); it must equal the
+ *      number the phrase starts with («10 plumones…» → 10), or 1 if the phrase starts with none;
  *   3. OFFICIAL price (resolve_sale_item_pricing); price_said ≠ list → price_modified (option A);
  *      official 0 → price_unavailable;
  *   4. available stock (minus reservations) and an active payment method;
@@ -73,9 +74,21 @@ export const makeConsolidatedRegistrar = (catalog: ValidationCatalog) => async (
     }
     products.set(product.id, product)
 
-    // 2. Quantity (rule: none said → 1).
-    const quantity = line.quantity ?? 1
-    if (line.quantity === null) notes.push(`${product.name}: no se indicó cantidad, se toma 1.`)
+    // 2. Quantity. Owner's rule: «la cantidad siempre va primero» — a cheap guard against an invented
+    // quantity without re-reading the text: the phrase's leading number must be the quantity; a phrase
+    // without one means 1.
+    const lead = leadingQuantity(line.phrase, line.unit)
+    const quantity = line.quantity ?? lead ?? 1
+    if (quantity !== (lead ?? 1)) {
+      reasons.push({
+        code: 'missing_quantity', line: n, detail: { quantity, phrase_quantity: lead ?? 1, ungrounded: true },
+        message: lead === null
+          ? `${label}: la frase no dice una cantidad (sería 1) y se propuso ${quantity}.`
+          : `${label}: la frase dice ${lead} y se propuso ${quantity}.`
+      })
+      continue
+    }
+    if (line.quantity === null && lead === null) notes.push(`${product.name}: no se indicó cantidad, se toma 1.`)
     if (!Number.isFinite(quantity) || quantity <= 0 || quantity > MAX_QTY) {
       reasons.push({ code: 'missing_quantity', line: n, message: `${label}: la cantidad ${quantity} no es válida.`, detail: { quantity } })
       continue

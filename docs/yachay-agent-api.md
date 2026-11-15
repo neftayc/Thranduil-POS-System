@@ -283,8 +283,11 @@ interruptor se evalúa en tiempo de ejecución (`POS_AGENT_SELECTOR`, `NUXT_POS_
 ```
 
 Valida **solo**: (1) `product_id` existe y está activo, y la presentación es válida para él (se
-puede cotizar); (2) cantidad > 0, entera en presentaciones por unidad (la docena admite 0,5); sin
-cantidad → 1; (3) precio **oficial** (`resolve_sale_item_pricing`): `price_said` distinto →
+puede cotizar); (2) cantidad > 0, entera en presentaciones por unidad (la docena admite 0,5) y, por la
+regla del dueño «la cantidad siempre va primero», igual al número con que empieza la `phrase`
+(«10 plumones FC 123 Jumbo» → 10; «media docena de…» → 0,5 docena o 6 unidades) o 1 si no empieza
+con número («100 hojas bond» es medida, no cantidad); si no coincide → `missing_quantity`; sin
+cantidad del selector se toma la de la frase; (3) precio **oficial** (`resolve_sale_item_pricing`): `price_said` distinto →
 `price_modified` (por confirmar, opción A); oficial 0 → `price_unavailable`; (4) stock disponible
 (menos reservas) y forma de pago activa: efectivo por defecto; otra solo si su `payment_phrase` está
 en el dictado (si no, `missing_payment`); (5) **guardia anti-alucinación**: la `phrase` de cada línea

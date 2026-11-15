@@ -1392,7 +1392,10 @@ test('registrador: cantidad 0, negativa o fraccionaria en unidad → revisión; 
     const { result } = await register(consolidatedOf({ lines: [cline({ quantity })] }), 'dos cuadernos A4')
     assert.deepEqual(rcodes(result), ['missing_quantity'], String(quantity))
   }
-  const { result: none } = await register(consolidatedOf({ lines: [cline({ quantity: null })] }), 'dos cuadernos A4')
+  // No quantity from the selector: the phrase's leading number («dos» → 2), or 1 when it has none.
+  const { result: fromPhrase } = await register(consolidatedOf({ lines: [cline({ quantity: null })] }), 'dos cuadernos A4')
+  assert.deepEqual([fromPhrase.kind, fromPhrase.sale.items[0].qty], ['direct', 2])
+  const { result: none } = await register(consolidatedOf({ lines: [cline({ quantity: null, phrase: 'cuaderno A4' })] }), 'cuaderno A4')
   assert.deepEqual([none.kind, none.sale.items[0].qty, none.sale.items[0].quantity_defaulted], ['direct', 1, true])
   const { result: half } = await register(consolidatedOf({ lines: [cline({ quantity: 0.5, unit: 'docena', phrase: 'media docena de cuadernos' })] }), 'media docena de cuadernos')
   assert.deepEqual([half.kind, half.sale.items[0].qty, half.sale.items[0].unit_name], ['direct', 0.5, 'docena'])
@@ -1503,4 +1506,26 @@ test('interruptor POS_AGENT_SELECTOR: llm|legacy en tiempo de ejecución; por de
   assert.equal(resolveSelectorMode({}, { NUXT_POS_AGENT_SELECTOR: 'LLM' }), 'llm')
   assert.equal(resolveSelectorMode({ posAgentSelector: 'llm' }, {}), 'llm')
   assert.equal(resolveSelectorMode({}, { POS_AGENT_SELECTOR: 'otro' }), 'legacy')
+})
+
+test('registrador: «la cantidad va primero» — la quantity debe coincidir con el número inicial de la phrase, o ser 1', async () => {
+  const ok = [
+    ['10 plumones FC 123 Jumbo', 10, null], ['dos cuadernos A4', 2, null], ['diecisiete cuadernos', 17, null],
+    ['cuaderno A4', 1, null], ['un cuaderno A4', 1, null], ['media docena de cuadernos', 0.5, 'docena'],
+    ['media docena de cuadernos', 6, null], ['una docena de cuadernos', 12, null], ['100 hojas bond', 1, null]
+  ]
+  for (const [phrase, quantity, unit] of ok) {
+    const { result } = await register(consolidatedOf({ lines: [cline({ phrase, quantity, unit })] }), phrase)
+    assert.equal(result.kind, 'direct', `${phrase} → ${quantity}: ${rcodes(result)}`)
+    assert.equal(result.sale.items[0].qty, quantity, phrase)
+  }
+  const wrong = [
+    ['10 plumones FC 123 Jumbo', 123], ['10 plumones FC 123 Jumbo', 1], ['dos cuadernos A4', 3],
+    ['cuaderno A4', 2], ['media docena de cuadernos', 6, 'docena'], ['100 hojas bond', 100]
+  ]
+  for (const [phrase, quantity, unit = null] of wrong) {
+    const { result } = await register(consolidatedOf({ lines: [cline({ phrase, quantity, unit })] }), phrase)
+    assert.deepEqual(rcodes(result), ['missing_quantity'], `${phrase} → ${quantity}`)
+    assert.equal(result.reasons[0].detail.ungrounded, true)
+  }
 })

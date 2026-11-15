@@ -957,7 +957,7 @@ test('precio dictado: owner o manager → venta directa con ese precio, motivo p
     assert.equal(response.status, 'completed', seller.role)
     assert.deepEqual(
       [sent[0].items[0].price_unit, sent[0].items[0].list_price, sent[0].items[0].manual_reason, sent[0].total],
-      [4, 5, 'Precio dictado por voz (lista S/ 5.00)', 8]
+      [4, 5, 'Precio dictado por vendedor (lista S/ 5.00)', 8]
     )
     assert.match(response.message, /Precio modificado de .*: lista S\/ 5\.00 → vendido S\/ 4\.00/)
   }
@@ -969,16 +969,25 @@ test('precio dictado como total («2 por 9 soles») se toma como 4.50 cada uno',
   assert.equal(sent[0].items[0].price_unit, 4.5)
 })
 
-test('precio dictado con otro rol → por confirmar con price_override_not_allowed (no cambia permisos)', async t => {
+test('precio dictado por un cajero (o un rol sin especificar) → venta directa a ese precio, con lista y motivo', async t => {
   for (const seller of [CAJERO, ANA]) {
-    const { run, counts, dependencies } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4 })] })] })
+    const { run, sent } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 4 })] })] })
     const response = await run(instruction('vende 2 cuadernos A4 a 4 soles, efectivo'), seller)
-    assert.equal(response.status, 'pending_review')
-    assert.deepEqual(codes(response), ['price_override_not_allowed'])
-    assert.match(response.message, /precio dictado S\/ 4\.00 distinto al de lista S\/ 5\.00; tu rol no permite/)
-    assert.deepEqual((await dependencies.store.getOperation(response.operation_id)).reservations, [{ product_id: CUADERNO.id, qty: 2 }])
-    assert.equal(counts.execute, 0)
+    assert.equal(response.status, 'completed', String(seller.role))
+    assert.deepEqual([sent[0].items[0].price_unit, sent[0].items[0].list_price, sent[0].items[0].manual_reason], [4, 5, 'Precio dictado por vendedor (lista S/ 5.00)'])
+    assert.match(response.message, /Precio modificado de .*: lista S\/ 5\.00 → vendido S\/ 4\.00/)
+    assert.doesNotMatch(JSON.stringify(response), /price_override_not_allowed/)
   }
+})
+
+test('precio bajo costo vendido por un cajero: alerta «precio bajo» SIN mostrar el costo', async t => {
+  const { run, state } = await setup(t, { drafts: [draftOf({ items: [line({ price_said: 3 })] })] })
+  withCost(state, 3.5)
+  const response = await run(instruction('vende 2 cuadernos A4 a 3 soles, efectivo'), CAJERO)
+  assert.equal(response.status, 'completed')
+  assert.deepEqual(response.result.price_alerts, [{ product_id: CUADERNO.id, name: CUADERNO.name, price_unit: 3, level: 'below_cost' }])
+  assert.match(response.message, /Alerta: precio bajo para .* \(S\/ 3\.00\)/)
+  assert.doesNotMatch(JSON.stringify(response), /3\.5|costo/)
 })
 
 test('precio dictado bajo el costo: no bloquea; se registra y se alerta «precio bajo costo»', async t => {

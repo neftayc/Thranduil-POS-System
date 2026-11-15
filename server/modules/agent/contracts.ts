@@ -63,7 +63,7 @@ export const REVIEW_REASONS = [
   'invalid_payment',      // payment method not in payment_method_catalog (active)
   'invalid_customer',     // customer_id does not exist
   'pos_rejected',         // create_sale answered with an error: nothing was registered
-  'price_override_not_allowed', // dictated price ≠ list price and the seller's role cannot change prices
+  'price_override_not_allowed', // NOT USED since 2026-11-15: any seller may register a dictated price (kept for old records)
   'price_unverified'      // the draft carries a dictated price that the seller's text does not contain
 ] as const
 export type ReviewReasonCode = typeof REVIEW_REASONS[number]
@@ -94,7 +94,8 @@ export type DraftItem = {
 export type SaleDraft = {
   customer_id: string | null; payment_method: string; items: DraftItem[]; total: number; currency: string
 }
-export type PriceAlert = { product_id: string; name: string; price_unit: number; unit_cost: number; level: 'below_cost' }
+/** unit_cost is present only for roles that may see costs (owner/manager). */
+export type PriceAlert = { product_id: string; name: string; price_unit: number; unit_cost?: number; level: 'below_cost' }
 /** Informational notes for the seller (quantity defaulted, price changed) and price alerts. Never block. */
 export type DecisionNotes = { notes: string[]; price_alerts: PriceAlert[] }
 export type DraftDecision =

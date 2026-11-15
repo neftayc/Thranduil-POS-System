@@ -3,6 +3,7 @@ import type {
   Confidence, OrderInterpretation as Interpretation, ProposalAlternative, ProposalItem, SaleProposal
 } from './agent1Contracts'
 import { explicitChoice } from './sellerChoice'
+import { descriptionWithoutQuantity } from './grounding'
 import { brandVocabulary, closestCandidates, decideMatch, reasonsFor, tiedWithBest, type MatchDecision, type RetrievedDoc } from './productSearch'
 
 export interface AgentCatalog {
@@ -25,7 +26,9 @@ const lowest = (...values: Confidence[]) => values.reduce((a, b) => RANK[a] <= R
 
 /** Text sent to the matcher: the interpreter keeps brand and attributes in `query`; add them if it split them out. */
 export const matchQuery = (item: Interpretation['items'][number]) => {
-  const query = item.query.trim()
+  // The interpreter sometimes leaves the quantity at the start ("dos cuadernos markin…"): it is not
+  // a product word, and keeping it lowers the match. Same rule as process 2 (grounding.ts).
+  const query = descriptionWithoutQuantity(item.query.trim()).trim()
   const extra = [item.brand, ...(item.attributes || [])]
     .filter((value): value is string => Boolean(value?.trim()))
     .filter(value => !normalize(query).includes(normalize(value)))

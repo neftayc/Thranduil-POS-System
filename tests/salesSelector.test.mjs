@@ -48,13 +48,13 @@ test('guardias: referencias → ids reales; una referencia inventada se vuelve p
   assert.ok(c.lines[2].question)
 })
 
-test('guardias: una línea «baja» lleva pregunta y opciones reales (la propuesta primero); sin cantidad → 1', () => {
+test('guardias: una línea «baja» lleva pregunta y opciones reales (la propuesta primero); una cantidad inválida queda null (el registrador la pide)', () => {
   const c = sel.toConsolidated(output([line({
     phrase: 'una goma en barra, la icona', product_ref: ref('Goma en barra 21Gr'), confidence: 'baja', question: '¿8 g o 21 g?',
     options: [ref('Goma en barra 8 gr'), 'p0', ref('Goma en barra 8 gr')]
   })]), catalog)
   const [l] = c.lines
-  assert.equal(l.quantity, 1)
+  assert.equal(l.quantity, null)
   assert.equal(l.question, '¿8 g o 21 g?')
   assert.deepEqual(l.options, [byName('Goma en barra 21Gr').id, byName('Goma en barra 8 gr').id])
 })
@@ -119,32 +119,24 @@ test('golden-dictados.json: todos los productos esperados existen en el snapshot
   }
 })
 
-test('verificación de HECHOS: una «alta» que contradice un número, medida o tipo dicho baja a pregunta con opciones reales', () => {
-  const decide = (phrase, name, messages = [phrase]) => sel.toConsolidated(output([line({ phrase, product_ref: ref(name), quantity: 1 })]), catalog, messages).lines[0]
-  const trilux = decide('Un lapicero Trilux 060 azul', 'Lapicero Trilux Azul-032')
-  assert.equal(trilux.confidence, 'baja', '060 ≠ 032')
-  assert.ok(trilux.options.length >= 2 && trilux.options.includes(byName('Lapicero Trilux Azul-032').id))
-  assert.equal(decide('cuaderno markin cuadriculado 50 hojas', 'Cuaderno Markin # 100 h').confidence, 'baja', '50 ≠ 100 hojas')
-  assert.equal(decide('cuaderno markin triple renglón', 'Cuaderno Markin # 100 h').confidence, 'baja', 'triple renglón ≠ cuadriculado')
+test('solo hechos: el código no relee el texto del vendedor; la lectura de la IA pasa tal cual (cantidad, producto)', () => {
+  const take = (phrase, name, quantity) => sel.toConsolidated(output([line({ phrase, product_ref: ref(name), quantity })]), catalog).lines[0]
+  // Noise in the phrase does not change anything: the code does not read it.
+  const a = take('...eh, 10 plumons FC 123 Jumbo.', 'Plumón de Pizarra Acrílico Jumbo - 123', 10)
+  const b = take('10 plumons FC 123 Jumbo', 'Plumón de Pizarra Acrílico Jumbo - 123', 10)
+  assert.deepEqual([a.product_id, a.quantity, a.confidence], [b.product_id, b.quantity, b.confidence])
+  // No override from the words: the AI's quantity stays (the quantity-first rule is a prompt instruction).
+  assert.equal(take('5 papeles a4 arcohiries', 'Papel Arcoiris', 4).quantity, 4)
+  // Facts: impossible quantities are not accepted.
+  for (const bad of [0, -2, Infinity, NaN, 2000000]) assert.equal(take('x', 'Papel Arcoiris', bad).quantity, null, String(bad))
+  // An «alta» with a real product is not second-guessed by word rules.
+  assert.equal(take('Un lapicero Trilux 060 azul', 'Lapicero 060 - Azul, Rojo', 1).confidence, 'alta')
 })
 
-test('el lenguaje lo interpreta la IA (decisión del dueño): sin reglas de palabras ni de empates en el código', () => {
-  const decide = (phrase, name, messages = [phrase]) => sel.toConsolidated(output([line({ phrase, product_ref: ref(name), quantity: 1 })]), catalog, messages).lines[0]
-  // Facts are fine → the code does not second-guess the AI's reading.
-  for (const [phrase, name] of [
-    ['2 plumones de cartel 123 de pizarra', 'Plumón de Pizarra Acrílico Jumbo - 123'],
-    ['dos lapiceros así, azul 0.60', 'Lapicero 060 - Azul, Rojo'],
-    ['tres cartulinas a colores', 'Cartulina a colores'],
-    ['5 siliconas en barra', 'Silicona en barrra'],
-    ['20 unidades de papel bond', 'Papel Bond'],
-    // Self-corrections and redundancies (real case c4d9a7e3 and variants).
-    ['20 unidades de papel a color', 'Papel Arcoiris'],
-    ['10 unidades de papel arcoíris a colores', 'Papel Arcoiris'],
-    ['2 plumones Faber-Castell de papel W47, perdón, de pizarra Jumbo 123', 'Plumón de Pizarra Acrílico Jumbo - 123']
-  ]) assert.equal(decide(phrase, name).confidence, 'alta', phrase)
-  assert.equal(sel.modelCodes('azul 0.60'), 'azul 060')
-  assert.equal(sel.modelCodes('cero treinta y dos'), '032')
-  assert.equal(sel.modelCodes('mina 0.5'), 'mina 0.5')
+test('el lenguaje lo interpreta la IA (decisión del dueño): el código no tiene reglas de palabras, empates, cantidades ni dictado', () => {
+  for (const name of ['contradictions', 'leadingQuantity', 'modelCodes']) assert.equal(sel[name], undefined, name)
+  const source = readFileSync(new URL('../server/modules/agent/app/salesSelector.ts', import.meta.url), 'utf8')
+  for (const banned of ['normalizeText', 'leadingQuantity', 'phraseInDictation', 'decideMatch', 'fixBrandDictation']) assert.ok(!source.includes(banned), banned)
 })
 
 test('autocorrecciones en el prompt y en los ejemplos aprendidos (no en el código)', () => {
@@ -154,24 +146,10 @@ test('autocorrecciones en el prompt y en los ejemplos aprendidos (no en el códi
   assert.match(system, /no, mejor correctores de 9 ml/)
 })
 
-test('regla del dueño: la cantidad va primero (dígitos o palabras; misma lectura que el registrador, grounding.leadingQuantity)', () => {
-  const q = sel.leadingQuantity
-  assert.equal(q('Cartulina blanco'), null, 'sin número delante (el modelo pone 1)')
-  assert.equal(q('5 papeles a4 arcohiries'), 5)
-  assert.equal(q('10 plumons FC 123 Jumbo'), 10)
-  assert.equal(q('cinco cartulinas negras'), 5)
-  assert.equal(q('una goma en barra, la icona'), 1)
-  assert.equal(q('Diez cartulinas negras'), 10)
-  assert.equal(q('cuaderno 100 hojas'), null)
-  assert.equal(q('plumones FC 123 Jumbo'), null)
-  assert.equal(q('media docena de lápices'), 6, 'sin presentación: 6 unidades')
-  assert.equal(q('media docena de lápices', 'docena'), 0.5, 'en docenas: media docena')
-  // The opening number wins over a quantity the model read from a model code.
-  const c = sel.toConsolidated(output([
-    line({ phrase: '10 plumons FC 123 Jumbo', product_ref: ref('Plumón de Pizarra Acrílico Jumbo - 123'), quantity: 123 }),
-    line({ phrase: 'Cartulina blanco', product_ref: ref('Cartulina blanca'), quantity: null })
-  ]), catalog, ['Cartulina blanco. 5 papeles a4 arcohiries, 10 plumons FC 123 Jumbo'])
-  assert.deepEqual(c.lines.map(l => l.quantity), [10, 1])
+test('regla del dueño «la cantidad va primero»: es instrucción y ejemplos para la IA, no un ajuste en el código', () => {
+  const system = sel.selectorSystemPrompt(catalog)
+  for (const rule of [/la cantidad va SIEMPRE PRIMERO/, /en dígitos o en palabras/, /Sin número delante es 1/, /número DESPUÉS del inicio del nombre es descripción/]) assert.match(system, rule)
+  assert.match(system, /«de 40» es la medida \(40 g\), no la cantidad/)
 })
 
 test('ejemplo literal del dueño en el set (D11) y en el prompt la regla completa', () => {
@@ -181,7 +159,7 @@ test('ejemplo literal del dueño en el set (D11) y en el prompt la regla complet
   // Two Arcoiris papers exist: asking is right; deciding the plain one is accepted until the owner validates.
   assert.deepEqual(d11.lines[1].options, ['Papel Arcoiris', 'Papel Arcoiris  Color Pastel'])
   const system = sel.selectorSystemPrompt(catalog)
-  for (const rule of [/la cantidad va SIEMPRE PRIMERO/, /en dígitos o en palabras/, /media docena/, /Sin número delante es 1/, /comas, puntos o «y»/, /pertenece al artículo que viene DESPUÉS/]) assert.match(system, rule)
+  for (const rule of [/la cantidad va SIEMPRE PRIMERO/, /en dígitos o en palabras/, /media docena/, /Sin número delante es 1/]) assert.match(system, rule)
 })
 
 // ------------------------------------------------------------ wiring with process 2 (buildDraft + registrar)
@@ -207,11 +185,11 @@ test('buildDraft del selector: consolidado con el esquema de contracts.ts; el re
   const build = sel.makeSelectorBuildDraft({ catalog: async () => catalog, model: mockModel(output([
     line({ phrase: 'Cartulina blanco', product_ref: ref('Cartulina blanca'), quantity: 1 }),
     line({ phrase: '5 papeles a4 arcohiries', product_ref: ref('Papel Arcoiris'), quantity: 5 }),
-    line({ phrase: '10 plumons FC 123 Jumbo', product_ref: ref('Plumón de Pizarra Acrílico Jumbo - 123'), quantity: 123 })
+    line({ phrase: '10 plumons FC 123 Jumbo', product_ref: ref('Plumón de Pizarra Acrílico Jumbo - 123'), quantity: 10 })
   ])) })
   const consolidated = await build([text], null)
   assert.equal(saleConsolidatedSchema.safeParse(consolidated).success, true)
-  assert.deepEqual(consolidated.lines.map(l => l.quantity), [1, 5, 10], 'el 123 es el modelo, la cantidad es la que va primero')
+  assert.deepEqual(consolidated.lines.map(l => l.quantity), [1, 5, 10])
   const decision = await makeConsolidatedRegistrar(validationCatalog)(consolidated, text, new Map())
   assert.equal(decision.kind, 'direct', JSON.stringify(decision.reasons || ''))
   assert.equal(decision.sale.payment_method, 'efectivo')
@@ -243,12 +221,11 @@ test('buildDraft del selector: en una aclaración recibe el consolidado previo (
   assert.equal(seen[2].consolidado_previo, null)
 })
 
-test('aclaración con otra cantidad: la frase pasa a ser el fragmento que dice esa cantidad (lo exige el registrador)', async () => {
+test('aclaración con otra cantidad: el registrador acepta la cantidad del selector tal cual (sin releer la frase)', async () => {
   const D6 = 'Cuadernos de 100 hojas, marca margen cuadriculado.', D6b = 'Dos cuadernos cuadriculados marca marking de 100 hojas.'
   const build = sel.makeSelectorBuildDraft({ catalog: async () => catalog, model: mockModel(output([line({ phrase: D6, product_ref: ref('Cuaderno Markin # 100 h'), quantity: 2 })])) })
   const consolidated = await build([D6, D6b], null)
   assert.equal(consolidated.lines[0].quantity, 2)
-  assert.equal(consolidated.lines[0].phrase, 'Dos cuadernos cuadriculados marca marking de 100 hojas')
   const decision = await makeConsolidatedRegistrar(validationCatalog)(consolidated, [D6, D6b].join('\n'), new Map())
   assert.equal(decision.kind, 'direct', JSON.stringify(decision.reasons || ''))
 })

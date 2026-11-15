@@ -1,10 +1,6 @@
 import { z } from 'zod'
 import { saleConsolidatedSchema, saleDraftSchema, type SaleConsolidated, type SaleDraftV1 } from '../contracts'
-import { leadingQuantity } from './grounding'
-import { phraseInDictation } from './registrar'
 import { SELECTOR_EXAMPLES, type SelectorExample } from './selectorExamples'
-import { fixBrandDictation } from './catalogConventions'
-import { applyConventions, brandVocabulary, contentWords, decideMatch, normalizeText, retrieveLexical, similarWord, type SearchDoc } from './productSearch'
 
 /**
  * STEP 2 — SALES SELECTOR (the smart seller).
@@ -87,9 +83,10 @@ Cómo decides (como un vendedor que conoce su tienda):
 - Errores de dictado frecuentes: «margen», «marking», «markin» = Markin; «iconza», «icona» = Layconsa; «de cartel», «castel» = Faber-Castell; «para pisar» = de pizarra; «Sure Table» = Shurtape; «más hojas» puede ser «100 hojas». Un código de modelo coincide aunque se dicte distinto: «0.60», «0 60», «cero sesenta» = 060.
 - Los códigos de modelo o medida (060, 123, «de 250», «100 hojas») NO son cantidades.
 - Cantidad (regla del dueño): cada artículo es [cantidad opcional] + producto, y la cantidad va SIEMPRE PRIMERO, en dígitos o en palabras («5 papeles», «cinco papeles», «una goma», «media docena de lápices»). Sin número delante es 1 («cartulina blanca» = 1; un plural sin número también es 1). Todo número DESPUÉS del inicio del nombre es descripción (modelo, medida, hojas, gramos): «10 plumones FC 123 Jumbo» = 10 y el 123 es el modelo; «cuaderno 100» = 1 cuaderno de 100 hojas.
-- Los artículos se separan por comas, puntos o «y». Un número pertenece al artículo que viene DESPUÉS de él: en «cartulina blanca, 5 papeles», el 5 es de los papeles.
+- Lee el dictado COMPLETO y en contexto. La puntuación del dictado por voz no es confiable: puntos, comas, «...», muletillas («eh», «em», «este»), repeticiones y basura NO deciden nada (ni separan artículos, ni crean cantidades, ni bloquean). Reconoce cada artículo por su sentido: [cantidad] + producto. Un número pertenece al artículo que viene DESPUÉS de él: en «cartulina blanca 5 papeles», el 5 es de los papeles. Repetir el mismo artículo («dos cartulinas blancas, dos cartulinas blancas») no lo duplica.
 - Cada mención con su propia cantidad delante es un artículo aparte: «papel lustre, em, dos papeles» = 1 × papel lustre y 2 × papeles (sin tipo → pregunta). Ignora muletillas («em», «a ver», «este»).
 - Autocorrecciones del vendedor: «perdón», «no, mejor», «digo», «o sea», «en vez de …», «mejor ponle». Lo ÚLTIMO dicho reemplaza a lo anterior del MISMO artículo: queda UNA sola línea con la cantidad y el producto corregidos, nunca dos. En el dictado por voz un «perdón» suele llegar como «...» o como una pausa: «10 unidades de X... 20 unidades de X» es una corrección (20), no dos artículos. La corrección puede nombrar el artículo de forma más corta o genérica («3 folders manila A4... 4 folders» corrige a los folders manila): sigue siendo el mismo artículo.
+- NUNCA omitas un artículo mencionado. Si dudas si una mención corrige a otra o es un artículo nuevo, deja UNA línea con la cantidad final, confianza "baja" y una pregunta corta («¿son 6 folders o 4 + 6?»): la duda se pregunta, no se resuelve borrando ni duplicando.
 - Redundancias: palabras que repiten lo que el producto ya es no cambian el producto ni lo ponen en duda («cartulina de color negro» = Cartulina Negra; «crayones jumbo de colores» = Crayones Jumbo, porque ya son de colores).
 - Presentación (unit): la dicha (caja, paquete, docena…) si existe en el producto; si no se dijo, null (unidad base).
 - Precio dictado («de un sol», «a 3 soles») va en price_said y sirve de PISTA: si varios productos compatibles difieren por precio, el que tiene ese precio. Nunca cambies el producto solo por precio si el tipo o las características no coinciden.
@@ -154,70 +151,17 @@ export type SelectorModelOutput = z.infer<typeof selectorModelSchema>
 const clip = (text: string | null | undefined, max: number) => (text || '').replace(/\s+/g, ' ').trim().slice(0, max)
 
 /**
- * Deterministic check of a «alta» pick: the phrase must not CONTRADICT the product (another
- * number or measure, another ruling or size, another type, another brand). Returns the
- * contradictions and the closest compatible alternatives (real products) for the question.
+ * Deterministic guards on the model's answer — FACTS only (owner, 15 nov: «interpretar un texto
+ * completo de acuerdo a su contexto; los puntos y otros textos basura no deben influir»). The code
+ * never re-reads the seller's text: quantities, self-corrections, redundancies, dictation errors
+ * and negations are the AI's job (prompt + examples + benchmark). Here only:
+ *  - references → real product ids (an unknown reference becomes a question);
+ *  - «alta» needs a real product; a «baja» line carries a question and real options;
+ *  - the quantity must be a finite number > 0 (otherwise null: the registrar asks for it);
+ *  - the payment method must be an active one (a said but unknown payment becomes a question;
+ *    none said → efectivo).
  */
-const TENS: Record<string, number> = { diez: 10, veinte: 20, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90 }
-const UNITS: Record<string, number> = { uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9 }
-/** Model codes said as decimals or words: «0.60», «0 60», «cero sesenta» → 060 (two digits only: «0.5» stays). */
-export const modelCodes = (text: string) => text
-  .replace(/\bcero\s+(diez|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa)(?:\s+y\s+(uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve))?\b/gi,
-    (_, tens: string, unit?: string) => `0${TENS[tens.toLowerCase()] + (unit ? UNITS[unit.toLowerCase()] : 0)}`)
-  .replace(/(^|[^\d.,])0(?:[.,]\s?|\s)(\d{2})(?![\d.,]*\d)/g, '$10$2')
-/** The leading quantity of a phrase («tres cartulinas…», «10 plumones…») is not part of the product. */
-const QUANTITY_HEAD = /^\s*(?:\d+(?:[.,]\d+)?|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|quince|veinte|media|medio)\s+/i
-
-const sameWord = (a: string, b: string) => similarWord(a, b) || (a.length >= 4 && b.startsWith(a)) || (b.length >= 4 && a.startsWith(b))
-
-/**
- * FACT check of a «alta» pick (owner, 15 nov: language — self-corrections, redundancies,
- * dictation — is interpreted by the AI, not by deterministic rules). It only flags exact
- * contradictions between the phrase and the product: another number or measure, ruling, size,
- * type or brand. Returns them and the closest compatible alternatives (real products).
- */
-export const contradictions = (phrase: string, productId: string, catalog: SelectorCatalog) => {
-  const docs: SearchDoc[] = catalog.products.map(p => ({ id: p.id, name: p.name, brand: p.brand, category: p.type, sku: null }))
-  const brands = brandVocabulary(docs)
-  const text = applyConventions(fixBrandDictation(modelCodes(phrase)).replace(QUANTITY_HEAD, ''))
-  const doc = docs.find(d => d.id === productId)
-  if (!doc) return { conflicts: ['el producto no existe'], alternatives: [] as string[] }
-  // The type is judged against the products the phrase retrieves (as the legacy search does).
-  const retrieved = retrieveLexical(text, docs, 30)
-  const pool = retrieved.some(d => d.id === doc.id) ? retrieved : [...retrieved, doc]
-  const decision = decideMatch(text, pool, brands)
-  const own = decision.ranked.find(c => c.doc.id === doc.id)
-  const alternatives = decision.ranked.filter(c => c.doc.id !== doc.id && !c.conflicts.length && c.coverage >= 0.5).slice(0, 4).map(c => c.doc.id)
-  const conflicts = [...(own?.conflicts || [])]
-  return { conflicts, alternatives: alternatives.slice(0, 4) }
-}
-
-/**
- * Deterministic guards on the model's answer: references → real ids (unknown → question),
- * «alta» needs a real product, a «baja» line always carries a question and real options,
- * no quantity → 1, no/unknown payment → efectivo when it was not said (a said but unknown
- * payment becomes a question).
- */
-// The owner's rule «la cantidad va primero» uses process 2's own reading (grounding.leadingQuantity),
-// so the selector and the registrar never disagree on what the phrase says.
-export { leadingQuantity }
-
-/**
- * The registrar requires the phrase to open with the line's quantity (or none for 1). When the
- * model kept a phrase that does not say its quantity, look in the dictation for the ONLY item
- * fragment that opens with that quantity and names this product, and use it.
- */
-const phraseForQuantity = (phrase: string, quantity: number, unit: string | null, productId: string | null, catalog: SelectorCatalog, messages: string[]) => {
-  if ((leadingQuantity(phrase, unit) ?? 1) === quantity || !productId) return phrase
-  const product = catalog.products.find(p => p.id === productId)
-  if (!product) return phrase
-  const own = contentWords(`${product.name} ${product.brand || ''} ${product.type || ''}`)
-  const fragments = messages.flatMap(m => m.split(/[.;,]|\s+y\s+/)).map(f => f.trim()).filter(Boolean)
-  const fits = fragments.filter(f => leadingQuantity(f, unit) === quantity && contentWords(f).some(w => own.some(o => sameWord(w, o))))
-  return fits.length === 1 && phraseInDictation(messages.join('\n'), fits[0]) ? fits[0] : phrase
-}
-
-export const toConsolidated = (raw: SelectorModelOutput, catalog: SelectorCatalog, messages: string[] = []): SaleConsolidated => {
+export const toConsolidated = (raw: SelectorModelOutput, catalog: SelectorCatalog): SaleConsolidated => {
   const { toId } = referencesFor(catalog.products)
   const ids = new Set(catalog.products.map(p => p.id))
   const resolve = (ref: string | null) => {
@@ -234,25 +178,14 @@ export const toConsolidated = (raw: SelectorModelOutput, catalog: SelectorCatalo
     let question = clip(line.question, 300) || null
     if (line.product_ref && !productId) { confidence = 'baja'; question = question || `No identifiqué el producto de «${clip(line.phrase, 80)}» en el catálogo.` }
     if (!productId) confidence = 'baja'
-    // The AI interprets, the rules verify: a «alta» pick that contradicts what was said becomes a question.
-    if (confidence === 'alta' && productId) {
-      const check = contradictions(line.phrase, productId, catalog)
-      if (check.conflicts.length) {
-        confidence = 'baja'
-        question = `«${clip(line.phrase, 80)}»: ${check.conflicts[0]}. ¿Cuál es?`
-        for (const id of check.alternatives) if (!options.includes(id)) options.push(id)
-      }
-    }
     if (confidence === 'baja') {
       if (productId && !options.includes(productId)) options.unshift(productId)
       question = question || `¿Cuál producto es «${clip(line.phrase, 80)}»?`
     } else question = null
-    // The number that opens the item is its quantity (owner's rule); a number after the product name never is.
-    const opening = leadingQuantity(line.phrase, line.unit)
-    const quantity = opening !== null && opening > 0 ? opening
-      : typeof line.quantity === 'number' && line.quantity > 0 && line.quantity <= 1000000 ? line.quantity : 1
+    // Fact: a finite quantity > 0, as the AI read it (the quantity-first rule is an instruction to the AI).
+    const quantity = typeof line.quantity === 'number' && Number.isFinite(line.quantity) && line.quantity > 0 && line.quantity <= 1000000 ? line.quantity : null
     return {
-      phrase: clip(phraseForQuantity(line.phrase, quantity, clip(line.unit, 40) || null, productId, catalog, messages), 500),
+      phrase: clip(line.phrase, 500),
       product_id: productId,
       quantity,
       unit: clip(line.unit, 40) || null,
@@ -303,7 +236,7 @@ export const makeSalesSelector = (deps: { model: SelectorModel; catalog: () => P
     } : null
     const user = JSON.stringify({ mensajes: input.messages.map(m => m.slice(0, 2500)).slice(-10), consolidado_previo: previous })
     const { output, usage } = await deps.model(cached.system, user)
-    return { consolidated: toConsolidated(output, catalog, input.messages), usage, intent: output.intent }
+    return { consolidated: toConsolidated(output, catalog), usage, intent: output.intent }
   }
 }
 

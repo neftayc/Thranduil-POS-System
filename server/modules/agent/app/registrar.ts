@@ -22,7 +22,8 @@ export const phraseInDictation = (dictation: string, phrase: string) => {
  *   3. OFFICIAL price (resolve_sale_item_pricing); price_said ≠ list → price_modified (option A);
  *      official 0 → price_unavailable;
  *   4. available stock (minus reservations) and an active payment method;
- *   5. a non-cash payment's phrase is in the dictation (the owner's rule: never Yape/transfer unless said);
+ *   5. the selector's payment method is accepted as is (efectivo when none); it only has to exist and be
+ *      active. The seller sees it next to the total in the short summary;
  *   6. confidence «baja», no product_id, or a question → por confirmar with the question and options.
  * Everything OK → DIRECT (create_sale). Otherwise → REVIEW with reservation, as in the legacy path.
  * It does NOT re-interpret the text (no quantity attribution, dozens, negations…): that is step 2.
@@ -32,7 +33,7 @@ export const phraseInDictation = (dictation: string, phrase: string) => {
  */
 export const makeConsolidatedRegistrar = (catalog: ValidationCatalog) => async (
   consolidated: SaleConsolidated,
-  dictation: string,
+  _dictation: string, // kept in the signature; the registrar no longer re-reads the text
   reserved: Map<string, number> = new Map(),
   context: ValidationContext = {}
 ): Promise<DraftDecision> => {
@@ -149,7 +150,7 @@ export const makeConsolidatedRegistrar = (catalog: ValidationCatalog) => async (
     if (hold > 0) reservations.push({ product_id: id, qty: hold })
   }
 
-  // 4. Payment: an active method. Efectivo when none was said; any other must have been said.
+  // 4. Payment: the selector's method, as is (it reads the whole text); only an unknown/inactive one blocks.
   const methods = await catalog.paymentMethods()
   const wanted = normalizeText(consolidated.payment_method || 'efectivo').trim()
   const method = methods.find(m => normalizeText(m.code).trim() === wanted) || methods.find(m => normalizeText(m.label).trim() === wanted)
@@ -157,9 +158,6 @@ export const makeConsolidatedRegistrar = (catalog: ValidationCatalog) => async (
   let paymentDefaulted = false
   if (!method) {
     reasons.push({ code: 'invalid_payment', message: `La forma de pago «${consolidated.payment_method}» no está disponible en el POS.`, detail: { payment_method: consolidated.payment_method } })
-  } else if (normalizeText(method.code).trim() !== 'efectivo' && !(consolidated.payment_phrase && phraseInDictation(dictation, consolidated.payment_phrase))) {
-    // Owner's rule: never register Yape / transfer unless the seller said it.
-    reasons.push({ code: 'missing_payment', message: `La forma de pago «${method.label}» no aparece en el pedido del vendedor.`, detail: { payment_method: method.code, ungrounded: true } })
   } else {
     paymentCode = method.code
     if (normalizeText(method.code).trim() === 'efectivo' && !consolidated.payment_phrase) {

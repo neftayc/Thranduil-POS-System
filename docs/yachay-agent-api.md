@@ -287,8 +287,8 @@ puede cotizar); (2) la cantidad del selector, **tal cual**: presente, > 0 y ente
 por unidad (la docena admite 0,5); si falta o es imposible → `missing_quantity`. La regla «la cantidad
 va primero» la aplica el paso 2; (3) precio **oficial** (`resolve_sale_item_pricing`): `price_said` distinto →
 `price_modified` (por confirmar, opción A); oficial 0 → `price_unavailable`; (4) stock disponible
-(menos reservas) y forma de pago activa: efectivo por defecto; otra solo si su `payment_phrase` está
-en el dictado (si no, `missing_payment`); (5) la `phrase` **no** tiene que ser literal del dictado
+(menos reservas) y forma de pago: la del selector **tal cual** (efectivo por defecto), solo debe existir
+y estar activa (si no, `invalid_payment`); el vendedor la ve junto al total en el resumen; (5) la `phrase` **no** tiene que ser literal del dictado
 (el dictado por voz deja puntuación y autocorrecciones; el selector solo usa ids reales del catálogo,
 que se verifican en (1)); (6) `confidence: "baja"`, `product_id` nulo o `question` →
 `selector_question`, con la pregunta y sus `options` (id y nombre) para el vendedor

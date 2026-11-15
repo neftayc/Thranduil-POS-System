@@ -1440,11 +1440,13 @@ test('registrador: stock insuficiente (descontando reservas) → revisión, rese
   assert.deepEqual(result.reservations, [{ product_id: CUADERNO.id, qty: 1 }])
 })
 
-test('registrador: pago — efectivo por defecto sin frase; otro pago solo si su frase está en el dictado; inexistente → revisión', async () => {
+test('registrador: pago — efectivo por defecto; el del selector se acepta tal cual (sin releer el texto); inexistente → revisión', async () => {
   const { result: cash } = await register(consolidatedOf({ lines: [cline()], payment_method: 'efectivo', payment_phrase: null }), 'dos cuadernos A4')
   assert.deepEqual([cash.kind, cash.sale.payment_method, cash.payment_defaulted, cash.notes], ['direct', 'efectivo', true, ['Pago: efectivo (por defecto).']])
-  const { result: invented } = await register(consolidatedOf({ lines: [cline()], payment_method: 'yape', payment_phrase: null }), 'dos cuadernos A4')
-  assert.deepEqual(rcodes(invented), ['missing_payment'])
+  const { result: yape } = await register(consolidatedOf({ lines: [cline()], payment_method: 'yape', payment_phrase: 'yape...' }), 'dos cuadernos A4, pago con yape...')
+  assert.deepEqual([yape.kind, yape.sale.payment_method, yape.payment_defaulted], ['direct', 'yape', false])
+  const { result: noPhrase } = await register(consolidatedOf({ lines: [cline()], payment_method: 'yape', payment_phrase: null }), 'dos cuadernos A4')
+  assert.deepEqual([noPhrase.kind, noPhrase.sale.payment_method], ['direct', 'yape'])
   const { result: missing } = await register(consolidatedOf({ lines: [cline()], payment_method: 'plin', payment_phrase: 'con plin' }), 'dos cuadernos A4 con plin')
   assert.deepEqual(rcodes(missing), ['invalid_payment'])
 })

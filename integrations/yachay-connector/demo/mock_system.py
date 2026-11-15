@@ -36,7 +36,7 @@ async def prepared_context(authorization: str | None = Header(None)):
             "instructions": [
                 "Solicita una orden y transmítela completa al agente del POS.",
                 "Comunica las respuestas sin inventar resultados.",
-                "Cada orden de venta requiere confirmación explícita en esta simulación."
+                "Cada orden de venta queda como venta por confirmar en esta simulación."
             ],
             "capabilities": ["simulate_sale", "simulate_confirmation"],
             "locale": "es-PE"
@@ -48,11 +48,11 @@ async def prepared_context(authorization: str | None = Header(None)):
 async def instructions(body: Instruction, authorization: str | None = Header(None)):
     authorize(authorization)
     if body.type == "instruction":
-        return {"status": "requires_confirmation", "operation_id": "demo-" + body.request_id,
-                "message": "SIMULACIÓN: ¿Confirmas que enviemos esta orden al POS? No se registrará nada."}
+        return {"status": "pending_review", "operation_id": "demo-" + body.request_id,
+                "message": "SIMULACIÓN: venta por confirmar; no se registró nada. Responde con el dato faltante o «cancelar»."}
     if body.type == "follow_up":
         answer = str(body.input.get("text", "")).strip().lower()
-        if answer in {"sí", "si", "confirmo", "confirmar"}:
+        if answer not in {"no", "cancelar", "cancela"}:
             return {"status": "completed", "message": "Simulación completada, SIN venta real.", "simulated": True}
         return {"status": "rejected", "message": "Simulación cancelada, SIN venta real.", "simulated": True}
     raise HTTPException(status_code=400, detail="type inválido")

@@ -63,7 +63,7 @@ Un token provisional, sin vendedor, firmado con otra clave o vencido se rechaza 
 
 ## Límites actuales
 
-- Solo local: Claude web/celular necesita la fase 2 (HTTPS público). El enlace `/vincular` usará entonces `POS_AGENT_PUBLIC_URL`.
+- Solo local: Claude web/celular necesita la fase 2 (HTTPS público). El enlace `/vincular` usará entonces `POS_AGENT_PUBLIC_URL`, y `systems.json` debe declarar ese origen en `verification_origin`.
 - La validación en lote de ventas por confirmar y los avisos programados son la etapa 2.
 - Sesiones y operaciones se guardan en archivos locales del POS: una sola instancia.
 

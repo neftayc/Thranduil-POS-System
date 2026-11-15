@@ -52,7 +52,7 @@ POS_AGENT_SESSION_KEY=<otro secreto de al menos 32 caracteres>
 POS_AGENT_MODEL=gpt-4o-mini
 POS_AGENT_STORAGE_DIR=.data/agent
 # Opcionales
-POS_AGENT_PUBLIC_URL=            # origen público del enlace /vincular (fase 2)
+POS_AGENT_PUBLIC_URL=            # origen público de /vincular (fase 2); requiere verification_origin en systems.json
 POS_AGENT_REVIEW_TTL_HOURS=48    # vigencia de la reserva de una venta por confirmar
 POS_AGENT_DRY_RUN=               # 1 = solo validación: nunca registra ventas (apagado por defecto)
 POS_AGENT_SEARCH_AUTOINDEX=      # 1 = calcular vectores al buscar (ESCRIBE en la base; apagado; nunca con dry-run)
@@ -90,16 +90,21 @@ enviar secretos al modelo ni al contexto.
 - En **cada** contexto con sesión e instrucción, el POS comprueba que la sesión no
   esté vencida ni revocada, renueva el token si hace falta, y verifica con Supabase
   Auth que el usuario no esté desactivado (`banned_until`) y que su rol (`user_role`)
-  sea `owner`, `manager` o `cashier`. Se repite justo antes de registrar.
+  sea `owner`, `manager` o `cashier`. Se repite justo antes de registrar. El nombre y
+  el **rol que usa el POS salen de ese perfil vigente**, no del momento de aprobar: si
+  bajan a un gerente a cajero, desde la siguiente petición opera como cajero.
 - La RPC `create_sale` se llama con el token del vendedor: `sales.created_by` es
   ese vendedor.
 - Una operación pertenece al vendedor que la creó: otro vendedor recibe 403
   («Esta operación pertenece a otro vendedor.»).
 - Límites (solo cuentan los fallos; un acierto nunca bloquea a nadie): 5 fallos por
-  código, contados de forma atómica (luego se anula); 5 por correo y 30 por IP cada
-  10 minutos. Peticiones sin código válido no cuentan. Aprobar un código y entregar la
+  código, contados de forma atómica (luego se anula); 5 por correo **desde la misma IP**
+  y 30 por IP cada 10 minutos (quien conozca el correo de un vendedor no puede
+  bloquearlo desde otra red; el mensaje no revela si el correo existe). Peticiones sin código válido no cuentan. Aprobar un código y entregar la
   sesión son transiciones atómicas: un código crea una sola sesión y se entrega una vez.
-- Antiphishing: `/vincular` muestra la hora en que se pidió el código, y Claude
+- Antiphishing: `/vincular` no acepta el código en la URL (el vendedor lo escribe),
+  avisa «Solo aprueba un código que tú mismo pediste en Claude en este momento»,
+  muestra la hora en que se pidió el código, y Claude
   muestra el nombre y el rol del vendedor aprobado y pide confirmar que es él o ella.
 - Revocar es inmediato en el POS y no lo deshace una renovación de token en curso
   (renovación y revocación comparten un bloqueo y se relee el registro). Luego se
@@ -125,7 +130,9 @@ Solo para el conector (`Authorization: Bearer <POS_AGENT_TOKEN>`).
 → `pending` | `denied` | `expired` | `{ "status": "approved", "session": "<opaco>", "seller": { "name": "Ana Pérez", "role": "cashier" }, "expires_at": 1762920000 }`
 
 El conector exige que `verification_url` tenga el mismo origen que su
-`identification_url` configurada.
+`identification_url` configurada. Si defines `POS_AGENT_PUBLIC_URL` (enlace público,
+fase remota), agrega en `systems.json` del conector `"verification_origin":
+"https://<tu-dominio>"` con ese mismo origen; si no, el conector rechaza el enlace.
 
 ## POST /api/agent/identification/approve
 

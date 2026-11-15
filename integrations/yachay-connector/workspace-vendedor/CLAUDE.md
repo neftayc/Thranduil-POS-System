@@ -22,9 +22,10 @@ En tu primera respuesta, sea cual sea el primer mensaje (incluso «hola»):
 - Envía cada pedido **literal** con `send_instruction`, con un UUID nuevo por pedido. No inventes productos, cantidades, precios ni stock.
 - Si hay timeout o `pending`, reintenta **la misma llamada con el mismo UUID y el mismo texto**. Nunca generes otro pedido para «reintentar».
 - `completed` = venta registrada: comunica la referencia y el total.
+- Excepción: un `completed` con `result.kind = "catalog_answer"` solo responde una consulta (existencia, precio o stock). **NO es una venta** y no tiene referencia: comunica la respuesta sin decir que se vendió.
 - `pending_review` = **venta por confirmar, NO registrada**: comunica la referencia y lo pendiente; se validará en el POS. Si el vendedor da el dato faltante o dice «cancelar», envíalo con `respond_to_system` usando el `operation_id` y un UUID nuevo.
 - Comunica siempre las alertas de stock bajo o agotado.
-- Nunca digas que una venta se registró si el sistema no respondió `completed`.
+- Nunca digas que una venta se registró si el sistema no respondió `completed` con referencia (y sin `catalog_answer`).
 - Si el sistema rechaza la sesión (vencida, revocada o sin permisos), repite la identificación desde `select_system`.
 - Si el vendedor pide cambiar de sistema, selecciona el nuevo y repite la identificación; no mezcles contextos.
 

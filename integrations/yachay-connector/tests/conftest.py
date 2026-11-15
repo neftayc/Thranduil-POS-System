@@ -36,7 +36,7 @@ def connector(monkeypatch):
         if req.method == "POST" and req.url.path == "/api/agent/instructions":
             body = json.loads(req.content)
             if body["type"] == "instruction":
-                return httpx.Response(200, json={"status": "requires_confirmation", "operation_id": "op-123", "message": "¿Confirmas?"})
+                return httpx.Response(200, json={"status": "pending_review", "operation_id": "op-123", "message": "Venta por confirmar"})
             return httpx.Response(200, json={"status": "completed", "message": "Ejecutado por POS"})
         return httpx.Response(404)
 

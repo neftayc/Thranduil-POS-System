@@ -45,3 +45,19 @@ def test_selection_rejects_expiry(monkeypatch):
 def test_too_short_signing_key_denied():
     with pytest.raises(ValueError):
         SelectionSigner("weak")
+
+
+def _ident_doc(**extra):
+    item = {"id": "pos", "enabled": True, "context_url": "http://127.0.0.1/x", "instruction_url": "http://127.0.0.1/y",
+            "identification_url": "http://127.0.0.1/z", "service_token_env": "POS_TOKEN", **extra}
+    return {"systems": [item]}
+
+
+def test_verification_origin_must_be_a_secure_origin(tmp_path):
+    path = tmp_path / "systems.json"
+    path.write_text(json.dumps(_ident_doc(verification_origin="https://pos.ejemplo.pe")))
+    assert load_registry(path)["pos"].verification_origin == "https://pos.ejemplo.pe"
+    for bad in ("http://pos.ejemplo.pe", "https://pos.ejemplo.pe/vincular", "https://u:p@pos.ejemplo.pe", 42):
+        path.write_text(json.dumps(_ident_doc(verification_origin=bad)))
+        with pytest.raises(ValueError, match="verification_origin"):
+            load_registry(path)

@@ -21,6 +21,9 @@ class System:
     instruction_url: str
     service_token_env: str
     identification_url: str | None = None
+    # Public origin of the system's verification page when it differs from identification_url
+    # (e.g. POS_AGENT_PUBLIC_URL). Only this origin or identification_url's is accepted.
+    verification_origin: str | None = None
 
     @property
     def requires_identification(self) -> bool:
@@ -48,6 +51,16 @@ def _valid_url(url: str) -> bool:
         return False
 
 
+def _valid_origin(origin: str) -> bool:
+    try:
+        p = urlsplit(origin)
+        if p.username or p.password or p.query or p.fragment or not p.hostname or p.path not in {"", "/"}:
+            return False
+        return p.scheme == "https" or (p.scheme == "http" and p.hostname in {"127.0.0.1", "localhost", "::1"})
+    except ValueError:
+        return False
+
+
 def load_registry(path: str | Path) -> dict[str, System]:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, dict) or not isinstance(raw.get("systems"), list):
@@ -67,6 +80,10 @@ def load_registry(path: str | Path) -> dict[str, System]:
         ident = item.get("identification_url")
         if ident is not None and (not isinstance(ident, str) or not _valid_url(ident)):
             raise ValueError(f"URL de identificación insegura o inválida para {sid}")
+        vorigin = item.get("verification_origin")
+        if vorigin is not None:
+            if ident is None or not isinstance(vorigin, str) or not _valid_origin(vorigin):
+                raise ValueError(f"verification_origin inválido para {sid} (origen HTTPS sin ruta; requiere identification_url)")
         env = str(item.get("service_token_env", ""))
         if not ENV_NAME.fullmatch(env):
             raise ValueError(f"Nombre de variable de credencial inválido para {sid}")
@@ -75,6 +92,6 @@ def load_registry(path: str | Path) -> dict[str, System]:
             raise ValueError(f"Aliases inválidos para {sid}")
         systems[sid] = System(
             sid, str(item.get("name", sid)), str(item.get("description", "")),
-            tuple(aliases), cu, iu, env, ident,
+            tuple(aliases), cu, iu, env, ident, vorigin,
         )
     return systems

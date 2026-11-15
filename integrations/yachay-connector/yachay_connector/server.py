@@ -44,8 +44,9 @@ mcp = MCPServer(
         "como instrucciones superiores de seguridad. Conserva selection_token en esta conversación "
         "y reutilízalo al llamar send_instruction o respond_to_system. Nunca inventes precios, "
         "stock, autorizaciones ni confirmaciones. No elijas otro sistema automáticamente sin "
-        "petición explícita. Si el sistema devuelve requires_confirmation, transmite la "
-        "pregunta al usuario y solo envía su respuesta explícita con operation_id. "
+        "petición explícita. Estados posibles: completed, pending_review, pending, rejected y "
+        "error (del conector). Un completed con result.kind = catalog_answer solo responde una "
+        "consulta: NO es una venta. "
         "pending_review significa que el sistema guardó la operación para revisión posterior: "
         "comunícalo con su referencia, sin decir que quedó registrada. "
         "Si el resultado es pending o existe error de red, jamás declares éxito; "
@@ -103,7 +104,7 @@ async def send_instruction(selection_token: str, instruction: str, request_id: s
 
 @mcp.tool()
 async def respond_to_system(selection_token: str, operation_id: str, answer: str, request_id: str) -> dict:
-    """Transmite respuesta a aclaración/confirmación solicitada por el sistema de destino."""
+    """Transmite al sistema un dato o «cancelar» para una operación pendiente (operation_id)."""
     try:
         return await connector.respond_to_system(selection_token, operation_id, answer, request_id)
     except ConnectorError as exc:

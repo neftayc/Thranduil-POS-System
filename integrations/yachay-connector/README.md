@@ -29,7 +29,7 @@ Sistema especializado (POS, PMS...)
     | POST /api/agent/instructions
     v
 Agente del sistema y su lógica comercial (FUERA de este repo)
-    | response (completed, pending_review, needs_clarification, requires_confirmation, rejected, pending)
+    | response (completed, pending_review, rejected, pending)
     v
 Claude comunica el resultado
 ```
@@ -92,7 +92,7 @@ Response HTTP 200:
     "instructions": [
       "Envía la instrucción completa al agente POS.",
       "No inventes precios, productos, stock ni resultados.",
-      "Si el POS requiere confirmación, pregunta al vendedor y transmite su respuesta."
+      "Si el POS deja una operación por confirmar, comunica su referencia y lo pendiente."
     ],
     "capabilities": ["sales", "inventory", "reports"],
     "locale": "es-PE"
@@ -115,7 +115,7 @@ Una nueva instrucción:
 }
 ```
 
-Respuesta para aclaración/confirmación:
+Dato faltante o «cancelar» para una operación pendiente:
 
 ```json
 {
@@ -123,25 +123,27 @@ Respuesta para aclaración/confirmación:
   "type": "follow_up",
   "request_id": "eb82eb33-f7b8-4dd5-acfa-a04c21a13db4",
   "operation_id": "op-pos-123",
-  "input": {"text": "sí, confirmo", "locale": "es-PE"}
+  "input": {"text": "el de marca A", "locale": "es-PE"}
 }
 ```
 
 Posibles respuestas del sistema:
 
 ```json
-{"status":"requires_confirmation", "operation_id":"op-pos-123", "message":"¿Confirmas esta operación?"}
+{"status":"pending_review", "operation_id":"op-pos-123", "message":"Venta por confirmar: elige el producto.", "result":{"reference":"op-pos-123"}}
 ```
 
 ```json
 {"status":"completed", "operation_id":"op-pos-123", "message":"Operación registrada", "result":{"reference":"sale-123"}}
 ```
 
-Estados admitidos: `completed`, `pending_review`, `requires_confirmation`, `needs_clarification`, `rejected`, `pending`. Para `pending_review`, `requires_confirmation` y `needs_clarification`, `operation_id` es obligatorio. Una respuesta HTTP 403 del sistema (vendedor no identificado, sesión vencida o revocada, usuario sin rol) se transmite como error con el mensaje del sistema.
+Estados admitidos (los que devuelve el POS): `completed`, `pending_review`, `rejected`, `pending`; cualquier otro se rechaza. Para `pending_review`, `operation_id` es obligatorio. Un `completed` con `result.kind = "catalog_answer"` solo responde una consulta y no es una venta. El conector devuelve además `{"status":"error"}` ante rechazos o fallos de red. Una respuesta HTTP 403 del sistema (vendedor no identificado, sesión vencida o revocada, usuario sin rol) se transmite como error con el mensaje del sistema.
 
 ### Identificación del vendedor (`yachay-identification/1`, opcional por sistema)
 
-Si `systems.json` define `identification_url`, el conector llama `POST identification_url` con `{"protocol":"yachay-identification/1","action":"start"}` y espera `requires_identification`, `identification_id` (opaco), `user_code`, `verification_url` (mismo origen que `identification_url`) y `expires_in` (60–900 s). Luego `{"action":"status","identification_id":...}` devuelve `pending`, `denied`, `expired` o `approved` con `session` (opaca), `seller` (`name`, `role`) y `expires_at`. Desde ese momento envía `X-Yachay-Session` en contexto e instrucciones. Implementación de referencia: `docs/yachay-agent-api.md` del POS. El conector transmite el resultado **sin comprobar ni ejecutar la operación comercial**. El sistema debe validar identidad, permisos, reglas y precios, y **garantizar idempotencia por `request_id`** (reintentos con igual UUID nunca duplican una venta). Si hay timeout, la ejecución queda indeterminada: no afirmar éxito.
+Si `systems.json` define `identification_url`, el conector llama `POST identification_url` con `{"protocol":"yachay-identification/1","action":"start"}` y espera `requires_identification`, `identification_id` (opaco), `user_code`, `verification_url` (mismo origen que `identification_url`, o que `verification_origin` si el sistema publica `/vincular` en otra URL; ver abajo) y `expires_in` (60–900 s). Luego `{"action":"status","identification_id":...}` devuelve `pending`, `denied`, `expired` o `approved` con `session` (opaca), `seller` (`name`, `role`) y `expires_at`. Desde ese momento envía `X-Yachay-Session` en contexto e instrucciones. Implementación de referencia: `docs/yachay-agent-api.md` del POS.
+
+**URL pública del enlace.** Si el POS define `POS_AGENT_PUBLIC_URL` (fase remota), su `verification_url` usa ese origen y ya no coincide con `identification_url` (que el conector puede seguir llamando por red interna). Declara entonces en `systems.json` el origen público permitido: `"verification_origin": "https://pos.ejemplo.pe"` (HTTPS, o HTTP solo en loopback; sin ruta). El conector acepta solo ese origen o el de `identification_url`; cualquier otro enlace se rechaza como posible phishing. El conector transmite el resultado **sin comprobar ni ejecutar la operación comercial**. El sistema debe validar identidad, permisos, reglas y precios, y **garantizar idempotencia por `request_id`** (reintentos con igual UUID nunca duplican una venta). Si hay timeout, la ejecución queda indeterminada: no afirmar éxito.
 
 ## Instrucciones para Claude
 

@@ -1423,6 +1423,24 @@ test('registrador: la phrase NO tiene que ser literal del dictado (puntuación y
   assert.ok(!rcodes(paraphrase).includes('phrase_not_in_order'))
 })
 
+test('registrador: el dictado no influye en la decisión (puntos, «...», muletillas o texto vacío: solo hechos del POS)', async () => {
+  const cases = [
+    consolidatedOf({ lines: [cline()] }),
+    consolidatedOf({ lines: [cline({ quantity: 3 })], payment_method: 'yape', payment_phrase: 'yape' }),
+    consolidatedOf({ lines: [cline({ price_said: 4 })] }),
+    consolidatedOf({ lines: [cline({ product_id: randomUUID() })] }),
+    consolidatedOf({ lines: [cline()], payment_method: 'plin' })
+  ]
+  const dictations = ['dos cuadernos A4', '', 'eh... este, ya, ...perdón, ¿ya? o sea... ¡listo!', 'tres reglas, pago con transferencia, a 9 soles, no yape']
+  for (const consolidated of cases) {
+    const outcomes = await Promise.all(dictations.map(async d => {
+      const { result } = await register(consolidated, d)
+      return JSON.stringify([result.kind, rcodes(result), result.items.map(i => [i.qty, i.price_unit]), result.sale?.payment_method ?? null])
+    }))
+    assert.equal(new Set(outcomes).size, 1, outcomes.join(' | '))
+  }
+})
+
 test('registrador: confianza baja → pregunta al vendedor con opciones (nombres); sin reserva del producto dudoso', async () => {
   const { result } = await register(consolidatedOf({ lines: [cline({ confidence: 'baja', question: '¿Cuaderno A4 o lapicero?', options: [CUADERNO.id, LAPICERO.id] })] }), 'dos cuadernos A4')
   assert.deepEqual(rcodes(result), ['selector_question'])

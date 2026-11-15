@@ -1,8 +1,8 @@
 import type { Product } from '../contracts'
-import { explicitChoice } from './sellerChoice'
+import { explicitChoiceDetail, type ChoiceDetail } from './sellerChoice'
 import type { OrderInterpretation } from './agent1Contracts'
 import { applyConventions } from './catalogConventions'
-import { brandVocabulary, contentWords, decideMatch, similarWord, tiedWithBest, type Confidence, type MatchDecision, type RankedCandidate } from './productSearch'
+import { brandVocabulary, contentWords, decideMatch, normalizeText, similarWord, tiedWithBest, type Confidence, type MatchDecision, type RankedCandidate } from './productSearch'
 
 /**
  * Product selection by CONTEXT (after the hybrid search and the exact-signal decision).
@@ -64,15 +64,34 @@ export const withContextSelection = async (query: string, decision: MatchDecisio
  * returns the option it points to, only if it is a real option of THAT line and it does not
  * contradict the line as now described (e.g. «el surco rayado» does not pick «surco #»).
  */
-export const clarifiedChoice = (lastMessage: string | undefined, offered: Product[], lineOptions: Product[] | undefined, lineQuery: string): Product | null => {
+export const clarifiedChoice = (lastMessage: string | undefined, offered: Product[], lineOptions: Product[] | undefined, lineQuery: string, exclude: string[] = []): (ChoiceDetail & { product: Product }) | null => {
   if (!lineOptions?.length) return null
   // Numbers/SKU/words are read against ALL the options in the order they were numbered for the seller.
-  const id = explicitChoice(lastMessage, offered.length ? offered : lineOptions)
-  const product = id ? lineOptions.find(p => p.id === id) : undefined
-  if (!product) return null
+  const detail = explicitChoiceDetail(lastMessage, offered.length ? offered : lineOptions)
+  const product = detail ? lineOptions.find(p => p.id === detail.id) : undefined
+  if (!detail || !product) return null
   const docs = lineOptions.map(p => ({ id: p.id, name: p.name, brand: p.brand, sku: p.sku, category: null }))
-  const check = decideMatch(lineQuery, docs.filter(d => d.id === product.id), brandVocabulary(docs)).ranked[0]
-  return check && !check.conflicts.length ? product : null
+  const check = decideMatch(lineQuery, docs.filter(d => d.id === product.id), brandVocabulary(docs), { exclude }).ranked[0]
+  // A word choice is still only a candidate: prepareSale confirms it against the whole catalog.
+  return check && !check.conflicts.length ? { ...detail, product } : null
+}
+
+// Words after a negation that are not attributes («no, mejor el surco»).
+const NOT_EXCLUDED = new Set(['mejor', 'se', 'hay', 'tengo', 'tiene', 'tienen', 'queda', 'quedan', 'pago', 'cliente', 'importa', 'problema', 'gracias', 'nada', 'mas', 'eso', 'esto', 'ese', 'esa', 'si', 'solo', 'era', 'es', 'ese'])
+const NEGATIONS = [
+  /\b(?:no|nunca|sin|ni)\s+(?:(?:es|era|son|sea|sean|dije|dijimos|dijo|pedi|pedimos|quiero|queremos|quiere|lleva|llevan|el|la|los|las|un|una|de|del|con|que|en)\s+){0,3}([a-z0-9]+)/g,
+  /\ben ningun momento\s+(?:(?:se|le|lo|la|les)\s+)?(?:dije|dijimos|dijo|pedi|pedimos|mencione|mencionamos|hablamos de|hable de)\s+(?:(?:el|la|los|las|un|una|de|del|que)\s+){0,2}([a-z0-9]+)/g
+]
+
+/**
+ * Terms the seller EXCLUDED («en ningún momento dijimos A4», «no es A4», «sin espiral», «no el
+ * rayado»). Candidates having them are discarded, except in a line that asks for that term itself.
+ */
+export const negatedTerms = (sellerText: string): string[] => {
+  const text = normalizeText(sellerText)
+  const terms = new Set<string>()
+  for (const pattern of NEGATIONS) for (const m of text.matchAll(pattern)) if (m[1].length >= 2 && !NOT_EXCLUDED.has(m[1])) terms.add(m[1])
+  return [...terms].slice(0, 10)
 }
 
 // Words of an order that are never a brand or model: quantities, payment, verbs and fillers.

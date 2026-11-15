@@ -29,6 +29,8 @@ export type RankedCandidate = {
   conflicts: string[]
   extra: number
   learned: boolean
+  /** Another product type, or something the seller excluded: never offered, not even as «similar». */
+  excluded?: boolean
   retrieval: number
   score: number
 }
@@ -209,25 +211,43 @@ const rulingOf = (attrs: Attributes) => {
 /** Type words of a product: its category (cuaderno, cinta, borrador…). */
 const typeWordsOf = (doc: SearchDoc) => parseAttributes(doc.category || '').words
 
+/** Head noun of a product name (Spanish: the first word, «Folder a color de cartulina» → folder). */
+const headOf = (doc: SearchDoc) => parseAttributes(doc.name).words.slice(0, 1)
+
 /**
- * PRODUCT TYPE of the order line: the first word of the order that is the category of some
- * retrieved product («cuaderno marking 100 hojas» → cuaderno; «cinta marking» → cinta).
- * null when the order names no category (then nothing is filtered by type).
+ * PRODUCT TYPE of the order line: its head noun (first word) when it is the category or the head
+ * noun of some retrieved product («cartulinas a colores» → cartulina; «cinta marking» → cinta);
+ * otherwise the first word that is a category. null = nothing is filtered by type.
  */
 export const lineType = (query: Attributes, docs: SearchDoc[]): string | null => {
   const categories = [...new Set(docs.flatMap(typeWordsOf))]
+  const head = query.words[0]
+  if (head && (wordPresent(head, categories) || docs.some(doc => wordPresent(head, headOf(doc))))) return head
   return query.words.find(word => wordPresent(word, categories)) ?? null
 }
-/** A product is of that type if its category or its name (or a learned synonym) says so. */
-const isOfType = (type: string, doc: SearchDoc) => wordPresent(type, typeWordsOf(doc)) ||
-  wordPresent(type, [...parseAttributes(doc.name).words, ...(doc.synonyms || []).flatMap(text => parseAttributes(text).words)])
+/**
+ * A product is of the line's type if its head noun or its category is that type, or its category
+ * is another word the order said («cinta correctora» → Corrector en Cinta). «Folder a color de
+ * cartulina» is a folder, not a cartulina. Products without a category are judged by any word of
+ * their name (or a learned synonym).
+ */
+const isOfType = (type: string, doc: SearchDoc, queryWords: string[]) => {
+  const synonyms = (doc.synonyms || []).flatMap(text => parseAttributes(text).words)
+  if (!doc.category) return wordPresent(type, [...parseAttributes(doc.name).words, ...synonyms])
+  return wordPresent(type, [...typeWordsOf(doc), ...headOf(doc), ...synonyms]) ||
+    typeWordsOf(doc).some(category => queryWords.some(word => wordPresent(word, [category])))
+}
+
+/** Tokens of a text as written (normalized), to test what the seller excluded («no es A4»). */
+const tokensOf = (text: string) => normalizeText(text).split(' ').filter(Boolean)
+const hasToken = (tokens: string[], term: string) => tokens.some(t => t === term || (/^[a-z]{4,}$/.test(term) && similarWord(t, term)))
 
 /**
  * Scores one candidate against the query. Conflicts are exact contradictions
  * (a different number of sheets, a different brand...). Unknown = the product
  * does not say (e.g. the order says A4 and the name does not mention a size).
  */
-export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<string>, normalizedQuery: string, type: string | null = null): Omit<RankedCandidate, 'retrieval' | 'score'> => {
+export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<string>, normalizedQuery: string, type: string | null = null, exclude: string[] = []): Omit<RankedCandidate, 'retrieval' | 'score'> => {
   const own = parseAttributes(docText(doc))
   const synonymTexts = (doc.synonyms || []).map(normalizeText)
   const synonymWords = synonymTexts.flatMap(text => parseAttributes(text).words)
@@ -237,7 +257,13 @@ export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<st
   const matched: string[] = [], unknown: string[] = [], conflicts: string[] = []
   const learned = synonymTexts.some(text => text === normalizedQuery)
   // A notebook is never a tape: a product of another type is out, whatever the brand or model says.
-  if (type && !learned && !isOfType(type, doc)) conflicts.push(`es ${doc.category ? normalizeText(doc.category) : 'otro tipo de producto'}, no ${type}`)
+  let excluded = false
+  if (type && !learned && !isOfType(type, doc, query.words)) excluded = true, conflicts.push(`es ${doc.category ? normalizeText(doc.category) : 'otro tipo de producto'}, no ${type}`)
+  // What the seller explicitly excluded («en ningún momento dijimos A4», «sin espiral»), unless this line asks for it.
+  const queryTokens = tokensOf(normalizedQuery), docTokens = tokensOf(docText(doc))
+  for (const term of exclude) {
+    if (!hasToken(queryTokens, term) && hasToken(docTokens, term)) { excluded = true; conflicts.push(`el vendedor dijo que no es ${term}`) }
+  }
 
   // Content words (product type, line, colour, brand).
   let covered = 0
@@ -294,7 +320,7 @@ export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<st
     else if (own.size.group === query.size.group) unknown.push(`${query.size.label.toUpperCase()} ≈ ${own.size.label} no confirmado`)
     else conflicts.push(`pide ${query.size.label} y el producto es ${own.size.label}`)
   }
-  return { doc, coverage, matched, unknown, conflicts, extra, learned }
+  return { doc, coverage, matched, unknown, conflicts, extra, learned, excluded }
 }
 
 const RRF_K = 60
@@ -315,15 +341,16 @@ const compareTuples = (a: number[], b: number[]) => {
  * medium = a probable candidate exists, but there is a tie or a doubt.
  * low    = nothing compatible.
  */
-export const decideMatch = (queryText: string, retrieved: RetrievedDoc[], brands: Set<string>): MatchDecision => {
+export const decideMatch = (queryText: string, retrieved: RetrievedDoc[], brands: Set<string>, options: { exclude?: string[] } = {}): MatchDecision => {
   queryText = applyConventions(queryText)
   const normalizedQuery = normalizeText(queryText)
   const query = parseAttributes(queryText, true)
   const type = lineType(query, retrieved)
+  const exclude = (options.exclude || []).map(term => normalizeText(term)).filter(Boolean)
   const ranked = retrieved.map((doc, index): RankedCandidate => {
     const retrieval = (doc.lexical_rank ? 1 / (RRF_K + doc.lexical_rank) : 0) + (doc.vector_rank ? 1 / (RRF_K + doc.vector_rank) : 0) +
       (!doc.lexical_rank && !doc.vector_rank ? 1 / (RRF_K + index + 1) : 0)
-    const scored = scoreCandidate(query, doc, brands, normalizedQuery, type)
+    const scored = scoreCandidate(query, doc, brands, normalizedQuery, type, exclude)
     const attrTotal = scored.matched.length + scored.unknown.length + scored.conflicts.length
     const attrScore = attrTotal ? scored.matched.length / attrTotal : 1
     const score = (0.5 * scored.coverage + 0.3 * attrScore + 0.2 * Math.min(1, retrieval * RRF_K / 1.2)) * (scored.conflicts.length ? 0.4 : 1)
@@ -355,9 +382,13 @@ export const decideMatch = (queryText: string, retrieved: RetrievedDoc[], brands
   return { confidence: high ? 'high' : 'medium', best, ranked, doubts }
 }
 
+/** A candidate that, alone, would be a sure match (every word, no conflict, no missing measure). */
+export const isUnequivocal = (c: RankedCandidate) => !c.conflicts.length && (c.learned || c.coverage === 1) &&
+  c.unknown.length <= 1 && !c.unknown.some(u => u.endsWith(MISSING_MEASURE))
+
 /** Most similar candidates even with conflicts (e.g. «tenemos Markin, pero de 100 hojas»). */
 export const closestCandidates = (ranked: RankedCandidate[], minCoverage = 0.6) => ranked
-  .filter(c => c.coverage >= minCoverage || c.learned)
+  .filter(c => !c.excluded && (c.coverage >= minCoverage || c.learned))
   .sort((a, b) => b.coverage - a.coverage || a.conflicts.length - b.conflicts.length || b.score - a.score)
 
 /** Candidates exactly as compatible as the best one (a real tie). */

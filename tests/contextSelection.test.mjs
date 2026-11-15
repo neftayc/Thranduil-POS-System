@@ -13,7 +13,7 @@ const requireNuxt = createRequire(import.meta.resolve('nuxt/package.json'))
 const jiti = requireNuxt('jiti').createJiti(import.meta.url)
 const search = await jiti.import('../server/modules/agent/app/productSearch.ts')
 const conventions = await jiti.import('../server/modules/agent/app/catalogConventions.ts')
-const { withContextSelection, clarifiedChoice, spokenHints } = await jiti.import('../server/modules/agent/app/contextSelection.ts')
+const { withContextSelection, clarifiedChoice, spokenHints, negatedTerms } = await jiti.import('../server/modules/agent/app/contextSelection.ts')
 const { makeHybridDraftBuilder } = await jiti.import('../server/modules/agent/app/draftBuilder.ts')
 const { makeDraftValidator } = await jiti.import('../server/modules/agent/app/validateDraft.ts')
 const { makeSalesAgent } = await jiti.import('../server/modules/agent/app/salesAgent.ts')
@@ -186,7 +186,7 @@ test('aclaración segura (A2): no elige algo que contradice la línea ni fuera d
   const opts = ['cuaderno surco # 100 h', 'Cuaderno Markin # 100 h', 'cuaderno layconsa teens # 100 h'].map(byName).map(d => ({ ...d, unit: 'unidad', stock: 20 }))
   // «el surco rayado»: surco is distinctive, but «rayado» contradicts «surco #».
   assert.equal(clarifiedChoice('el surco rayado', opts, opts, 'cuaderno surco rayado 100 hojas'), null)
-  assert.equal(clarifiedChoice('el surco', opts, opts, 'cuaderno 100 hojas cuadriculado').name, 'cuaderno surco # 100 h')
+  assert.equal(clarifiedChoice('el surco', opts, opts, 'cuaderno 100 hojas cuadriculado').product.name, 'cuaderno surco # 100 h')
   // Replies that do not name an option.
   for (const reply of ['con yape', '2', 'cuaderno 100 hojas']) assert.equal(clarifiedChoice(reply, opts, opts, 'cuaderno 100 hojas cuadriculado'), null, reply)
   // An option of ANOTHER line is not a choice for this one.
@@ -280,4 +280,91 @@ test('criterio de éxito (dry-run con mocks): «dos cuadernos marking 100 hojas 
   }
   assert.equal(calls.execute, 0)
   assert.equal(calls.selector, 0, 'una venta inequívoca no llama al selector (sin costo ni latencia extra)')
+})
+
+// ------------------------------------------------------------ real dry-run of 15 nov: clarification with a negation
+
+const M1 = 'Dos cartulinas blancas, un lapicero Faber-Castell azul de un sol, un cartón cartulina, tres cartulinas a colores, dos plumones Faber-Castell para pisar.'
+const M2 = 'La cartulina es la cartulina a color. En ningún momento dijimos A4. En cuanto a los plumones, vamos a vender el W47.'
+// What the interpreter returns for M1 (and keeps for M2): five lines, the dictated price on the pen.
+const ORDER_15NOV = {
+  intent: 'sale', payment_method: null, customer_query: null, question: null,
+  items: [['cartulina blanca', 2], ['lapicero Faber-Castell azul', 1, 1], ['cartón cartulina', 1], ['cartulinas a colores', 3], ['plumones Faber-Castell para pisar', 2]]
+    .map(([query, quantity, price = null]) => ({ query, sku: null, quantity, unit: null, product_id: null, price }))
+}
+// List prices: the 060 pen is S/ 2.00 (as in the dry-run), the Trilux Azul-032 is S/ 1.00.
+const priced = () => ({
+  ...catalogFrom(snapshot),
+  quote: async (p, qty, unit) => ({ unit_name: unit || p.unit, price: /Trilux Azul/.test(p.name) ? 1 : /060/.test(p.name) ? 2 : 4.5, factor: 1, currency: 'PEN' })
+})
+const nameOf = id => snapshot.find(p => p.id === id)?.name
+
+test('negatedTerms: «en ningún momento dijimos A4», «no es A4», «sin espiral», «no el rayado»', () => {
+  assert.deepEqual(negatedTerms(M2), ['a4'])
+  assert.deepEqual(negatedTerms('no es A4'), ['a4'])
+  assert.deepEqual(negatedTerms('el cuaderno sin espiral, no el rayado'), ['espiral', 'rayado'])
+  assert.deepEqual(negatedTerms('no, mejor el surco'), [])
+})
+
+test('BUG 15 nov: tras «En ningún momento dijimos A4» la línea 4 es «Cartulina a colores», nunca la A4', async () => {
+  const catalog = priced()
+  const first = await makeHybridDraftBuilder(interpreterReturning(ORDER_15NOV).interpret, catalog)([M1], null)
+  assert.equal(nameOf(first.items[3].product_id), 'Cartulina a colores', 'la coincidencia casi exacta va primero')
+  const second = await makeHybridDraftBuilder(interpreterReturning(ORDER_15NOV).interpret, catalog)([M1, M2], first)
+  const line = second.items[3]
+  assert.equal(nameOf(line.product_id), 'Cartulina a colores')
+  assert.ok(![line.product_id, ...line.candidates].some(id => /A4/.test(nameOf(id))), 'la A4 queda excluida, ni siquiera como opción')
+  // Even if the interpreter re-adds A4 to the search text, the affirmative line asks for it; but if it copies the A4 id it is not a seller choice.
+  const a4 = snapshot.find(p => p.name === 'cartulinas de pliego a color A4')
+  const forged = { ...ORDER_15NOV, items: ORDER_15NOV.items.map((it, i) => i === 3 ? { ...it, product_id: a4.id } : it) }
+  const third = await makeHybridDraftBuilder(interpreterReturning(forged).interpret, catalog)([M1, M2], first)
+  assert.notEqual(third.items[3].product_id === a4.id && third.items[3].confidence === 'high', true, 'la A4 nunca sale con seguridad alta')
+})
+
+test('una aclaración ambigua nunca da seguridad alta (ni por una palabra que solo distingue entre lo ofrecido)', async () => {
+  const catalog = catalogFrom(snapshot)
+  const first = await makeHybridDraftBuilder(interpreterReturning(sale('plumones', 1)).interpret, catalog)(['un plumón, efectivo'], null)
+  assert.notEqual(first.items[0].confidence, 'high')
+  for (const reply of ['el de color', 'el plumón', 'el W47', 'ese']) {
+    const second = await makeHybridDraftBuilder(interpreterReturning(sale('plumones', 1)).interpret, catalog)(['un plumón, efectivo', reply], first)
+    assert.notEqual(second.items[0].confidence, 'high', reply)
+  }
+  // An option number is unequivocal.
+  const numbered = await makeHybridDraftBuilder(interpreterReturning(sale('plumones', 1)).interpret, catalog)(['un plumón, efectivo', 'la 2'], first)
+  assert.equal(numbered.items[0].confidence, 'high')
+})
+
+test('precio dictado como pista: «lapicero Faber-Castell azul de un sol» → el único de S/ 1.00 (Trilux Azul-032)', async () => {
+  const draft = await makeHybridDraftBuilder(interpreterReturning(ORDER_15NOV).interpret, priced())([M1], null)
+  const line = draft.items[1]
+  assert.equal(nameOf(line.product_id), 'Lapicero Trilux Azul-032')
+  assert.equal(line.confidence, 'high')
+  assert.equal(line.price_unit, 1)
+  // Without the dictated price it stays a doubt between the Faber-Castell blue pens.
+  const noPrice = { ...ORDER_15NOV, items: [{ ...ORDER_15NOV.items[1], price: null }] }
+  const plain = await makeHybridDraftBuilder(interpreterReturning(noPrice).interpret, priced())(['un lapicero Faber-Castell azul'], null)
+  assert.equal(plain.items[0].confidence, 'medium')
+  // A price that two candidates share does not decide; a price no candidate has does not either.
+  for (const price of [4.5, 7]) {
+    const other = { ...ORDER_15NOV, items: [{ ...ORDER_15NOV.items[1], price }] }
+    const d = await makeHybridDraftBuilder(interpreterReturning(other).interpret, priced())(['un lapicero Faber-Castell azul'], null)
+    assert.equal(d.items[0].confidence, 'medium', String(price))
+  }
+})
+
+test('tipo: «cartulinas a colores» nunca propone «Folder a color de cartulina»', async () => {
+  const d = decide('cartulinas a colores')
+  const folder = d.ranked.find(c => c.doc.name === 'Folder a color de cartulina')
+  assert.ok(!folder || folder.excluded, 'el folder es de otro tipo')
+  const draft = await makeHybridDraftBuilder(interpreterReturning(sale('cartulinas a colores', 3)).interpret, catalogFrom(snapshot))(['tres cartulinas a colores'], null)
+  assert.ok(![draft.items[0].product_id, ...draft.items[0].candidates].some(id => /Folder/.test(nameOf(id))))
+})
+
+test('dictado en características: «plumones para pisar» → pizarra (o duda entre pizarras), nunca papel con seguridad alta', () => {
+  for (const text of ['plumones Faber-Castell para pisar', 'plumones para pisar', 'plumón de pisarra']) {
+    const d = decide(text)
+    assert.match(d.best.doc.name, /Pizarra/, text)
+    if (d.confidence === 'high') assert.ok(!/papel/i.test(d.best.doc.name), text)
+    assert.ok(search.tiedWithBest(d).every(c => /Pizarra/.test(c.doc.name)), text)
+  }
 })

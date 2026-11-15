@@ -2,11 +2,11 @@ import type { DraftDoubt, DraftItem, Product, SaleDraft } from '../contracts'
 import type {
   Confidence, OrderInterpretation as Interpretation, ProposalAlternative, ProposalItem, SaleProposal
 } from './agent1Contracts'
-import { explicitChoice } from './sellerChoice'
+import { explicitChoiceDetail, type ChoiceDetail } from './sellerChoice'
 import { resolveQuantity } from './grounding'
 import { clarifiedChoice, withContextSelection, type ProductSelector } from './contextSelection'
 import { descriptionWithoutQuantity } from './grounding'
-import { applyConventions, brandVocabulary, closestCandidates, decideMatch, reasonsFor, tiedWithBest, type MatchDecision, type RetrievedDoc } from './productSearch'
+import { applyConventions, brandVocabulary, closestCandidates, decideMatch, isUnequivocal, reasonsFor, tiedWithBest, type MatchDecision, type RetrievedDoc } from './productSearch'
 
 export interface AgentCatalog {
   findProducts(query: string, sku?: string | null): Promise<Product[]>
@@ -43,17 +43,17 @@ export type ProductMatch = { decision: MatchDecision; products: Map<string, Prod
  * Retrieves candidates, decides with exact attributes and the line's context (type, features,
  * brand), lets the optional selector order equally good options, and loads their live rows.
  */
-export const makeProductMatcher = (catalog: AgentCatalog, selector?: ProductSelector) => async (rawQuery: string, useSelector = true): Promise<ProductMatch> => {
+export const makeProductMatcher = (catalog: AgentCatalog, selector?: ProductSelector) => async (rawQuery: string, useSelector = true, exclude: string[] = []): Promise<ProductMatch> => {
   const query = applyConventions(rawQuery)
   let decision: MatchDecision
   let found: Product[] = []
   if (catalog.searchProducts) {
     const { docs, brands } = await catalog.searchProducts(query)
-    decision = decideMatch(query, docs, brands)
+    decision = decideMatch(query, docs, brands, { exclude })
   } else {
     found = await catalog.findProducts(query, null)
     const docs = found.map(p => ({ id: p.id, name: p.name, brand: p.brand, sku: p.sku, category: null }))
-    decision = decideMatch(query, docs, brandVocabulary(docs))
+    decision = decideMatch(query, docs, brandVocabulary(docs), { exclude })
   }
   if (useSelector) decision = await withContextSelection(query, decision, selector)
   const ids = [...new Set([...decision.ranked.slice(0, 6), ...closestCandidates(decision.ranked).slice(0, 6)].map(c => c.doc.id))]
@@ -79,7 +79,20 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
    * `context.lineOptions[i]` = options shown for line i: a clarification («es el Markin») resolves it.
    */
   return async (input: Interpretation, previousCandidates: Product[], reserved: Map<string, number> = new Map(),
-    context: { lastMessage?: string; offered?: Product[]; checkStock?: boolean; lineOptions?: Product[][]; hints?: string[]; sourceText?: string } = {}) => {
+    context: { lastMessage?: string; offered?: Product[]; checkStock?: boolean; lineOptions?: Product[][]; hints?: string[]; sourceText?: string; exclude?: string[] } = {}) => {
+    const exclude = context.exclude || []
+    const search = (query: string, useSelector = true) => match(query, useSelector, exclude)
+    /**
+     * A choice by option number or SKU is unequivocal. A choice by a WORD only distinguishes it among
+     * the options shown, so it is sure only if the whole catalog agrees: the line plus those words
+     * must resolve to that same product with no doubt (otherwise the line keeps its options).
+     */
+    const confirmedChoice = async (detail: ChoiceDetail | null, query: string) => {
+      if (!detail) return false
+      if (detail.by !== 'word') return true
+      const { decision } = await search(`${query} ${detail.words.join(' ')}`, false)
+      return decision.confidence === 'high' && decision.best?.doc.id === detail.id
+    }
     const candidates: Product[] = []
     // Options listed to the seller in THIS answer, numbered in this order.
     const offered: Product[] = []
@@ -115,6 +128,13 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
     if (!payment) ask(`Indica una forma de pago disponible: ${methods.map(p => p.label).join(', ')}.`, 'medium', 'missing_payment')
     else draft.payment_method = proposal.payment_method = payment.code
 
+    // The quantity process 2 will decide (same rule: resolveQuantity), used to quote.
+    const quantityFor = (index: number, item: Interpretation['items'][number]) => {
+      const others = input.items.filter((_, i) => i !== index).map(other => other.quantity).filter((q): q is number => q !== null)
+      const decided = context.sourceText === undefined ? null
+        : resolveQuantity(context.sourceText, item.quantity, item.query, others, { singleLine: input.items.length === 1, unit: item.unit })
+      return decided?.ok ? decided.quantity : item.quantity ?? 1
+    }
     for (const [index, item] of input.items.entries()) {
       const label = `Artículo ${index + 1}`
       const line: ProposalItem = {
@@ -134,11 +154,13 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
       // last message picked it deterministically (option number, SKU or a distinctive word).
       // Otherwise the line is searched again (a preselection never becomes a sale by itself).
       const known = item.product_id ? previousCandidates.find(p => p.id === item.product_id) : undefined
-      const chosen = known && explicitChoice(context.lastMessage, context.offered?.length ? context.offered : previousCandidates) === known.id
+      const pick = known ? explicitChoiceDetail(context.lastMessage, context.offered?.length ? context.offered : previousCandidates) : null
+      const chosen = Boolean(known && pick?.id === known.id && await confirmedChoice(pick, matchQuery(item)))
       // The seller's clarification of THIS line, pointing to one of its real options (A2 still holds).
-      const clarified = !item.product_id && !item.sku?.trim()
-        ? clarifiedChoice(context.lastMessage, context.offered || [], context.lineOptions?.[index], matchQuery(item))
+      const clarification = !item.product_id && !item.sku?.trim()
+        ? clarifiedChoice(context.lastMessage, context.offered || [], context.lineOptions?.[index], matchQuery(item), exclude)
         : null
+      const clarified = clarification && await confirmedChoice(clarification, matchQuery(item)) ? clarification.product : null
       if (item.product_id && !known) {
         lineDoubt('la selección no corresponde a una opción disponible. Indica nuevamente el producto.', 'low', 'product_not_found')
       } else if (chosen) {
@@ -161,14 +183,37 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
         // Words the seller said that the interpreter dropped (single-line orders only): a hint is kept
         // only if it makes the line unequivocal, so it can never make the choice worse.
         const hints = input.items.length === 1 ? (context.hints || []) : []
-        let { decision, products } = await match(matchQuery(item), !hints.length)
+        let { decision, products } = await search(matchQuery(item), !hints.length)
         let hintUsed: string | null = null
         if (decision.confidence !== 'high' && hints.length) {
           for (const hint of hints) {
-            const retry = await match(`${matchQuery(item)} ${hint}`, false)
+            const retry = await search(`${matchQuery(item)} ${hint}`, false)
             if (retry.decision.confidence === 'high') { ({ decision, products } = retry); hintUsed = hint; break }
           }
           if (!hintUsed) decision = await withContextSelection(matchQuery(item), decision, options.selector)
+        }
+        // The price the seller dictated breaks a tie when exactly ONE equally compatible product has
+        // that list price («lapicero Faber-Castell azul de un sol»). Never across types or features.
+        let priceUsed: number | null = null
+        const said = typeof item.price === 'number' && item.price > 0 ? item.price : null
+        if (said !== null && decision.confidence !== 'high' && decision.best) {
+          const tiedCandidates = tiedWithBest(decision).filter(c => products.has(c.doc.id)).slice(0, 8)
+          if (tiedCandidates.length > 1) {
+            const priced = await Promise.all(tiedCandidates.map(async c => {
+              try { return { c, price: (await catalog.quote(products.get(c.doc.id)!, quantityFor(index, item), item.unit, draft.customer_id)).price } } catch { return { c, price: null } }
+            }))
+            const same = priced.filter(r => r.price !== null && Math.abs(r.price - said) < 0.005)
+            if (same.length === 1) {
+              const winner = same[0].c
+              priceUsed = said
+              decision = {
+                ...decision, best: winner, selected: winner.doc.id,
+                ranked: [winner, ...decision.ranked.filter(c => c !== winner)],
+                confidence: isUnequivocal(winner) ? 'high' : decision.confidence,
+                doubts: isUnequivocal(winner) ? [] : decision.doubts
+              }
+            }
+          }
         }
         // On a tie, preselect the tied product with the most available stock (never a random one).
         const tied = tiedWithBest(decision).map(c => products.get(c.doc.id)).filter((p): p is Product => Boolean(p))
@@ -183,7 +228,7 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
           product = best
           line.confidence = decision.confidence
           line.match_score = bestCandidate.score
-          line.reasons = [...(hintUsed ? [`«${hintUsed}» lo dijo el vendedor`] : []), ...reasonsFor(bestCandidate)]
+          line.reasons = [...(hintUsed ? [`«${hintUsed}» lo dijo el vendedor`] : []), ...(priceUsed !== null ? [`único con el precio dictado S/ ${priceUsed.toFixed(2)}`] : []), ...reasonsFor(bestCandidate)]
         }
         if (decision.confidence !== 'high') {
           // Offer only real candidates: the best one first, then the closest alternatives.
@@ -208,10 +253,7 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
       }
       // Quote with the quantity process 2 will decide (same rule: resolveQuantity), so a dropped
       // quantity («doce lapiceros…») is priced at the wholesale tier too, not at 1.
-      const others = input.items.filter((_, i) => i !== index).map(other => other.quantity).filter((q): q is number => q !== null)
-      const decided = context.sourceText === undefined ? null
-        : resolveQuantity(context.sourceText, item.quantity, item.query, others, { singleLine: input.items.length === 1, unit: item.unit })
-      const quantity = decided?.ok ? decided.quantity : item.quantity ?? 1
+      const quantity = quantityFor(index, item)
       if (!product) continue
       try {
         const quote = await catalog.quote(product, quantity, item.unit, draft.customer_id)

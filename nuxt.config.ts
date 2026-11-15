@@ -29,6 +29,8 @@ export default defineNuxtConfig({
     // Validation-only mode for tests with real reads: never calls create_sale. Off by default.
     posAgentDryRun: ['1', 'true'].includes(String(process.env.POS_AGENT_DRY_RUN || '').trim().toLowerCase()),
     // Background vector indexing during searches WRITES to the database. Off unless explicitly enabled.
+    // Step-2 agent: llm (selector → consolidated sale → simplified registrar) or legacy (current). Default legacy.
+    posAgentSelector: process.env.POS_AGENT_SELECTOR || 'legacy',
     posAgentSearchAutoindex: ['1', 'true'].includes(String(process.env.POS_AGENT_SEARCH_AUTOINDEX || '').trim().toLowerCase()),
     posAgentStorageDir: process.env.POS_AGENT_STORAGE_DIR || '.data/agent',
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE || '',

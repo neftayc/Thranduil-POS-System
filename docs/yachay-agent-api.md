@@ -265,6 +265,39 @@ responde sin modificar esa venta (mensajes, motivos, reservas y vencimiento). En
 dry-run lleva la marca de simulación. Se activa con `answerCatalogQuestions: true`
 en `server/utils/agent.ts`.
 
+### Paso 3: registrador simplificado (`POS_AGENT_SELECTOR=llm`)
+
+Plan en 3 pasos (dueño, 2026-11-15): con `POS_AGENT_SELECTOR=llm` el **agente selector** (paso 2,
+`salesSelector.ts`, Agente 1) entrega el **consolidado** y el **registrador** (`app/registrar.ts`)
+valida solo lo necesario para registrar. Con `legacy` (por defecto) todo sigue como antes. El
+interruptor se evalúa en tiempo de ejecución (`POS_AGENT_SELECTOR`, `NUXT_POS_AGENT_SELECTOR` o
+`runtimeConfig`) y se registra en el log al arrancar. Mientras el selector no esté conectado en
+`server/utils/agent.ts`, `llm` usa el camino actual y lo avisa en el log.
+
+```jsonc
+{ "contract": "sale-consolidated/1",
+  "lines": [{ "phrase": "dos cuadernos markin", "product_id": "uuid | null", "quantity": 2,
+              "unit": "docena | null", "price_said": null, "confidence": "alta | baja",
+              "reason": "…", "question": null, "options": ["uuid"] }],
+  "payment_method": "efectivo", "payment_phrase": null, "questions": [] }
+```
+
+Valida **solo**: (1) `product_id` existe y está activo, y la presentación es válida para él (se
+puede cotizar); (2) cantidad > 0, entera en presentaciones por unidad (la docena admite 0,5); sin
+cantidad → 1; (3) precio **oficial** (`resolve_sale_item_pricing`): `price_said` distinto →
+`price_modified` (por confirmar, opción A); oficial 0 → `price_unavailable`; (4) stock disponible
+(menos reservas) y forma de pago activa: efectivo por defecto; otra solo si su `payment_phrase` está
+en el dictado (si no, `missing_payment`); (5) **guardia anti-alucinación**: la `phrase` de cada línea
+aparece en el dictado (normalizado: tildes, mayúsculas, puntuación, espacios), si no
+`phrase_not_in_order`; (6) `confidence: "baja"`, `product_id` nulo o `question` →
+`selector_question`, con la pregunta y sus `options` (id y nombre) para el vendedor
+(`result.reasons[].question/options`); las `questions` generales también. Id inexistente →
+`product_inactive`. Todo bien → `create_sale` (dry-run respetado); si no → por confirmar con reserva
+(el producto dudoso no se reserva). **No** reinterpreta el texto (atribución de cantidades, docenas,
+pagos negados…): eso queda para `legacy`. Se conservan idempotencia, dry-run, reservas, revisión de
+precios, bloqueo en 3 fases e «indeterminado nunca se reintenta». En un seguimiento, el selector
+recibe el consolidado previo como `previous`.
+
 ### Regla de decisión (fija y auditable)
 
 Se registra **directo** a nombre del vendedor identificado solo si:
@@ -351,6 +384,8 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 | `invalid_customer` | El cliente indicado no existe. |
 | `pos_rejected` | `create_sale` respondió con error: no se registró nada. |
 | `unit_unclear` | La presentación (caja, docena…) que propuso la IA no la dijo el vendedor. |
+| `phrase_not_in_order` | (paso 3) La frase de la línea no aparece en el dictado: posible alucinación del selector. |
+| `selector_question` | (paso 3) El selector pregunta (confianza baja, sin producto o pregunta): `question` y `options` para el vendedor. |
 | `price_modified` | Precio dictado (escrito por el vendedor) distinto al de lista: por confirmar para todos los roles; un revisor la aprueba a ese precio. |
 | `price_override_not_allowed` | **Sin uso desde 2026-11-15**. Se conserva para registros antiguos. |
 | `price_unverified` | El borrador trae un precio dictado que no aparece en el texto del vendedor (posible invención del modelo). |

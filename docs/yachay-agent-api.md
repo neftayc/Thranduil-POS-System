@@ -257,6 +257,14 @@ Se registra **directo** a nombre del vendedor identificado solo si:
 
 - hay al menos una línea y **cada** línea tiene `product_id` de un producto que
   existe y está activo, seguridad `high`, ninguna duda y una cantidad válida;
+- **por línea**: en pedidos de varias líneas, cada cantidad se atribuye a la línea cuyas palabras
+  la siguen («2 lapiceros y 3 cuadernos») y cada monto a la línea que lo precede («un lapicero a 1 sol
+  y un cuaderno a 5 soles»); cada número se usa una sola vez y uno que no se puede atribuir deja la
+  línea sin cantidad en revisión. «pagó con 50», «paga con», «vuelto de», «billete de» son montos;
+- **presentación**: una distinta de la unidad base (caja, docena, paquete, ciento, millar…) solo vale
+  si el vendedor la dijo; si no, `unit_unclear` (con `ungrounded`). «una docena» es 1 si se vende por
+  docena y 12 si se vende por unidad («media docena»: 0.5 o 6), nunca 12 docenas; en presentaciones
+  por unidad no se aceptan cantidades no enteras (`missing_quantity`);
 - **cantidad**: la que escribió el vendedor; **si no dijo cantidad, es 1** (aviso «no se
   indicó cantidad, se toma 1»; `items[].quantity_defaulted`). También es 1 si el modelo
   tomó un número de la descripción («cuaderno 100 hojas a4» → 1). Las cantidades en palabras
@@ -269,30 +277,27 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   el vendedor escribió una cantidad (distinta de 1) que ninguna línea recoge (por ejemplo,
   el modelo la perdió): nunca se vende 1 en silencio en ese caso;
 - **precio**: el oficial de `resolve_sale_item_pricing` (con el cliente, si lo hay), que
-  debe coincidir con `price_unit` del borrador (tolerancia S/ 0.005); si no, `price_changed`.
+  debe coincidir con `price_unit` del borrador (tolerancia S/ 0.005); si no, `price_changed`. Un precio
+  oficial de S/ 0 es `price_unavailable` (lo decide el proceso 2, sin depender de la duda del agente 1).
   Si el borrador no trae precio, se usa el oficial;
-- **precio dictado** (`price_said` distinto del de lista): es la venta que hace el vendedor,
-  pero solo cuenta si el vendedor lo **escribió** como monto («a 4 soles», «s/ 4.50», «$4»
-  —el dictado escribe «un sol» como «$1»—,
-  «4 soles», o el total: «2 por 9 soles» → 4.50 c/u). Si no aparece: `price_unverified`.
-  **Cualquier vendedor** (decisión del dueño, 2026-11-15) lo registra **directo** a ese precio,
-  para validarlo luego contra el precio del sistema: se envía a `create_sale` `price_unit` =
-  dictado y `manual_discount_reason` = «Precio dictado por vendedor (lista S/ X)» (la base
-  guarda `auto_price_unit`, el precio vendido y el motivo), y la respuesta avisa «Precio
-  modificado de …: lista S/ X → vendido S/ Y». **Requiere la migración
-  `20261115_create_sale_manual_price_any_role`**: sin ella `create_sale` rechaza el precio
-  manual de un rol que no sea owner/manager y la venta queda por confirmar (`pos_rejected`).
+- **precio dictado** (`price_said`): solo cuenta si el vendedor lo **escribió** como monto
+  («a 4 soles», «s/ 4.50», «4 soles», «$4» —el dictado escribe «un sol» como «$1»—, o el total:
+  «2 por 9 soles» → 4.50 c/u). Si no aparece: `price_unverified`. Igual al de lista: no cambia
+  nada. **Distinto al de lista** (decisión del dueño, 2026-11-15, opción A): para **todos los
+  roles**, owner incluido, la venta **no se registra**: queda **por confirmar** (`price_modified`,
+  «Precio dictado S/ Y distinto al de lista S/ X: queda por confirmar; el revisor la aprueba»),
+  con su stock reservado como cualquier venta por confirmar. Un revisor (owner/manager, que ya
+  tiene precio manual en `create_sale`) la aprueba luego a ese precio: **no hace falta migración**.
+  La operación guarda por línea el precio dictado (`items[].price_unit`), el de lista
+  (`items[].list_price`) y el motivo (`manual_reason`, «Precio dictado por vendedor (lista S/ X)»),
+  y en `operation.price_review` (`status: "pending"`, vendedor, líneas con lista, dictado y si
+  queda bajo costo). `result.price_review: "pending"`. `listPendingPriceReviews(store)`
+  (`app/priceReview.ts`) lista las vigentes para la futura pantalla de revisión (etapa 2).
   `price_override_not_allowed` ya no se usa.
-  La venta **queda registrada** y, además, **anotada en la revisión de precios** (decisión del
-  dueño): `operation.price_review` con `status: "pending"`, la referencia de la venta, el vendedor y,
-  por línea, precio de lista, precio vendido y si quedó bajo costo. La respuesta trae
-  `result.price_review: "pending"` y el aviso «Quedó anotada en la revisión de precios…».
-  `listPendingPriceReviews(store)` (`app/priceReview.ts`) las lista para la validación del mediodía y
-  del cierre (etapa 2). En la base se pueden cruzar con `sale_items.price_unit ≠ auto_price_unit`.
-  Si el precio dictado queda **bajo el costo** (`avg_cost` de `product_catalog` × factor
-  de la presentación) no se bloquea: `result.price_alerts` con `level: "below_cost"`. El
-  costo solo se muestra a owner/manager («Alerta de precio: … bajo su costo S/ Z»); a otro rol,
-  sin `unit_cost`: «Alerta: precio bajo para …». Sin costo conocido no hay alerta;
+  Si el precio dictado queda **bajo el costo** (`avg_cost` de `product_catalog` × factor de la
+  presentación), además hay una alerta (`result.price_alerts`, `level: "below_cost"`). El costo
+  solo se muestra a owner/manager («Alerta de precio: … bajo su costo S/ Z»); a otro rol, sin
+  `unit_cost`: «Alerta: precio bajo para …». Sin costo conocido no hay alerta;
 - el stock alcanza: `disponible = stock_on_hand − reservas de otras ventas por
   confirmar vigentes`, sumando las líneas repetidas en unidad base;
 - la cantidad y la forma de pago **las escribió el vendedor**: el proceso 2 las
@@ -302,6 +307,8 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   «media docena»), sin contar los números que describen el producto («100 hojas»,
   «30 cm», «a4») ni los montos («a 3 soles»). Si no, `missing_payment` /
   `missing_quantity` con `detail.ungrounded`;
+- la forma de pago no está negada en su frase («yape no, efectivo», «no es yape», «sin tarjeta»: esa
+  forma no cuenta);
 - la forma de pago existe y está activa en `payment_method_catalog`, y el cliente
   (si se indicó) existe;
 - el agente 1 no reportó dudas generales.
@@ -323,7 +330,9 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 | `invalid_payment` | La forma de pago no existe en el POS. |
 | `invalid_customer` | El cliente indicado no existe. |
 | `pos_rejected` | `create_sale` respondió con error: no se registró nada. |
-| `price_override_not_allowed` | **Sin uso desde 2026-11-15** (cualquier vendedor registra el precio dictado). Se conserva para registros antiguos. |
+| `unit_unclear` | La presentación (caja, docena…) que propuso la IA no la dijo el vendedor. |
+| `price_modified` | Precio dictado (escrito por el vendedor) distinto al de lista: por confirmar para todos los roles; un revisor la aprueba a ese precio. |
+| `price_override_not_allowed` | **Sin uso desde 2026-11-15**. Se conserva para registros antiguos. |
 | `price_unverified` | El borrador trae un precio dictado que no aparece en el texto del vendedor (posible invención del modelo). |
 
 ### Reservas de ventas por confirmar
@@ -340,37 +349,18 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 ### Respuestas
 
 - `completed`: `result.reference` (id de la venta), `total`, `currency`, `items`
-  (precio vendido; `list_price` y `manual_reason` si se dictó otro precio;
-  `quantity_defaulted` si se tomó 1), `alerts`, `notes` (cantidad por defecto, precio
-  modificado) y `price_alerts` (precio bajo costo).
+  (precio de lista; `quantity_defaulted` si se tomó 1), `alerts`, `notes` (cantidad por defecto) y
+  `price_alerts`.
 - `pending_review`: `result.reference` (id de la operación), `reasons`
   (`[{ code, line?, message, doubt?, ungrounded? }]`: `doubt` es el código de duda del
   agente 1, p. ej. `ambiguous_product`; `ungrounded` indica que el vendedor no escribió
   la cantidad, la forma de pago o el precio), `pending` (texto), `items`, `reservations`,
-  `review_expires_at`, `alerts`, `notes`, `price_alerts`.
+  `review_expires_at`, `alerts`, `notes`, `price_alerts`, `price_review` (`"pending"` si hay
+  precio dictado distinto al de lista; `items[].list_price` y `items[].price_unit` = dictado).
 
 Alertas: tras `completed` o `pending_review`, para cada producto afectado
 `disponible = stock_on_hand − reservas`; `out` si ≤ 0, `low` si ≤ `min_stock`
 (de `product_catalog`). Un fallo al calcularlas nunca altera la venta.
-
-## Migración pendiente: precio manual para cualquier rol
-
-`create_sale` hoy exige rol owner/manager para cualquier precio distinto del automático. El cambio
-mínimo (decisión del dueño, 2026-11-15): el **precio manual** se permite a cualquier rol que pueda
-registrar ventas; los **descuentos** (`manual_discount_pct`, `manual_discount_amount`) siguen solo
-para owner/manager; el **motivo** sigue siendo obligatorio (el agente lo llena: «Precio dictado por
-vendedor (lista S/ X)»; en la pantalla del POS solo owner/manager cambian precios y ya escriben motivo).
-
-La migración se genera a partir de la definición **real** de la base, nunca de `schema.sql`:
-
-1. Solo lectura, en el SQL Editor de Supabase:
-   `select pg_get_functiondef('public.create_sale(uuid,text,jsonb)'::regprocedure);` → guardar en un `.sql`.
-2. `node scripts/create-sale-manual-price-migration.mjs <definicion-real.sql>` escribe
-   `supabase/migrations/20261115_create_sale_manual_price_any_role.sql` y
-   `supabase/rollbacks/20261115_create_sale_manual_price_any_role_down.sql` (exactamente la definición
-   real). Falla si el bloque de permisos no aparece exactamente una vez o si cambiaría algo más.
-3. Aplicarla es decisión del dueño. Sin ella, el precio dictado por un cajero queda por confirmar
-   (`pos_rejected`).
 
 ## Modo de solo validación (`POS_AGENT_DRY_RUN=1`)
 
@@ -403,6 +393,19 @@ Reintentar **el mismo mensaje** exige el mismo UUID y contenido. Se conserva su
 respuesta; cambiar contenido con ese UUID devuelve 409. La API devuelve `pending`
 a los 8 segundos si sigue trabajando; reintenta el mismo UUID.
 
+Una aclaración «no» suelta ya no anula la venta por confirmar; para anularla: «cancelar» o «anular».
+
+**Bloqueo.** Cada mensaje pasa en tres fases: (1) bajo el bloqueo, breve: releer la operación,
+respuestas inmediatas (terminada, vencida, «cancelar») y reclamar el `request_id` (`claimed_at`,
+`operation.inflight`); (2) **sin bloqueo**: el agente 1 arma el borrador (OpenAI, solo lectura), así un
+vendedor no espera al otro; (3) bajo el bloqueo: releer, validar, reservar y ejecutar. Otro mensaje de
+la misma operación mientras se prepara recibe `pending` (reintentar con su mismo `request_id`). Un
+reclamo sin respuesta de más de 2 minutos y sin `create_sale` enviado (proceso interrumpido) responde
+`rejected` («se interrumpió el proceso; no se registró»), nunca un `pending` eterno; si `create_sale`
+se envió (`executing`, `operation.execution` sin cerrar) sigue `pending` y nunca se reintenta.
+`processing.lock` guarda el pid: si ese proceso ya no existe y no hay ningún `create_sale` sin cerrar,
+el siguiente mensaje lo recupera; si lo hay, queda ocupado para conciliación manual.
+
 `.data/agent` es privado, local y para una sola instalación. Un bloqueo
 exclusivo impide ejecuciones concurrentes. La marca `executing` se guarda antes de
 llamar a `create_sale`. Después de enviarla:
@@ -413,8 +416,8 @@ llamar a `create_sale`. Después de enviarla:
   con `pos_rejected`. Al chat solo llega el código; el detalle va al log del servidor;
 - error **sin código** (red, 502) o sin respuesta en 20 s (timeout de `create_sale`)
   → **indeterminado**: `pending`, nunca éxito y nunca una segunda llamada; reintentar el
-  mismo `request_id` devuelve `pending` hasta conciliar. El timeout libera el bloqueo. Si el proceso muere puede quedar `processing.lock`: conciliar antes de
-borrarlo. Varias réplicas o Vercel necesitan almacenamiento transaccional
+  mismo `request_id` devuelve `pending` hasta conciliar. El timeout libera el bloqueo. Si el proceso muere con un `create_sale` sin cerrar, `processing.lock` no
+se recupera solo: conciliar esa venta antes de borrarlo. Varias réplicas o Vercel necesitan almacenamiento transaccional
 compartido (sesiones incluidas); no desplegar así.
 
 ## Validación

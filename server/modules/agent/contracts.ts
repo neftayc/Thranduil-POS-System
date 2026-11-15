@@ -63,7 +63,9 @@ export const REVIEW_REASONS = [
   'invalid_payment',      // payment method not in payment_method_catalog (active)
   'invalid_customer',     // customer_id does not exist
   'pos_rejected',         // create_sale answered with an error: nothing was registered
-  'price_override_not_allowed', // NOT USED since 2026-11-15: any seller may register a dictated price (kept for old records)
+  'price_override_not_allowed', // NOT USED since 2026-11-15 (kept for old records)
+  'unit_unclear',         // the presentation (caja, docena…) the AI proposed was not said by the seller
+  'price_modified',       // dictated price ≠ list price: always por confirmar; a reviewer approves it at that price
   'price_unverified'      // the draft carries a dictated price that the seller's text does not contain
 ] as const
 export type ReviewReasonCode = typeof REVIEW_REASONS[number]
@@ -87,7 +89,7 @@ export type DraftItem = {
   quantity_defaulted?: boolean
   /** List price when the seller dictated a different price (price_unit = dictated price). */
   list_price?: number
-  /** manual_discount_reason sent to create_sale when price_unit ≠ list price. */
+  /** Reason for a price ≠ list price (what a reviewer would send as manual_discount_reason). */
   manual_reason?: string
 }
 /** What is sent to create_sale. Only built when every check passed. */
@@ -120,10 +122,14 @@ export type Operation = {
   draft?: SaleDraft
   reasons?: ReviewReason[]
   /**
-   * Sale REGISTERED with a dictated price ≠ list price: it is also queued for the price review
-   * (validated later against the system price). The sale itself is not pending.
+   * "Venta por confirmar" with a dictated price ≠ list price (NOT registered): what the reviewer
+   * needs to approve it at that price later (list and dictated price per line).
    */
   price_review?: PriceReview
+  /** A request is being prepared for this operation (agent 1 runs outside the lock). */
+  inflight?: { request_id: string; started_at: number }
+  /** create_sale was dispatched; `settled` once the outcome (receipt, rejection or indeterminate) was recorded. */
+  execution?: { request_id: string; started_at: number; settled: boolean }
   response?: AgentResponse
   reservations?: Reservation[]
   expires_at: number
@@ -134,7 +140,7 @@ export const catalogAnswerSchema = z.object({
   message: z.string().trim().min(1).transform(value => value.slice(0, 4000)),
   result: z.record(z.string(), z.unknown()).default({})
 })
-export type RequestRecord = { fingerprint: string; operation_id: string; seller_id: string; response?: AgentResponse }
+export type RequestRecord = { fingerprint: string; operation_id: string; seller_id: string; response?: AgentResponse; /** when it was claimed (ms) */ claimed_at?: number }
 
 export interface AgentStore {
   getRequest(id: string): Promise<RequestRecord | null>

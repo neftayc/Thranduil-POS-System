@@ -8,6 +8,7 @@ import { makeSealer, makeSellerSessions, SellerRejectedError, type ActiveSeller,
 import { makeFileAgentStore } from '../modules/agent/infra/fileAgentStore'
 import { makeFileSellerSessionStore } from '../modules/agent/infra/fileSellerSessionStore'
 import { makeOpenAIOrderInterpreter } from '../modules/agent/infra/openaiOrderInterpreter'
+import { makeOpenAIProductSelector } from '../modules/agent/infra/openaiProductSelector'
 import { embeddingModelName, makeOpenAIEmbedder } from '../modules/agent/infra/openaiEmbeddings'
 import { makeSupabaseAgentCatalog, searchAutoindexIntervalMs } from '../modules/agent/infra/supabaseAgentCatalog'
 import { makeSupabaseSaleExecutor } from '../modules/agent/infra/supabaseSaleExecutor'
@@ -93,7 +94,10 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
     store: makeFileAgentStore(dryRun ? join(String(config.posAgentStorageDir), 'dry-run') : String(config.posAgentStorageDir)),
     // Agent 1 (AI): interpretation + hybrid search (vectors + text + exact attributes) → sale-draft/1.
     // Catalog questions are answered by process 2 as information (completed, kind catalog_answer), never as a sale.
-    buildDraft: makeHybridDraftBuilder(makeOpenAIOrderInterpreter(key, String(config.posAgentModel)), catalog, { answerCatalogQuestions: true }),
+    // The context selector (same model) only orders equally compatible options; it never invents or upgrades.
+    buildDraft: makeHybridDraftBuilder(makeOpenAIOrderInterpreter(key, String(config.posAgentModel)), catalog, {
+      answerCatalogQuestions: true, selector: makeOpenAIProductSelector(key, String(config.posAgentModel))
+    }),
     // Process 2 (deterministic).
     validate: makeDraftValidator(catalog),
     // Second barrier: in dry-run the executor cannot reach create_sale even if called.

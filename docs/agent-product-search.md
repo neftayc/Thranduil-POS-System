@@ -47,6 +47,28 @@ precio y stock en vivo. `buildDraft` las devuelve como `{ kind: 'catalog_answer'
 con `answerCatalogQuestions: true`; si no, como `intent: 'unsupported'`. El proceso 2
 las atiende sin vender ni reservar (ver yachay-agent-api.md).
 
+## Selección por contexto
+
+La línea se lee en partes: **tipo** (cuaderno), **características** (cuadriculado, 100 hojas, A4…), **marca o modelo** (marking → Markin) y presentación.
+
+- **Convenciones en un solo lugar:** `server/modules/agent/app/catalogConventions.ts`.
+  - «#» = cuadriculado, «triple renglón» = tres rayas, «1x1»/«2x2» = cuadrimax, «100 h» = 100 hojas, rayado.
+  - Frases: «goma de borrar» → borrador.
+  - Equivalencias de palabras y tamaños.
+  - Los sinónimos de productos concretos NO van aquí: se aprenden de las ventas (`product_search_synonyms`, `source='sale_review'`).
+- **Tipo:** el tipo de la línea es la primera palabra que coincide con la categoría de algún candidato. Un producto de otra categoría, cuyo nombre no menciona ese tipo, queda en conflicto. Un cuaderno nunca es una cinta.
+- **Marca tolerante al dictado:** las palabras de 5 o más letras que suenan igual coinciden. Ejemplos: margen / marking / markin → «markin». Masking sigue siendo otra palabra.
+- **Selector LLM** (`infra/openaiProductSelector.ts`, mismo modelo `POS_AGENT_MODEL`):
+  - Solo se llama cuando quedan 2 o más candidatos igual de compatibles.
+  - Elige por número entre esos candidatos reales; nunca maneja ids ni inventa.
+  - Su elección pasa a ser la opción preseleccionada, con una justificación.
+  - **Nunca sube un empate a seguridad alta:** la alta la decide la verificación determinista (un único producto activo compatible).
+  - Si falla o no distingue, queda la preselección determinista, que es el mayor stock.
+- **Aclaración del vendedor** («es el Markin», «la 2», un SKU):
+  - Resuelve la línea que tenía opciones, aunque el intérprete no copie el id.
+  - Solo vale si apunta a una opción real de ESA línea y no contradice lo que ahora dice la línea.
+  - Ejemplo: «el surco rayado» no elige «surco #». Se mantiene la corrección A2.
+
 ## Índice y sinónimos (`supabase/migrations/20261110_product_hybrid_search.sql`)
 
 - `product_search_index`: `document` = «nombre. Marca: … Categoría: … También:

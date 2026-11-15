@@ -62,8 +62,9 @@ export const applyConventions = (text: string) => {
 }
 
 /**
- * Sound-alike key for dictated words (Spanish speech-to-text): marking / markin / margen → «markin»,
- * while masking → «maskin» stays different. Only used for words of 5+ letters.
+ * Sound-alike key for dictated words (Spanish speech-to-text), for brands AND features:
+ * marking / markin / margen → «markin» (masking stays different); pisar / pizarra → «pisar».
+ * Only used for words of 5+ letters.
  */
 export const phoneticKey = (word: string) => word
   .replace(/ng$/, 'n')
@@ -78,3 +79,5 @@ export const phoneticKey = (word: string) => word
   .replace(/e/g, 'i')
   .replace(/o/g, 'u')
   .replace(/(.)\1+/g, '$1')
+  // A dropped/added final vowel is a common dictation error: «para pisar» ≈ pizarra.
+  .replace(/[aiu]$/, '')

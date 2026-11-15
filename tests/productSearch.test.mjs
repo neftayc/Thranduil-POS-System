@@ -157,12 +157,16 @@ test('agente 1: producto inexistente → seguridad baja, sin product_id', async 
   assert.match(result.question, /no encontré «calculadora casio»/)
 })
 
-test('agente 1: falta la forma de pago → por confirmar; sin cantidad se toma 1 (no es duda)', async () => {
+test('agente 1: sin forma de pago dicha es efectivo (regla del negocio); un pago dicho que no existe es duda; sin cantidad se toma 1', async () => {
   const prepare = makeSalePreparer(catalogFrom(snapshot))
   const noPay = await prepare({ ...sale('cuaderno markin cuadriculado 100 a4', 1), payment_method: null }, [], new Map())
-  assert.equal(noPay.draft, undefined)
-  assert.equal(noPay.proposal.confidence, 'medium')
-  assert.equal(noPay.proposal.payment_method, null)
+  assert.equal(noPay.proposal.confidence, 'high')
+  assert.equal(noPay.proposal.payment_method, 'efectivo')
+  assert.deepEqual(noPay.proposal.order_doubts, [])
+  const unknown = await prepare({ ...sale('cuaderno markin cuadriculado 100 a4', 1), payment_method: 'bitcoin' }, [], new Map())
+  assert.equal(unknown.draft, undefined)
+  assert.equal(unknown.proposal.payment_method, null)
+  assert.deepEqual(unknown.proposal.order_doubts.map(d => d.code), ['missing_payment'])
   const noQty = await prepare(sale('cuaderno markin cuadriculado 100 a4', null), [], new Map())
   assert.equal(noQty.proposal.items[0].qty, null) // process 2 records the default of 1
   assert.equal(noQty.proposal.items[0].confidence, 'high')
@@ -270,7 +274,7 @@ test('buildDraft: empate → ambiguous_product con candidatos reales; el proceso
   assert.equal(decision.kind, 'review')
 })
 
-test('buildDraft: códigos de duda (no encontrado, sin forma de pago); sin cantidad no es duda', async () => {
+test('buildDraft: códigos de duda (no encontrado); sin forma de pago es efectivo; sin cantidad no es duda', async () => {
   const catalog = catalogFrom(snapshot)
   const order = { intent: 'sale', items: [
     { query: 'calculadora casio', sku: null, quantity: 1, unit: null, product_id: null },
@@ -284,8 +288,8 @@ test('buildDraft: códigos de duda (no encontrado, sin forma de pago); sin canti
   assert.ok(draft.items[1].product_id)
   assert.equal(draft.items[1].quantity, null)
   assert.deepEqual(draft.items[1].doubts.map(d => d.code), [])
-  assert.equal(draft.payment_method, null)
-  assert.deepEqual(draft.doubts.map(d => d.code), ['missing_payment'])
+  assert.equal(draft.payment_method, 'efectivo')
+  assert.deepEqual(draft.doubts.map(d => d.code), [])
 })
 
 test('buildDraft: en la aclaración solo acepta IDs de candidatos ofrecidos antes', async () => {

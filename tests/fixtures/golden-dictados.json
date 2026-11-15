@@ -7,7 +7,8 @@
   "also_ok": "alternativa también correcta mientras el dueño no valide (p. ej. decidir el producto en vez de preguntar)",
   "follows": "el caso es una aclaración: se envía el dictado del caso anterior más este mensaje, con el consolidado previo",
   "noise_of": "variante con ruido («.», «...», «eh», «em», repeticiones, «perdón») del caso indicado: debe dar exactamente el mismo resultado que la versión limpia",
-  "price_said": "precio dictado esperado en esa línea; si falta, la línea no debe traer precio"
+  "price_said": "precio dictado esperado en esa línea; si falta, la línea no debe traer precio",
+  "ambiguous": "caso ambiguo de verdad: preguntar con la opción correcta entre las opciones cuenta como correcto (decisión del dueño); también vale para owner_check"
  },
  "rules": [
   "Sin número delante → 1 (la cantidad va siempre ANTES del producto).",
@@ -338,7 +339,8 @@
      "quantity": 5
     }
    ],
-   "payment_method": "efectivo"
+   "payment_method": "efectivo",
+   "ambiguous": true
   },
   {
    "id": "D11",
@@ -404,7 +406,8 @@
     }
    ],
    "payment_method": "efectivo",
-   "noise_of": "D12p"
+   "noise_of": "D12p",
+   "ambiguous": true
   },
   {
    "id": "D12p",
@@ -666,7 +669,8 @@
     }
    ],
    "payment_method": "efectivo",
-   "owner_check": true
+   "owner_check": true,
+   "ambiguous": true
   },
   {
    "id": "D11n1",

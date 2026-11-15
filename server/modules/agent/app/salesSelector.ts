@@ -223,9 +223,17 @@ export type SelectorInput = {
   previous?: SaleConsolidated | null
 }
 
-export const makeSalesSelector = (deps: { model: SelectorModel; catalog: () => Promise<SelectorCatalog>; examples?: SelectorExample[] }) => {
+/** Adds the reviewer's usage to the selector's (both passes = one sale). */
+const sumUsage = (a: SelectorUsage, b: SelectorUsage | null): SelectorUsage => b ? {
+  model: a.model, input_tokens: a.input_tokens + b.input_tokens, cached_tokens: a.cached_tokens + b.cached_tokens,
+  output_tokens: a.output_tokens + b.output_tokens, latency_ms: a.latency_ms + b.latency_ms
+} : a
+
+export type SalesReviewer = (messages: string[], consolidated: SaleConsolidated, catalog: SelectorCatalog) => Promise<{ consolidated: SaleConsolidated; usage: SelectorUsage | null; issues: number }>
+
+export const makeSalesSelector = (deps: { model: SelectorModel; catalog: () => Promise<SelectorCatalog>; examples?: SelectorExample[]; reviewer?: SalesReviewer }) => {
   let cached: { version: string; system: string } | null = null
-  return async (input: SelectorInput): Promise<{ consolidated: SaleConsolidated; usage: SelectorUsage; intent: SelectorModelOutput['intent'] }> => {
+  return async (input: SelectorInput): Promise<{ consolidated: SaleConsolidated; usage: SelectorUsage; intent: SelectorModelOutput['intent']; review_issues: number }> => {
     const catalog = await deps.catalog()
     if (!cached || cached.version !== catalog.version) cached = { version: catalog.version, system: selectorSystemPrompt(catalog, deps.examples) }
     const { toRef } = referencesFor(catalog.products)
@@ -236,7 +244,16 @@ export const makeSalesSelector = (deps: { model: SelectorModel; catalog: () => P
     } : null
     const user = JSON.stringify({ mensajes: input.messages.map(m => m.slice(0, 2500)).slice(-10), consolidado_previo: previous })
     const { output, usage } = await deps.model(cached.system, user)
-    return { consolidated: toConsolidated(output, catalog), usage, intent: output.intent }
+    const consolidated = toConsolidated(output, catalog)
+    if (!deps.reviewer || output.intent !== 'venta' || !consolidated.lines.length) return { consolidated, usage, intent: output.intent, review_issues: 0 }
+    // Second AI pass. If it cannot run, nothing goes through unreviewed: every line asks for confirmation.
+    try {
+      const reviewed = await deps.reviewer(input.messages, consolidated, catalog)
+      return { consolidated: reviewed.consolidated, usage: sumUsage(usage, reviewed.usage), intent: output.intent, review_issues: reviewed.issues }
+    } catch {
+      const lines = consolidated.lines.map(l => ({ ...l, confidence: 'baja' as const, question: l.question || 'No se pudo revisar el pedido; confirma este artículo.', options: l.options.length ? l.options : l.product_id ? [l.product_id] : [] }))
+      return { consolidated: { ...consolidated, lines }, usage, intent: output.intent, review_issues: -1 }
+    }
   }
 }
 
@@ -256,7 +273,7 @@ export type CatalogAnswerer = (query: { intent: 'catalog_query'; items: Array<{ 
  * Process 2's step-2 contract: `buildDraft(messages, previous)` → sale-consolidated/1, a
  * catalog answer (questions never become sales), or a lineless sale-draft/1 (cancel / not a sale).
  */
-export const makeSelectorBuildDraft = (deps: { model: SelectorModel; catalog: () => Promise<SelectorCatalog>; examples?: SelectorExample[]; answer?: CatalogAnswerer; onUsage?: (usage: SelectorUsage) => void }) => {
+export const makeSelectorBuildDraft = (deps: { model: SelectorModel; catalog: () => Promise<SelectorCatalog>; examples?: SelectorExample[]; reviewer?: SalesReviewer; answer?: CatalogAnswerer; onUsage?: (usage: SelectorUsage) => void }) => {
   const select = makeSalesSelector(deps)
   return async (messages: string[], previous: unknown) => {
     const { consolidated, usage, intent } = await select({ messages, previous: isConsolidated(previous) ? previous : null })

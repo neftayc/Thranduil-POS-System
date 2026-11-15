@@ -229,3 +229,57 @@ test('aclaración con otra cantidad: el registrador acepta la cantidad del selec
   const decision = await makeConsolidatedRegistrar(validationCatalog)(consolidated, [D6, D6b].join('\n'), new Map())
   assert.equal(decision.kind, 'direct', JSON.stringify(decision.reasons || ''))
 })
+
+// ------------------------------------------------------------ reviewer (second AI pass)
+
+const rev = await jiti.import('../server/modules/agent/app/salesReviewer.ts')
+const reviewer = issues => rev.makeSalesReviewer(async () => ({ output: { issues }, usage: { input_tokens: 5, cached_tokens: 2, output_tokens: 3, latency_ms: 7, model: 'mock' } }))
+const consolidatedOf = lines => sel.toConsolidated(output(lines), catalog)
+
+test('revisor: una duda baja la línea a «baja» con pregunta y opciones reales; el producto propuesto queda primero', async () => {
+  const c = consolidatedOf([
+    line({ phrase: 'Dos cartulinas blancas', product_ref: ref('Cartulina blanca'), quantity: 2 }),
+    line({ phrase: 'un cartón cartulina', product_ref: ref('Cartulina a colores'), quantity: 1 })
+  ])
+  const { consolidated, issues } = await reviewer([{ line: 2, kind: 'aclaracion', phrase: 'La cartulina es la cartulina a color', question: '¿La aclaración es del cartón cartulina o de las cartulinas a colores?', options: [ref('carton cartulina'), ref('Cartulina a colores'), 'p99999'] }])(['…'], c, catalog)
+  assert.equal(issues, 1)
+  assert.equal(consolidated.lines[0].confidence, 'alta', 'lo no señalado no cambia')
+  const l = consolidated.lines[1]
+  assert.equal(l.confidence, 'baja')
+  assert.match(l.question, /cartón cartulina/)
+  assert.deepEqual(l.options, [byName('Cartulina a colores').id, byName('carton cartulina').id], 'solo referencias reales, sin inventadas')
+  assert.equal(l.product_id, byName('Cartulina a colores').id, 'el revisor no cambia productos')
+  assert.equal(l.quantity, 1, 'ni cantidades')
+})
+
+test('revisor: un artículo dicho que falta se vuelve PREGUNTA (sin producto, nunca adivinado); el registrador no la vende', async () => {
+  const c = consolidatedOf([line({ phrase: '2 cartulinas', product_ref: ref('Cartulina a colores'), quantity: 2 })])
+  const { consolidated } = await reviewer([{ line: null, kind: 'falta', phrase: 'cartulinas a colores', question: 'Falta «cartulinas a colores»: ¿cuántas y cuál?', options: [ref('Cartulina a colores')] }])(['Tengo cartulinas a colores, em, dos cartulinas'], c, catalog)
+  assert.equal(consolidated.lines.length, 2)
+  const added = consolidated.lines[1]
+  assert.deepEqual([added.product_id, added.quantity, added.confidence], [null, null, 'baja'])
+  assert.deepEqual(added.options, [byName('Cartulina a colores').id])
+  const decision = await makeConsolidatedRegistrar(validationCatalog)(consolidated, 'Tengo cartulinas a colores, em, dos cartulinas', new Map())
+  assert.equal(decision.kind, 'review')
+})
+
+test('revisor: sin dudas no cambia nada; si falla, nada pasa sin revisar (todas las líneas piden confirmación)', async () => {
+  const lines = [line({ phrase: '5 cartulinas negras', product_ref: ref('Cartulina Negra'), quantity: 5 })]
+  const clean = await sel.makeSalesSelector({ catalog: async () => catalog, model: mockModel(output(lines)), reviewer: reviewer([]) })({ messages: ['5 cartulinas negras'] })
+  assert.equal(clean.consolidated.lines[0].confidence, 'alta')
+  assert.equal(clean.usage.latency_ms, 8, 'la latencia y el costo suman las dos pasadas')
+  const broken = await sel.makeSalesSelector({ catalog: async () => catalog, model: mockModel(output(lines)), reviewer: async () => { throw new Error('timeout') } })({ messages: ['5 cartulinas negras'] })
+  assert.equal(broken.consolidated.lines[0].confidence, 'baja')
+  assert.match(broken.consolidated.lines[0].question, /No se pudo revisar/)
+  // A catalog question or a cancel never goes to the reviewer.
+  let called = 0
+  await sel.makeSalesSelector({ catalog: async () => catalog, model: mockModel(output([], { intent: 'cancelar' })), reviewer: async () => { called++; return null } })({ messages: ['cancela'] })
+  assert.equal(called, 0)
+})
+
+test('revisor: el prompt revisa omisiones, sobrantes, cantidades, aclaraciones y ambigüedades; el código no relee el texto', () => {
+  const system = rev.reviewerSystemPrompt(catalog)
+  for (const rule of [/Falta algún artículo/, /Sobra alguna línea/, /cantidad no corresponde/, /aclaración o corrección se aplicó a una línea/, /dos lecturas posibles/, /NO corriges nada/]) assert.match(system, rule)
+  const source = readFileSync(new URL('../server/modules/agent/app/salesReviewer.ts', import.meta.url), 'utf8')
+  for (const banned of ['normalizeText', 'leadingQuantity', 'decideMatch', 'split(']) assert.ok(!source.includes(banned), banned)
+})

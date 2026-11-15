@@ -1,6 +1,8 @@
 import type { Product } from '../contracts'
 import { explicitChoice } from './sellerChoice'
-import { brandVocabulary, decideMatch, tiedWithBest, type Confidence, type MatchDecision, type RankedCandidate } from './productSearch'
+import type { OrderInterpretation } from './agent1Contracts'
+import { applyConventions } from './catalogConventions'
+import { brandVocabulary, contentWords, decideMatch, similarWord, tiedWithBest, type Confidence, type MatchDecision, type RankedCandidate } from './productSearch'
 
 /**
  * Product selection by CONTEXT (after the hybrid search and the exact-signal decision).
@@ -71,4 +73,30 @@ export const clarifiedChoice = (lastMessage: string | undefined, offered: Produc
   const docs = lineOptions.map(p => ({ id: p.id, name: p.name, brand: p.brand, sku: p.sku, category: null }))
   const check = decideMatch(lineQuery, docs.filter(d => d.id === product.id), brandVocabulary(docs)).ranked[0]
   return check && !check.conflicts.length ? product : null
+}
+
+// Words of an order that are never a brand or model: quantities, payment, verbs and fillers.
+const NOT_HINTS = new Set([
+  'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'docena', 'docenas', 'media', 'medio', 'par',
+  'efectivo', 'yape', 'plin', 'tarjeta', 'transferencia', 'pago', 'paga', 'pagar', 'cobra', 'cobrar', 'cobro', 'contado', 'credito', 'deposito',
+  'vender', 'vende', 'vendo', 'venta', 'quiero', 'dame', 'deme', 'ponme', 'agrega', 'agregar', 'llevo', 'lleva', 'favor', 'porfa', 'gracias',
+  'cliente', 'publico', 'otro', 'otra', 'mas', 'tambien', 'solo', 'nada', 'eso', 'esto', 'ese', 'esa', 'cada'
+])
+
+/**
+ * Words the seller SAID that did not reach the interpreted line (e.g. «marca marking» lost by the
+ * interpreter): «marca/línea/modelo X» first, then any other leftover word. They are only HINTS:
+ * prepareSale tries them one by one and keeps a hint only if it makes the line unequivocal.
+ */
+export const spokenHints = (sellerText: string, input: OrderInterpretation, limit = 3): string[] => {
+  const used = contentWords(input.items.flatMap(i => [i.query, i.product || '', i.brand || '', ...(i.attributes || []), i.unit || ''])
+    .concat(input.payment_method || '', input.customer_query || '').join(' '))
+  const text = applyConventions(sellerText)
+  const marked = [...text.matchAll(/\b(?:marca|linea|modelo)\s+([a-z]{3,})/g)].map(m => m[1])
+  const hints: string[] = []
+  for (const word of [...marked, ...contentWords(text)]) {
+    if (NOT_HINTS.has(word) || hints.includes(word) || used.some(u => similarWord(u, word))) continue
+    hints.push(word)
+  }
+  return hints.slice(0, limit)
 }

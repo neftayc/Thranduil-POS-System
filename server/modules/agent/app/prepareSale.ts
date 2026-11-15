@@ -39,7 +39,7 @@ export type ProductMatch = { decision: MatchDecision; products: Map<string, Prod
  * Retrieves candidates, decides with exact attributes and the line's context (type, features,
  * brand), lets the optional selector order equally good options, and loads their live rows.
  */
-export const makeProductMatcher = (catalog: AgentCatalog, selector?: ProductSelector) => async (rawQuery: string): Promise<ProductMatch> => {
+export const makeProductMatcher = (catalog: AgentCatalog, selector?: ProductSelector) => async (rawQuery: string, useSelector = true): Promise<ProductMatch> => {
   const query = applyConventions(rawQuery)
   let decision: MatchDecision
   let found: Product[] = []
@@ -51,7 +51,7 @@ export const makeProductMatcher = (catalog: AgentCatalog, selector?: ProductSele
     const docs = found.map(p => ({ id: p.id, name: p.name, brand: p.brand, sku: p.sku, category: null }))
     decision = decideMatch(query, docs, brandVocabulary(docs))
   }
-  decision = await withContextSelection(query, decision, selector)
+  if (useSelector) decision = await withContextSelection(query, decision, selector)
   const ids = [...new Set([...decision.ranked.slice(0, 6), ...closestCandidates(decision.ranked).slice(0, 6)].map(c => c.doc.id))]
   const live = found.length ? found.filter(p => ids.includes(p.id))
     : catalog.getProducts ? await catalog.getProducts(ids)
@@ -75,7 +75,7 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
    * `context.lineOptions[i]` = options shown for line i: a clarification («es el Markin») resolves it.
    */
   return async (input: Interpretation, previousCandidates: Product[], reserved: Map<string, number> = new Map(),
-    context: { lastMessage?: string; offered?: Product[]; checkStock?: boolean; lineOptions?: Product[][] } = {}) => {
+    context: { lastMessage?: string; offered?: Product[]; checkStock?: boolean; lineOptions?: Product[][]; hints?: string[] } = {}) => {
     const candidates: Product[] = []
     // Options listed to the seller in THIS answer, numbered in this order.
     const offered: Product[] = []
@@ -153,7 +153,18 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
           lineDoubt(`el SKU «${item.sku}» corresponde a varios productos: ${offer(matches.slice(0, 5))}.`, 'medium', 'ambiguous_product')
         }
       } else {
-        const { decision, products } = await match(matchQuery(item))
+        // Words the seller said that the interpreter dropped (single-line orders only): a hint is kept
+        // only if it makes the line unequivocal, so it can never make the choice worse.
+        const hints = input.items.length === 1 ? (context.hints || []) : []
+        let { decision, products } = await match(matchQuery(item), !hints.length)
+        let hintUsed: string | null = null
+        if (decision.confidence !== 'high' && hints.length) {
+          for (const hint of hints) {
+            const retry = await match(`${matchQuery(item)} ${hint}`, false)
+            if (retry.decision.confidence === 'high') { ({ decision, products } = retry); hintUsed = hint; break }
+          }
+          if (!hintUsed) decision = await withContextSelection(matchQuery(item), decision, options.selector)
+        }
         // On a tie, preselect the tied product with the most available stock (never a random one).
         const tied = tiedWithBest(decision).map(c => products.get(c.doc.id)).filter((p): p is Product => Boolean(p))
         const preferred = tied.length > 1 && !decision.selected ? [...tied].sort((a, b) => (b.stock - (reserved.get(b.id) || 0)) - (a.stock - (reserved.get(a.id) || 0)))[0] : null
@@ -167,7 +178,7 @@ export const makeSalePreparer = (catalog: AgentCatalog, options: { selector?: Pr
           product = best
           line.confidence = decision.confidence
           line.match_score = bestCandidate.score
-          line.reasons = reasonsFor(bestCandidate)
+          line.reasons = [...(hintUsed ? [`«${hintUsed}» lo dijo el vendedor`] : []), ...reasonsFor(bestCandidate)]
         }
         if (decision.confidence !== 'high') {
           // Offer only real candidates: the best one first, then the closest alternatives.

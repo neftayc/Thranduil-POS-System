@@ -13,7 +13,7 @@ const requireNuxt = createRequire(import.meta.resolve('nuxt/package.json'))
 const jiti = requireNuxt('jiti').createJiti(import.meta.url)
 const search = await jiti.import('../server/modules/agent/app/productSearch.ts')
 const conventions = await jiti.import('../server/modules/agent/app/catalogConventions.ts')
-const { withContextSelection, clarifiedChoice } = await jiti.import('../server/modules/agent/app/contextSelection.ts')
+const { withContextSelection, clarifiedChoice, spokenHints } = await jiti.import('../server/modules/agent/app/contextSelection.ts')
 const { makeHybridDraftBuilder } = await jiti.import('../server/modules/agent/app/draftBuilder.ts')
 const { makeDraftValidator } = await jiti.import('../server/modules/agent/app/validateDraft.ts')
 const { makeSalesAgent } = await jiti.import('../server/modules/agent/app/salesAgent.ts')
@@ -218,4 +218,66 @@ test('dry-run con mocks: «dos cuadernos margen 100 hojas cuadriculado» → se 
   assert.equal(response.result.would_be, 'completed')
   assert.equal(response.result.total, 9)
   assert.match(JSON.stringify(response), /Cuaderno Markin # 100 h/)
+})
+
+// ------------------------------------------------------------ the brand the interpreter dropped (dry-run 14 nov)
+
+// What the real interpreter returned in the dry-run: brand lost, query without it.
+const lostBrand = (quantity, payment = null) => ({ ...sale('cuaderno 100 hojas cuadriculado', quantity, { brand: null }), payment_method: payment })
+
+test('spokenHints: recupera «marca X» y palabras dichas que no llegaron a la línea; ignora cantidad y pago', () => {
+  assert.deepEqual(spokenHints('Cuadernos de 100 hojas, marca margen cuadriculado.', lostBrand(null)), ['margen'])
+  assert.deepEqual(spokenHints('Dos cuadernos cuadriculados marca marking de 100 hojas.', lostBrand(2)), ['marking'])
+  assert.deepEqual(spokenHints('dos cuadernos 100 hojas cuadriculado, efectivo', lostBrand(2, 'efectivo')), [])
+})
+
+test('ensayo real: «Cuadernos de 100 hojas, marca margen cuadriculado.» → Cuaderno Markin # 100 h aunque el intérprete pierda la marca', async () => {
+  const text = 'Cuadernos de 100 hojas, marca margen cuadriculado.'
+  const draft = await makeHybridDraftBuilder(interpreterReturning(lostBrand(null)).interpret, catalogFrom(snapshot))([text], null)
+  assert.equal(draft.items[0].product_id, byName('Cuaderno Markin # 100 h').id)
+  assert.deepEqual(draft.items[0].doubts.map(d => d.code), ['missing_quantity'], 'solo falta la cantidad')
+})
+
+test('ensayo real: «Dos cuadernos cuadriculados marca marking de 100 hojas.» → 2 × Cuaderno Markin # 100 h', async () => {
+  const text = 'Dos cuadernos cuadriculados marca marking de 100 hojas.'
+  const draft = await makeHybridDraftBuilder(interpreterReturning(lostBrand(2)).interpret, catalogFrom(snapshot))([text], null)
+  const [line] = draft.items
+  assert.equal(line.product_id, byName('Cuaderno Markin # 100 h').id)
+  assert.equal(line.quantity, 2)
+  assert.equal(line.confidence, 'high')
+  assert.deepEqual(line.doubts, [])
+  assert.deepEqual(draft.doubts.map(d => d.code), ['missing_payment'], 'el dictado no dijo la forma de pago')
+})
+
+test('una pista nunca empeora la elección: palabras ajenas no producen un «high» y no se usan en pedidos de varias líneas', async () => {
+  const catalog = catalogFrom(snapshot)
+  const noise = await makeHybridDraftBuilder(interpreterReturning(lostBrand(2, 'efectivo')).interpret, catalog)(['dos cuadernos 100 hojas cuadriculado para mi hijo, efectivo'], null)
+  assert.equal(noise.items[0].confidence, 'medium')
+  const two = { ...lostBrand(2, 'efectivo'), items: [...lostBrand(2).items, { query: 'cinta masking', sku: null, quantity: 1, unit: null, product_id: null }] }
+  const multi = await makeHybridDraftBuilder(interpreterReturning(two).interpret, catalog)(['dos cuadernos marca markin 100 hojas cuadriculado y una cinta masking, efectivo'], null)
+  assert.equal(multi.items[0].confidence, 'medium', 'con varias líneas no se sabe a cuál pertenece la palabra')
+})
+
+test('criterio de éxito (dry-run con mocks): «dos cuadernos marking 100 hojas cuadriculado, efectivo» → 2 × Markin, venta directa, sin preguntas', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'papeleria-context-test-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const catalog = catalogFrom(snapshot)
+  const calls = { execute: 0, selector: 0 }
+  // Worst case: the interpreter drops «marking» again.
+  for (const order of [lostBrand(2, 'efectivo'), sale('cuaderno marking 100 hojas cuadriculado', 2, { brand: 'marking' })]) {
+    const agent = makeSalesAgent({
+      store: makeFileAgentStore(join(dir, String(calls.execute + Math.random()))),
+      buildDraft: makeHybridDraftBuilder(interpreterReturning(order).interpret, catalog, { selector: async () => { calls.selector++; return { product_id: null, confidence: 'low', reason: '' } } }),
+      validate: makeDraftValidator(catalog),
+      execute: async () => { calls.execute++; throw new Error('create_sale NO debe llamarse en dry-run') },
+      dryRun: true
+    })
+    const response = await agent({ protocol: 'yachay-agent/1', type: 'instruction', request_id: randomUUID(), input: { text: 'dos cuadernos marking 100 hojas cuadriculado, efectivo', locale: 'es-PE' } }, { id: 'user-ana' })
+    assert.equal(response.result.dry_run, true)
+    assert.equal(response.result.would_be, 'completed', JSON.stringify(response.result))
+    assert.equal(response.result.total, 9)
+    assert.match(JSON.stringify(response), /Cuaderno Markin # 100 h/)
+  }
+  assert.equal(calls.execute, 0)
+  assert.equal(calls.selector, 0, 'una venta inequívoca no llama al selector (sin costo ni latencia extra)')
 })

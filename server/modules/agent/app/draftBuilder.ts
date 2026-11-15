@@ -2,7 +2,7 @@ import { saleDraftSchema, type Product, type SaleDraftV1 } from '../contracts'
 import type { SaleProposal } from './agent1Contracts'
 import { makeCatalogAnswerer } from './catalogAnswers'
 import { makeSalePreparer, type AgentCatalog } from './prepareSale'
-import type { ProductSelector } from './contextSelection'
+import { spokenHints, type ProductSelector } from './contextSelection'
 import type { OrderInterpreter } from '../infra/openaiOrderInterpreter'
 
 export type CatalogAnswer = { kind: 'catalog_answer'; message: string; result: Record<string, unknown> }
@@ -91,7 +91,7 @@ export const makeHybridDraftBuilder = (
     const lineOptions = parsed.items.length === previousItems.length
       ? previousItems.map(line => choosing(line) ? products.filter(p => p.id === line.product_id || line.candidates.includes(p.id)) : [])
       : undefined
-    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered, checkStock: false, lineOptions })
+    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered, checkStock: false, lineOptions, hints: spokenHints(sourceText, parsed) })
     return toSaleDraft(proposal, sourceText)
   }
 }

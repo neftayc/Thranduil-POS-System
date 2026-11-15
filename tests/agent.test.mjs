@@ -95,7 +95,7 @@ async function setup(t, { drafts = [draftOf()], ...overrides } = {}) {
     ...overrides
   }
   const agent = makeSalesAgent(dependencies)
-  return { run: (request, seller = ANA) => agent(request, seller), dependencies, counts, sent, state, catalog, clock }
+  return { run: (request, seller = ANA) => agent(request, seller), dependencies, counts, sent, state, catalog, clock, dir }
 }
 const codes = response => response.result.reasons.map(r => r.code)
 
@@ -155,7 +155,8 @@ const reviewCases = [
   ['product_inactive', { items: [line({ product_id: randomUUID() })] }],
   ['missing_quantity', { items: [line({ quantity: null })], source_text: 'vende 2 o 3 cuadernos, efectivo' }],
   ['missing_quantity', { items: [line({ quantity: 0 })] }],
-  ['price_unavailable', { items: [line({ unit: 'millar' })] }],
+  ['price_unavailable', { items: [line({ unit: 'millar' })], source_text: 'vende 2 millar de cuadernos A4, efectivo' }],
+  ['unit_unclear', { items: [line({ unit: 'caja' })] }],
   ['price_changed', { items: [line({ price_unit: 4.5 })] }],
   ['insufficient_stock', { items: [line({ quantity: 21 })] }],
   ['missing_payment', { payment_method: null }],
@@ -210,7 +211,7 @@ test('stock insuficiente: suma líneas repetidas en unidad base, descuenta reser
 test('una línea sin producto no reserva; las resueltas sí', async () => {
   const { catalog } = makeCatalog()
   const result = await makeDraftValidator(catalog)(draftOf({
-    items: [line({ product_id: null, candidates: [LAPICERO.id], confidence: 'low' }), line({ quantity: 3 })],
+    items: [line({ product_id: null, candidates: [LAPICERO.id], confidence: 'low', query: 'lapicero azul' }), line({ quantity: 3 })],
     source_text: 'vende 2 lapiceros y 3 cuadernos, efectivo'
   }))
   assert.equal(result.kind, 'review')
@@ -929,9 +930,13 @@ test('cantidad: la cantidad que sí se dice se respeta y sigue exigiendo groundi
   const inferred = await setup(t, { drafts: [draftOf({ items: [line({ quantity: null })] })] })
   assert.equal((await inferred.run(instruction('vende tres cuadernos A4, efectivo'))).status, 'completed')
   assert.equal(inferred.sent[0].items[0].qty, 3)
-  // Two lines and the AI dropped one quantity: ambiguous → review, never a silent 1.
+  // Two lines and the AI dropped one quantity: the number written next to that line is used ("tres cuadernos" → 3).
+  const perLine = await setup(t, { drafts: [draftOf({ items: [line({ quantity: null }), line({ product_id: LAPICERO.id, quantity: 2, price_unit: 1.5, query: 'lapicero azul' })] })] })
+  assert.equal((await perLine.run(instruction('vende tres cuadernos A4 y 2 lapiceros, efectivo'))).status, 'completed')
+  assert.deepEqual(perLine.sent[0].items.map(i => i.qty), [3, 2])
+  // Two candidate quantities for the same line: review, never a silent 1.
   const dropped = await setup(t, { drafts: [draftOf({ items: [line({ quantity: null }), line({ product_id: LAPICERO.id, quantity: 2, price_unit: 1.5, query: 'lapicero azul' })] })] })
-  const response = await dropped.run(instruction('vende tres cuadernos A4 y 2 lapiceros, efectivo'))
+  const response = await dropped.run(instruction('vende tres o cuatro cuadernos A4 y 2 lapiceros, efectivo'))
   assert.deepEqual(codes(response), ['missing_quantity'])
   assert.match(response.message, /no pude asignar/)
   assert.equal(dropped.counts.execute + wrong.counts.execute, 0)
@@ -1139,4 +1144,154 @@ test('el dictado «$1» se lee como un sol: es precio, no cantidad', async () =>
   const result = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: null, price_said: 4 })], source_text: 'dos cuadernos a $4, efectivo' }), new Map(), { role: 'owner' })
   assert.deepEqual(result.reasons.map(r => r.code), ['price_modified']) // grounded: "$4" counts as a dictated price
   assert.deepEqual([result.items[0].qty, result.items[0].price_unit], [2, 4])
+})
+
+// ---------------------------------------------------------------- revisión independiente: sonda del supervisor
+
+const LAP = { id: '11111111-1111-1111-1111-111111111111', name: 'Lapicero azul', sku: 'LAP1', brand: null, unit: 'unidad', stock: 1000, avg_cost: 0.5 }
+const CUA = { id: '22222222-2222-2222-2222-222222222222', name: 'Cuaderno A4', sku: 'CU1', brand: null, unit: 'unidad', stock: 1000, avg_cost: 3 }
+const probeCatalog = (lapUnitPrice = 1) => {
+  const prices = { [LAP.id]: { unidad: [lapUnitPrice, 1], docena: [10, 12], caja: [40, 50] }, [CUA.id]: { unidad: [5, 1], docena: [55, 12] } }
+  return {
+    getProduct: async id => [LAP, CUA].find(p => p.id === id) || null,
+    paymentMethods: async () => [{ code: 'efectivo', label: 'Efectivo' }, { code: 'yape', label: 'Yape' }],
+    customerExists: async () => true,
+    quote: async (p, _qty, unit) => { const u = unit || p.unit; const r = prices[p.id][u]; if (!r) throw new Error('x'); return { unit_name: u, price: r[0], factor: r[1], currency: 'PEN' } }
+  }
+}
+const pl = o => ({ product_id: LAP.id, candidates: [], quantity: null, unit: null, price_unit: null, price_said: null, confidence: 'high', doubts: [], query: 'lapicero azul', ...o })
+const pd = (items, text, pay = 'efectivo') => saleDraftSchema.parse({ version: 'sale-draft/1', intent: 'sale', items, payment_method: pay, customer_id: null, doubts: [], source_text: text })
+const probe = async (draft, lapUnitPrice) => makeDraftValidator(probeCatalog(lapUnitPrice))(draft)
+
+const probeCases = [
+  ['A presentación inventada (caja)', pd([pl({ quantity: 2, unit: 'caja' })], '2 lapiceros azules, efectivo'), 'unit_unclear'],
+  ['B «una docena» → 12 docenas', pd([pl({ quantity: 12, unit: 'docena' })], 'una docena de lapiceros azules, efectivo'), 'missing_quantity'],
+  ['C «media docena» → 6 docenas', pd([pl({ quantity: 6, unit: 'docena' })], 'media docena de lapiceros azules, efectivo'), 'missing_quantity'],
+  ['D «media docena» → 0.5 unidad', pd([pl({ quantity: 0.5 })], 'media docena de lapiceros azules, efectivo'), 'missing_quantity'],
+  ['E cantidades intercambiadas', pd([pl({ quantity: 3 }), pl({ product_id: CUA.id, quantity: 2, query: 'cuaderno a4' })], '2 lapiceros azules y 3 cuadernos a4, efectivo'), 'missing_quantity'],
+  ['F precios cruzados', pd([pl({ quantity: 1, price_said: 5 }), pl({ product_id: CUA.id, quantity: 1, price_said: 1, query: 'cuaderno a4' })], 'un lapicero azul a 1 sol y un cuaderno a4 a 5 soles, efectivo'), 'price_unverified'],
+  ['G cantidad tomada del pago', pd([pl({ quantity: 50 })], 'lapicero azul, pagó con 50, efectivo'), 'missing_quantity'],
+  ['H cantidad 1 de otra línea', pd([pl({ quantity: 1 }), pl({ product_id: CUA.id, quantity: 3, query: 'cuaderno a4' })], 'un cuaderno a4 y 3 lapiceros azules, efectivo'), 'missing_quantity'],
+  ['I pago negado', pd([pl({ quantity: 1 })], 'un lapicero azul, no es yape, efectivo', 'yape'), 'missing_payment'],
+  ['J precio oficial 0', pd([pl({ quantity: 1 })], 'un lapicero azul, efectivo'), 'price_unavailable', 0]
+]
+for (const [name, draft, code, lapPrice] of probeCases) {
+  test(`sonda ${name} → revisión (${code}), nunca directa`, async () => {
+    const result = await probe(draft, lapPrice)
+    assert.equal(result.kind, 'review')
+    assert.ok(result.reasons.some(r => r.code === code), result.reasons.map(r => r.code).join(','))
+  })
+}
+
+const probeCorrect = [
+  ['2 cajas dichas', pd([pl({ quantity: 2, unit: 'caja' })], '2 cajas de lapiceros azules, efectivo'), [[2, 'caja']]],
+  ['una docena = 1 docena', pd([pl({ quantity: 1, unit: 'docena' })], 'una docena de lapiceros azules, efectivo'), [[1, 'docena']]],
+  ['una docena = 12 unidades', pd([pl({ quantity: 12 })], 'una docena de lapiceros azules, efectivo'), [[12, 'unidad']]],
+  ['media docena = 0.5 docena', pd([pl({ quantity: 0.5, unit: 'docena' })], 'media docena de lapiceros azules, efectivo'), [[0.5, 'docena']]],
+  ['media docena = 6 unidades', pd([pl({ quantity: 6 })], 'media docena de lapiceros azules, efectivo'), [[6, 'unidad']]],
+  ['cantidades en su línea', pd([pl({ quantity: 2 }), pl({ product_id: CUA.id, quantity: 3, query: 'cuaderno a4' })], '2 lapiceros azules y 3 cuadernos a4, efectivo'), [[2, 'unidad'], [3, 'unidad']]],
+  ['la IA pierde una cantidad (varias líneas)', pd([pl({ quantity: null }), pl({ product_id: CUA.id, quantity: 3, query: 'cuaderno a4' })], '2 lapiceros azules y 3 cuadernos a4, efectivo'), [[2, 'unidad'], [3, 'unidad']]],
+  ['«un cuaderno y 3 lapiceros»', pd([pl({ quantity: 3 }), pl({ product_id: CUA.id, quantity: 1, query: 'cuaderno a4' })], 'un cuaderno a4 y 3 lapiceros azules, efectivo'), [[3, 'unidad'], [1, 'unidad']]],
+  ['«pagó con 50» sin cantidad → 1', pd([pl({ quantity: null })], 'lapicero azul, pagó con 50, efectivo'), [[1, 'unidad']]],
+  ['«yape no, efectivo» con efectivo', pd([pl({ quantity: 1 })], 'un lapicero azul, yape no, efectivo'), [[1, 'unidad']]]
+]
+for (const [name, draft, expected] of probeCorrect) {
+  test(`sonda (correcto) ${name} → directa`, async () => {
+    const result = await probe(draft)
+    assert.equal(result.kind, 'direct', result.kind === 'review' ? result.reasons.map(r => r.code).join(',') : '')
+    assert.deepEqual(result.sale.items.map(i => [i.qty, i.unit_name]), expected)
+  })
+}
+
+test('precios dictados en su línea: cada monto va con el producto que lo precede', async () => {
+  const result = await probe(pd([pl({ quantity: 1, price_said: 1.5 }), pl({ product_id: CUA.id, quantity: 1, price_said: 4, query: 'cuaderno a4' })], 'un lapicero azul a 1.50 soles y un cuaderno a4 a 4 soles, efectivo'))
+  assert.deepEqual(result.reasons.map(r => r.code), ['price_modified', 'price_modified']) // grounded per line (option A: review)
+  assert.deepEqual(result.items.map(i => i.price_unit), [1.5, 4])
+})
+
+test('«paga con 20», «vuelto de 5», «billete de 100» son montos, no cantidades', async () => {
+  for (const text of ['lapicero azul, paga con 20, efectivo', 'lapicero azul, vuelto de 5, efectivo', 'lapicero azul con billete de 100, efectivo']) {
+    const result = await probe(pd([pl({ quantity: null })], text))
+    assert.equal(result.kind, 'direct', text)
+    assert.equal(result.sale.items[0].qty, 1, text)
+  }
+})
+
+test('pago negado: «sin tarjeta», «no con yape», «yape no» no respaldan ese pago', () => {
+  const yape = { code: 'yape', label: 'Yape' }
+  for (const text of ['no es yape, efectivo', 'no con yape', 'yape no, efectivo', 'sin yape']) assert.equal(paymentMentioned(text, yape), false, text)
+  for (const text of ['paga con yape', 'efectivo no, yape', 'yape']) assert.equal(paymentMentioned(text, yape), true, text)
+})
+
+test('una cantidad no entera en una presentación por unidad va a revisión', async () => {
+  const result = await probe(pd([pl({ quantity: 1.5 })], '1.5 lapiceros azules, efectivo'))
+  assert.equal(result.kind, 'review')
+  assert.ok(result.reasons.some(r => r.code === 'missing_quantity'))
+})
+
+// ---------------------------------------------------------------- «no» suelto y lock
+
+test('un «no» suelto ya no anula la venta por confirmar; «cancelar» sí', async t => {
+  const { run, dependencies } = await setup(t, { drafts: [draftOf({ payment_method: null })] })
+  const review = await run(instruction('vende dos cuadernos A4'))
+  const answer = await run(follow(review.operation_id, 'no'))
+  assert.equal(answer.status, 'pending_review')
+  assert.equal((await dependencies.store.getOperation(review.operation_id)).state, 'review')
+  assert.equal((await run(follow(review.operation_id, 'cancelar'))).status, 'rejected')
+})
+
+test('el agente 1 corre FUERA del lock: mientras prepara un pedido, otro vendedor no queda en pending', async t => {
+  let release
+  const gate = new Promise(resolve => { release = resolve })
+  let started
+  const ready = new Promise(resolve => { started = resolve })
+  let calls = 0
+  const { run, counts } = await setup(t, { buildDraft: async () => { if (++calls === 1) { started(); await gate } return draftOf() } })
+  const slow = run(instruction('vende dos cuadernos A4, efectivo'), ANA)
+  await ready
+  const other = await run(instruction('vende dos cuadernos A4, pago efectivo'), BETO)
+  assert.equal(other.status, 'completed') // not blocked by Ana's draft being built
+  release()
+  assert.equal((await slow).status, 'completed')
+  assert.equal(counts.execute, 2)
+})
+
+test('un pedido reclamado e interrumpido (sin ejecución) responde rejected, no pending eterno; un indeterminado sigue pending', async t => {
+  const { run, dependencies, clock, counts } = await setup(t)
+  const request = instruction()
+  // A crashed process left the claim: request without response, operation preparing.
+  await dependencies.store.saveRequest(request.request_id, {
+    fingerprint: (await import('node:crypto')).createHash('sha256').update(JSON.stringify([request.protocol, request.type, null, request.input.text, 'es-PE', ANA.id])).digest('hex'),
+    operation_id: request.request_id, seller_id: ANA.id, claimed_at: clock.now
+  })
+  await dependencies.store.saveOperation({ id: request.request_id, state: 'preparing', seller_id: ANA.id, messages: [], expires_at: clock.now + 1e9, inflight: { request_id: request.request_id, started_at: clock.now } })
+  assert.equal((await run(request)).status, 'pending') // still fresh: maybe being prepared
+  clock.now += 121_000
+  const late = await run(request)
+  assert.equal(late.status, 'rejected')
+  assert.match(late.message, /se interrumpió el proceso\. No se registró una venta/)
+  assert.deepEqual(await run(request), late) // stable answer
+  assert.equal(counts.execute, 0)
+  // If create_sale was dispatched (executing), it stays pending and is never retried.
+  const lost = await setup(t, { execute: async (_s, beforeCommit) => { await beforeCommit(); throw new Error('fetch failed') } })
+  const sent = instruction()
+  assert.equal((await lost.run(sent)).status, 'pending')
+  lost.clock.now += 10 * 60_000
+  assert.equal((await lost.run(sent)).status, 'pending')
+})
+
+test('lock huérfano: se recupera si su proceso murió y no hay create_sale sin cerrar; si lo hay, sigue ocupado', async t => {
+  const { writeFile } = await import('node:fs/promises')
+  const { spawnSync } = await import('node:child_process')
+  const deadPid = spawnSync(process.execPath, ['-e', 'process.stdout.write(String(process.pid))']).stdout.toString() * 1
+  const { run, dependencies, dir } = await setup(t)
+  await writeFile(join(dir, 'processing.lock'), JSON.stringify({ pid: deadPid, started_at: new Date().toISOString() }))
+  assert.equal((await run(instruction())).status, 'completed') // recovered
+  // An unsettled dispatch blocks the recovery (a person must reconcile it).
+  await dependencies.store.saveOperation({ id: randomUUID(), state: 'executing', seller_id: ANA.id, messages: [], expires_at: 0, execution: { request_id: randomUUID(), started_at: 0, settled: false } })
+  await writeFile(join(dir, 'processing.lock'), JSON.stringify({ pid: deadPid, started_at: new Date().toISOString() }))
+  assert.equal((await run(instruction('vende dos cuadernos A4, pago efectivo'))).status, 'pending')
+  // A lock held by a live process is never taken over.
+  await writeFile(join(dir, 'processing.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() }))
+  assert.equal((await run(instruction('vende dos cuadernos A4, efectivo ya'))).status, 'pending')
 })

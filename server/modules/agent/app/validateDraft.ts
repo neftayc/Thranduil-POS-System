@@ -1,4 +1,4 @@
-import { paymentMentioned, priceGrounded, resolveQuantity } from './grounding'
+import { analyzeOrder, decideQuantity, paymentMentioned, priceGroundedFor, quantityFitsUnit, unitGrounded } from './grounding'
 import type { DraftDecision, DraftItem, PriceAlert, Product, Reservation, ReviewReason, SaleDraftV1, ValidationContext } from '../contracts'
 
 /** Read-only catalog used by process 2. Every value comes from the POS, never from the draft. */
@@ -45,7 +45,8 @@ const doubtText: Record<string, string> = {
  *             (when the draft had one) unless the SELLER dictated a price (then: grounded in the text and
  *             it equals the list price; a different one sends the sale to REVIEW with price_modified,
  *             for every role — a reviewer approves it at that price). The quantity
- *             is the one the seller wrote, or 1 when none was said (resolveQuantity). A payment method that the SELLER wrote
+ *             is the one the seller wrote FOR THAT LINE, or 1 when none was said (decideQuantity); the
+ *             presentation (unit) must have been said too. A payment method that the SELLER wrote
  *             (draft.source_text, see grounding.ts), enough available stock (stock_on_hand − reservations of
  *             other pending sales); plus a valid payment method, a valid customer (or none) and
  *             no general doubts.
@@ -96,6 +97,8 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
     else reasons.push({ code: 'invalid_customer', message: 'El cliente indicado no existe en el POS.', detail: { customer_id: draft.customer_id } })
   }
 
+  // Which quantities and amounts the seller wrote for each line (by position in the text).
+  const evidence = analyzeOrder(draft.source_text, draft.items)
   for (const [index, line] of draft.items.entries()) {
     const n = index + 1
     const label = `Artículo ${n}${line.query ? ` («${line.query.slice(0, 80)}»)` : ''}`
@@ -120,8 +123,7 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
       continue
     }
     // "Si no se dice cantidad es 1": a quantity the seller wrote is used; otherwise 1.
-    const others = draft.items.filter((_, i) => i !== index).map(other => other.quantity).filter((q): q is number => q !== null)
-    const decided = resolveQuantity(draft.source_text, line.quantity, line.query, others, { singleLine: draft.items.length === 1, unit: line.unit })
+    const decided = decideQuantity(evidence, index, line)
     if (!decided.ok) {
       reasons.push({
         code: 'missing_quantity', line: n, detail: { quantity: line.quantity, ungrounded: true },
@@ -134,6 +136,11 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
     }
     const quantity = decided.ok ? decided.quantity : line.quantity!
     if (!product) continue
+    // The AI may not invent the presentation: «2 lapiceros» is not «2 cajas».
+    if (!unitGrounded(draft.source_text, line.unit, product.unit)) {
+      reasons.push({ code: 'unit_unclear', line: n, message: `${label}: la presentación «${line.unit}» no aparece en el pedido del vendedor.`, detail: { unit: line.unit, ungrounded: true } })
+      continue
+    }
 
     let quote: Awaited<ReturnType<ValidationCatalog['quote']>>
     try {
@@ -145,12 +152,20 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
       reasons.push({ code: 'price_unavailable', line: n, message: `${label}: no hay precio para la presentación «${line.unit || product.unit}» de ${product.name}.`, detail: { unit: line.unit } })
       continue
     }
+    if (!quantityFitsUnit(quantity, quote.unit_name)) {
+      reasons.push({ code: 'missing_quantity', line: n, message: `${label}: la cantidad ${quantity} no es válida para la presentación «${quote.unit_name}».`, detail: { quantity, unit: quote.unit_name } })
+      continue
+    }
     const official = round(quote.price)
+    if (official <= 0) {
+      // A zero list price is a catalog gap: never sold directly (process 2 checks it, whatever agent 1 said).
+      reasons.push({ code: 'price_unavailable', line: n, message: `${label}: ${product.name} tiene precio S/ 0.00 en el catálogo; confirma el precio.`, detail: { list_price: official } })
+    }
     let sold = official
     const dictated = line.price_said !== null && Math.abs(line.price_said - official) > PRICE_TOLERANCE ? round(line.price_said) : null
     if (dictated !== null) {
       // A dictated price is the sale the seller is making, but only if the SELLER wrote it.
-      if (!priceGrounded(draft.source_text, dictated, quantity)) {
+      if (!priceGroundedFor(evidence, index, dictated, quantity)) {
         reasons.push({ code: 'price_unverified', line: n, message: `${label}: el precio ${money(dictated)} no aparece en el pedido del vendedor (lista ${money(official)}).`, detail: { price_said: dictated, list_price: official, ungrounded: true } })
       } else {
         // Business rule (owner, 2026-11-15, option A): a dictated price different from the list price

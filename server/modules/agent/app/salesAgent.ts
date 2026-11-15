@@ -8,7 +8,12 @@ import {
 import { parseAgentDraft } from './proposalAdapter'
 
 const normalize = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.,!¡¿?]/g, '').trim().replace(/\s+/g, ' ')
-const cancellations = new Set(['no', 'cancelar', 'cancela', 'cancelar venta', 'cancela la venta', 'anular', 'anula la venta'])
+// A bare «no» is NOT a cancellation (it usually answers something else); only explicit words cancel.
+const cancellations = new Set(['cancelar', 'cancela', 'cancelar venta', 'cancela la venta', 'anular', 'anula la venta', 'anular venta'])
+/** A claimed request without an outcome after this long was interrupted (agent 1 itself times out at 30 s). */
+export const CLAIM_STALE_MS = 120_000
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const INTERRUPTED = 'El pedido no se completó porque se interrumpió el proceso. No se registró una venta. Envíalo de nuevo con otro request_id.'
 const round = (value: number) => Number(value.toFixed(4))
 const DEFAULT_REVIEW_TTL_MS = 48 * 60 * 60 * 1000
 const DRY_RUN_PREFIX = 'SIMULACIÓN (dry-run), NO se registró ninguna venta. '
@@ -74,8 +79,26 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
     if (existing.seller_id !== seller.id) throw new AgentForbiddenError(OTHER_SELLER)
     if (existing.fingerprint !== fingerprint) throw new AgentConflictError('request_id ya utilizado con otro contenido')
     if (existing.response) return existing.response
-    const interrupted = await deps.store.getOperation(existing.operation_id)
-    return interrupted?.state === 'completed' ? interrupted.response! : pending(existing.operation_id)
+    const op = await deps.store.getOperation(existing.operation_id)
+    if (op?.state === 'completed' && op.response) return op.response
+    // create_sale may have been sent: indeterminate, never retried.
+    if (op?.state === 'executing' || (op?.execution && !op.execution.settled)) return pending(existing.operation_id)
+    // Still being prepared (agent 1 runs outside the lock).
+    if (existing.claimed_at && now() - existing.claimed_at < CLAIM_STALE_MS) return pending(existing.operation_id)
+    // Claimed, never finished and nothing was sent: the process was interrupted → a clear rejection, not an eternal pending.
+    const response: AgentResponse = { status: 'rejected', operation_id: existing.operation_id, message: INTERRUPTED }
+    await deps.store.saveRequest(request.request_id, { ...existing, response })
+    return response
+  }
+
+  /** Runs `work` under the store lock; the lock is short now, so wait briefly instead of failing at once. */
+  const locked = async <T>(work: () => Promise<T>, attempts = 60): Promise<T> => {
+    for (let attempt = 1; ; attempt++) {
+      try { return await deps.store.exclusive(work) } catch (error) {
+        if (!(error instanceof AgentBusyError) || attempt >= attempts) throw error
+        await sleep(50)
+      }
+    }
   }
 
   /** Base units held by live (not expired) pending sales, excluding `excludeId`. */
@@ -106,87 +129,114 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
     }
   }
 
+  /** Helpers bound to one loaded operation (finish/cancel/review persist it and the request). */
+  const bind = (op: Operation) => {
+    const mark = (response: AgentResponse): AgentResponse => deps.dryRun
+      ? {
+          ...response,
+          message: response.message.startsWith(DRY_RUN_PREFIX) ? response.message : `${DRY_RUN_PREFIX}${response.message}`,
+          result: { ...(response.result || {}), dry_run: true }
+        }
+      : response
+    const finish = async (response: AgentResponse) => {
+      response = mark(response)
+      op.response = response
+      if (op.inflight?.request_id === request.request_id) delete op.inflight
+      if (op.execution) op.execution.settled = true
+      await deps.store.saveOperation(op)
+      await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id, response })
+      return response
+    }
+    const cancel = (message: string) => {
+      op.state = 'cancelled'
+      delete op.reservations
+      return finish({ status: 'rejected', operation_id: id, message })
+    }
+    const review = async (reasons: ReviewReason[], items: DraftItem[], reservations: Reservation[], extra: DecisionNotes = NO_NOTES) => {
+      op.state = 'review'
+      op.reasons = reasons
+      op.reservations = reservations
+      op.expires_at = now() + reviewTtl
+      op.price_review = priceReviewFor(items, extra, null, seller.id, now())
+      if (!op.price_review) delete op.price_review
+      const alerts = await alertsFor(items.map(i => i.product_id), reservations, op.id)
+      const pendingText = reasons.map(r => r.message).join(' ')
+      return finish({
+        status: 'pending_review', operation_id: id,
+        message: `Venta por confirmar guardada (referencia ${id}). No se registró todavía: se validará en el POS. Motivo: ${pendingText}${reservations.length ? ' Se reservó el stock disponible de los artículos identificados.' : ''}${notesText(extra)}${alertText(alerts)}`,
+        result: {
+          reference: id,
+          // Agent 1's doubt code (ambiguous_product, product_not_found…) and the ungrounded flag are kept.
+          reasons: reasons.map(({ code, line, message, detail }) => ({
+            code, ...(line ? { line } : {}), message,
+            ...(detail?.doubt ? { doubt: detail.doubt } : {}), ...(detail?.ungrounded ? { ungrounded: true } : {})
+          })),
+          pending: pendingText,
+          notes: extra.notes, price_alerts: extra.price_alerts, price_review: op.price_review ? 'pending' : null,
+          items, reservations,
+          review_expires_at: new Date(op.expires_at).toISOString(),
+          alerts,
+          ...(deps.dryRun ? { would_be: 'pending_review' } : {})
+        }
+      })
+    }
+    return { mark, finish, cancel, review }
+  }
+
   const replayed = await replay()
   if (replayed) return replayed
   try {
-    return await deps.store.exclusive(async () => {
+    // PHASE 1 (short, under the lock): immediate outcomes, or claim the request for this operation.
+    const claim = await locked(async (): Promise<{ response: AgentResponse } | { messages: string[]; previous: SaleDraftV1 | null }> => {
       const duplicate = await replay()
-      if (duplicate) return duplicate
+      if (duplicate) return { response: duplicate }
       let op = await deps.store.getOperation(id)
       if (!op && request.type === 'follow_up') {
-        return { status: 'rejected', operation_id: id, message: 'Operación no encontrada. Envía una nueva instrucción.' }
+        return { response: { status: 'rejected', operation_id: id, message: 'Operación no encontrada. Envía una nueva instrucción.' } }
       }
       if (op && op.seller_id !== seller.id) throw new AgentForbiddenError(OTHER_SELLER)
-      if (!op) {
-        op = { id, state: 'preparing', seller_id: seller.id, messages: [], expires_at: now() + reviewTtl }
+      // Another message of this same operation is being prepared: answer pending without claiming.
+      if (op?.inflight && op.inflight.request_id !== request.request_id && now() - op.inflight.started_at < CLAIM_STALE_MS) {
+        return { response: pending(id) }
       }
-      await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id })
-      const mark = (response: AgentResponse): AgentResponse => deps.dryRun
-        ? {
-            ...response,
-            message: response.message.startsWith(DRY_RUN_PREFIX) ? response.message : `${DRY_RUN_PREFIX}${response.message}`,
-            result: { ...(response.result || {}), dry_run: true }
-          }
-        : response
-      const finish = async (response: AgentResponse) => {
-        response = mark(response)
-        op!.response = response
-        await deps.store.saveOperation(op!)
-        await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id, response })
-        return response
-      }
-      const cancel = (message: string) => {
-        op!.state = 'cancelled'
-        delete op!.reservations
-        return finish({ status: 'rejected', operation_id: id, message })
-      }
-      const review = async (reasons: ReviewReason[], items: DraftItem[], reservations: Reservation[], extra: DecisionNotes = NO_NOTES) => {
-        op!.state = 'review'
-        op!.reasons = reasons
-        op!.reservations = reservations
-        op!.expires_at = now() + reviewTtl
-        op!.price_review = priceReviewFor(items, extra, null, seller.id, now())
-        if (!op!.price_review) delete op!.price_review
-        const alerts = await alertsFor(items.map(i => i.product_id), reservations, op!.id)
-        const pendingText = reasons.map(r => r.message).join(' ')
-        return finish({
-          status: 'pending_review', operation_id: id,
-          message: `Venta por confirmar guardada (referencia ${id}). No se registró todavía: se validará en el POS. Motivo: ${pendingText}${reservations.length ? ' Se reservó el stock disponible de los artículos identificados.' : ''}${notesText(extra)}${alertText(alerts)}`,
-          result: {
-            reference: id,
-            // Agent 1's doubt code (ambiguous_product, product_not_found…) and the ungrounded flag are kept.
-            reasons: reasons.map(({ code, line, message, detail }) => ({
-              code, ...(line ? { line } : {}), message,
-              ...(detail?.doubt ? { doubt: detail.doubt } : {}), ...(detail?.ungrounded ? { ungrounded: true } : {})
-            })),
-            pending: pendingText,
-            notes: extra.notes, price_alerts: extra.price_alerts, price_review: op!.price_review ? 'pending' : null,
-            items, reservations,
-            review_expires_at: new Date(op!.expires_at).toISOString(),
-            alerts,
-            ...(deps.dryRun ? { would_be: 'pending_review' } : {})
-          }
-        })
-      }
-
-      if (op.state === 'completed' || op.state === 'cancelled' || op.state === 'simulated' || op.state === 'answered') return finish(op.response!)
-      if (op.state === 'executing') return finish(pending(id))
+      if (!op) op = { id, state: 'preparing', seller_id: seller.id, messages: [], expires_at: now() + reviewTtl }
+      await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id, claimed_at: now() })
+      const { finish, cancel } = bind(op)
+      if (op.state === 'completed' || op.state === 'cancelled' || op.state === 'simulated' || op.state === 'answered') return { response: await finish(op.response!) }
+      if (op.state === 'executing') return { response: await finish(pending(id)) }
       if (op.expires_at <= now()) {
-        return cancel('La venta por confirmar venció y se liberó su reserva. Envía una nueva instrucción para consultar precios y stock actuales.')
+        return { response: await cancel('La venta por confirmar venció y se liberó su reserva. Envía una nueva instrucción para consultar precios y stock actuales.') }
       }
       if (request.type === 'follow_up' && cancellations.has(normalize(request.input.text))) {
-        return cancel('Operación cancelada. No se registró una venta y se liberó cualquier reserva.')
+        return { response: await cancel('Operación cancelada. No se registró una venta y se liberó cualquier reserva.') }
       }
-      op.messages.push(request.input.text)
-      if (op.messages.length > 20) {
-        return finish({ status: 'rejected', operation_id: id, message: 'Se alcanzó el límite de mensajes para esta operación. Inicia un pedido nuevo.' })
+      if (op.messages.length + 1 > 20) {
+        return { response: await finish({ status: 'rejected', operation_id: id, message: 'Se alcanzó el límite de mensajes para esta operación. Inicia un pedido nuevo.' }) }
       }
+      op.inflight = { request_id: request.request_id, started_at: now() }
+      await deps.store.saveOperation(op)
+      return { messages: [...op.messages, request.input.text], previous: op.proposal || null }
+    })
+    if ('response' in claim) return claim.response
 
-      // AGENT 1: build the draft. Its output is untrusted input for process 2.
-      let raw: unknown
-      try {
-        raw = await deps.buildDraft(op.messages, op.proposal || null)
-      } catch {
+    // PHASE 2 (no lock): AGENT 1 builds the draft (AI, read only). Its output is untrusted input.
+    let raw: unknown
+    let buildFailed = false
+    try {
+      raw = await deps.buildDraft(claim.messages, claim.previous)
+    } catch {
+      buildFailed = true
+    }
+
+    // PHASE 3 (under the lock): re-read, PROCESS 2 decides, reserve, execute.
+    return await locked(async () => {
+      const op = await deps.store.getOperation(id)
+      if (!op || op.inflight?.request_id !== request.request_id) {
+        // Our claim was taken over (it went stale): report what the request shows, never act twice.
+        return (await replay()) || pending(id)
+      }
+      const { mark, finish, cancel, review } = bind(op)
+      if (buildFailed) {
         return finish({ status: 'rejected', operation_id: id, message: 'No se pudo interpretar el pedido. No se registró una venta. Reintenta con otro request_id.' })
       }
       const answer = catalogAnswerSchema.safeParse(raw)
@@ -201,11 +251,14 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
           return finish(response)
         }
         // Inside an open venta por confirmar: answer without altering that sale (messages, proposal,
-        // reasons, reservations and expiry stay as they were).
+        // reasons, reservations and expiry stay as they were); only the claim is released.
         const marked = mark(response)
+        delete op.inflight
+        await deps.store.saveOperation(op)
         await deps.store.saveRequest(request.request_id, { fingerprint, operation_id: id, seller_id: seller.id, response: marked })
         return marked
       }
+      op.messages.push(request.input.text)
       const parsed = parseAgentDraft(raw, op.messages.join('\n'))
       if (!parsed.success) {
         return review([{ code: 'invalid_draft', message: 'El borrador del agente no respeta el contrato (sale-draft/1 o SaleProposal).' }], [], [])
@@ -244,6 +297,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       try {
         const result = await deps.execute(op.draft, async () => {
           op!.state = 'executing'
+          op!.execution = { request_id: request.request_id, started_at: now(), settled: false }
           // Persist BEFORE calling create_sale. A lost reply must never trigger another sale.
           await deps.store.saveOperation(op!)
         })

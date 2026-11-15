@@ -64,6 +64,7 @@ export const REVIEW_REASONS = [
   'invalid_customer',     // customer_id does not exist
   'pos_rejected',         // create_sale answered with an error: nothing was registered
   'price_override_not_allowed', // NOT USED since 2026-11-15 (kept for old records)
+  'unit_unclear',         // the presentation (caja, docena…) the AI proposed was not said by the seller
   'price_modified',       // dictated price ≠ list price: always por confirmar; a reviewer approves it at that price
   'price_unverified'      // the draft carries a dictated price that the seller's text does not contain
 ] as const
@@ -125,6 +126,10 @@ export type Operation = {
    * needs to approve it at that price later (list and dictated price per line).
    */
   price_review?: PriceReview
+  /** A request is being prepared for this operation (agent 1 runs outside the lock). */
+  inflight?: { request_id: string; started_at: number }
+  /** create_sale was dispatched; `settled` once the outcome (receipt, rejection or indeterminate) was recorded. */
+  execution?: { request_id: string; started_at: number; settled: boolean }
   response?: AgentResponse
   reservations?: Reservation[]
   expires_at: number
@@ -135,7 +140,7 @@ export const catalogAnswerSchema = z.object({
   message: z.string().trim().min(1).transform(value => value.slice(0, 4000)),
   result: z.record(z.string(), z.unknown()).default({})
 })
-export type RequestRecord = { fingerprint: string; operation_id: string; seller_id: string; response?: AgentResponse }
+export type RequestRecord = { fingerprint: string; operation_id: string; seller_id: string; response?: AgentResponse; /** when it was claimed (ms) */ claimed_at?: number }
 
 export interface AgentStore {
   getRequest(id: string): Promise<RequestRecord | null>

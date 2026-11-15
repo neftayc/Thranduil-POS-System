@@ -48,6 +48,41 @@ export const paymentMentioned = (text: string, method: { code: string; label: st
   })))
 }
 
+export type PaymentMethodRow = { code: string; label: string }
+export type PaymentChoice =
+  | { kind: 'said'; method: PaymentMethodRow }
+  | { kind: 'default'; method: PaymentMethodRow }
+  | { kind: 'ambiguous'; methods: PaymentMethodRow[] }
+  | { kind: 'unavailable'; said: string }
+  | { kind: 'no_default' }
+
+const methodKey = (method: PaymentMethodRow) => {
+  const keys = [method.code, method.label].map(value => tokens(value).join(' '))
+  return keys.find(key => key in PAYMENT_ALIASES) || keys.map(key => key.split(' ')[0]).find(key => key in PAYMENT_ALIASES) || keys[0]
+}
+/** Payment names the seller wrote (not negated), by alias family (efectivo, yape, plin, tarjeta, transferencia). */
+const paymentFamiliesSaid = (text: string) => Object.keys(PAYMENT_ALIASES).filter(key => paymentMentioned(text, { code: key, label: key }))
+
+/**
+ * Payment rule (owner, 2026-11-16): «por defecto va a ser efectivo; si el vendedor te dice pago por
+ * transferencia, ahí recién registres eso». Only the seller's text decides, never the AI:
+ *  - one method said (not negated) → that one, if it exists in the POS;
+ *  - a method said that the POS does not have → unavailable (review);
+ *  - several different methods said → ambiguous (review);
+ *  - none said → efectivo by default (an AI proposal the seller did not say is ignored).
+ */
+export const choosePayment = (text: string, methods: PaymentMethodRow[]): PaymentChoice => {
+  const saidMethods = methods.filter(method => paymentMentioned(text, method))
+  const covered = new Set(saidMethods.map(methodKey))
+  const missing = paymentFamiliesSaid(text).filter(family => !covered.has(family))
+  if (missing.length) return { kind: 'unavailable', said: missing[0] }
+  const distinct = [...new Map(saidMethods.map(m => [m.code, m])).values()]
+  if (distinct.length > 1) return { kind: 'ambiguous', methods: distinct }
+  if (distinct.length === 1) return { kind: 'said', method: distinct[0] }
+  const cash = methods.find(method => methodKey(method) === 'efectivo')
+  return cash ? { kind: 'default', method: cash } : { kind: 'no_default' }
+}
+
 // ------------------------------------------------------------------------------------- numbers
 
 const WORD_NUMBERS: Record<string, number> = {

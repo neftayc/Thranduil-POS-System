@@ -172,7 +172,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
             ...(detail?.doubt ? { doubt: detail.doubt } : {}), ...(detail?.ungrounded ? { ungrounded: true } : {})
           })),
           pending: pendingText,
-          notes: extra.notes, price_alerts: extra.price_alerts, price_review: op.price_review ? 'pending' : null,
+          notes: extra.notes, price_alerts: extra.price_alerts, payment_defaulted: Boolean(extra.payment_defaulted), price_review: op.price_review ? 'pending' : null,
           items, reservations,
           review_expires_at: new Date(op.expires_at).toISOString(),
           alerts,
@@ -291,7 +291,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         return finish({
           status: 'rejected', operation_id: id,
           message: `Con datos reales se habría registrado directamente por S/ ${op.draft.total.toFixed(2)}.${notesText(decision)}${alertText(alerts)}`,
-          result: { would_be: 'completed', reference: null, total: op.draft.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts }
+          result: { would_be: 'completed', reference: null, total: op.draft.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts, payment_method: op.draft.payment_method, payment_defaulted: Boolean(decision.payment_defaulted) }
         })
       }
       try {
@@ -306,7 +306,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         return await finish({
           status: 'completed', operation_id: id,
           message: `Venta registrada correctamente (referencia ${result.saleId}).${notesText(decision)}${alertText(alerts)}`,
-          result: { reference: result.saleId, total: result.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts }
+          result: { reference: result.saleId, total: result.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts, payment_method: op.draft.payment_method, payment_defaulted: Boolean(decision.payment_defaulted) }
         })
       } catch (error) {
         // A storage error after receiving the receipt must not report a failed sale.

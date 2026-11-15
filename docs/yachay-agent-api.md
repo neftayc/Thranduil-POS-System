@@ -228,7 +228,7 @@ Cada mensaje pasa por dos procesos separados:
     "doubts": [{ "code": "ambiguous_product", "note": "…" }],
     "query": "2 cuadernos A4"
   }],
-  "payment_method": "efectivo | null", // código o etiqueta; null = no se dijo
+  "payment_method": "efectivo | null", // propuesta del agente 1; el proceso 2 decide con el texto (null = efectivo)
   "customer_id": "uuid | null",
   "doubts": [],                     // dudas generales
   "source_text": "pedido original"
@@ -314,17 +314,23 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   `unit_cost`: «Alerta: precio bajo para …». Sin costo conocido no hay alerta;
 - el stock alcanza: `disponible = stock_on_hand − reservas de otras ventas por
   confirmar vigentes`, sumando las líneas repetidas en unidad base;
-- la cantidad y la forma de pago **las escribió el vendedor**: el proceso 2 las
-  contrasta con los mensajes reales de la conversación (nunca con un texto del agente).
-  La forma de pago debe aparecer por código, etiqueta o alias (`efectivo`, `al contado`,
-  `yapeo`, `plin`, `visa`…); la cantidad, como número o palabra («dos», «una docena»,
-  «media docena»), sin contar los números que describen el producto («100 hojas»,
-  «30 cm», «a4») ni los montos («a 3 soles»). Si no, `missing_payment` /
-  `missing_quantity` con `detail.ungrounded`;
-- la forma de pago no está negada en su frase («yape no, efectivo», «no es yape», «sin tarjeta»: esa
-  forma no cuenta);
-- la forma de pago existe y está activa en `payment_method_catalog`, y el cliente
-  (si se indicó) existe;
+- la cantidad **la escribió el vendedor**: el proceso 2 la contrasta con los mensajes reales de la
+  conversación (nunca con un texto del agente), como número o palabra («dos», «una docena»,
+  «media docena»), sin contar los números que describen el producto («100 hojas», «30 cm», «a4»)
+  ni los montos («a 3 soles»). Si no, `missing_quantity` con `detail.ungrounded`;
+- **forma de pago** (decisión del dueño, 2026-11-16: «por defecto va a ser efectivo; si el vendedor
+  te dice pago por transferencia, ahí recién registres eso»). La decide solo el texto del vendedor:
+  · **no dijo ninguna** → **efectivo**, venta directa; `result.payment_defaulted: true` y el aviso
+    «Pago: efectivo (por defecto).». Ya no es motivo de revisión (tampoco la duda «falta la forma de
+    pago» del agente 1);
+  · dijo una (código, etiqueta o alias: `efectivo`, `al contado`, `yapeo`, `plin`, `visa`,
+    `transferencia`, `depósito`…) **sin negación** en su frase → esa. «yape no, efectivo», «no es
+    yape», «sin tarjeta»: esa forma no cuenta;
+  · la IA propone una que el vendedor **no dijo** → se ignora y se usa efectivo (nunca se registra
+    Yape o transferencia sin que se haya dicho);
+  · dijo una que el POS no tiene activa (`payment_method_catalog`) → `invalid_payment`; dijo varias
+    distintas («mitad yape y mitad efectivo») → `missing_payment`: ambas por confirmar;
+- el cliente (si se indicó) existe;
 - el agente 1 no reportó dudas generales.
 
 Si no, se guarda **por confirmar** con uno o más motivos codificados:
@@ -340,8 +346,8 @@ Si no, se guarda **por confirmar** con uno o más motivos codificados:
 | `price_unavailable` | No hay precio para esa presentación. |
 | `price_changed` | El precio oficial difiere del que vio el agente 1 (se muestran ambos). |
 | `insufficient_stock` | No alcanza el stock disponible. |
-| `missing_payment` | Falta la forma de pago (no se asume efectivo). |
-| `invalid_payment` | La forma de pago no existe en el POS. |
+| `missing_payment` | Se dijeron varias formas de pago distintas, o no hay «efectivo» activo para usarlo por defecto. (Sin forma de pago dicha ya NO es motivo: efectivo.) |
+| `invalid_payment` | La forma de pago que dijo el vendedor no existe o no está activa en el POS. |
 | `invalid_customer` | El cliente indicado no existe. |
 | `pos_rejected` | `create_sale` respondió con error: no se registró nada. |
 | `unit_unclear` | La presentación (caja, docena…) que propuso la IA no la dijo el vendedor. |

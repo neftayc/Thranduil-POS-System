@@ -1,4 +1,4 @@
-import { analyzeOrder, decideQuantity, paymentMentioned, priceGroundedFor, quantityFitsUnit, unitGrounded } from './grounding'
+import { analyzeOrder, choosePayment, decideQuantity, priceGroundedFor, quantityFitsUnit, unitGrounded } from './grounding'
 import type { DraftDecision, DraftItem, PriceAlert, Product, Reservation, ReviewReason, SaleDraftV1, ValidationContext } from '../contracts'
 
 /** Read-only catalog used by process 2. Every value comes from the POS, never from the draft. */
@@ -74,23 +74,29 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
     reasons.push({ code: 'invalid_draft', message: 'El pedido no tiene artículos identificables.' })
   }
   for (const doubt of draft.doubts) {
+    // The payment is decided here from the seller's text (efectivo by default): agent 1's
+    // «falta la forma de pago» is not a reason to review.
+    if (doubt.code === 'missing_payment') continue
     reasons.push({ code: 'agent_doubt', message: sentence(`Duda del pedido: ${doubt.note || doubtText[doubt.code]}`), detail: { doubt: doubt.code } })
   }
 
+  // Payment: efectivo by default; another method only if the SELLER said it (the AI's proposal does
+  // not count by itself). A method said that the POS does not have, or several, go to review.
   let paymentCode = ''
-  if (!draft.payment_method) {
-    reasons.push({ code: 'missing_payment', message: 'Falta la forma de pago (no se asume efectivo).' })
+  let paymentDefaulted = false
+  const choice = choosePayment(draft.source_text, await catalog.paymentMethods())
+  if (choice.kind === 'said') paymentCode = choice.method.code
+  else if (choice.kind === 'default') {
+    paymentCode = choice.method.code
+    paymentDefaulted = true
+    notes.push(`Pago: ${choice.method.label.toLowerCase()} (por defecto).`)
+  } else if (choice.kind === 'ambiguous') {
+    reasons.push({ code: 'missing_payment', message: `Se mencionan varias formas de pago (${choice.methods.map(m => m.label).join(', ')}); indica una.`, detail: { methods: choice.methods.map(m => m.code) } })
+  } else if (choice.kind === 'unavailable') {
+    reasons.push({ code: 'invalid_payment', message: `La forma de pago «${choice.said}» no está disponible en el POS.`, detail: { payment_method: choice.said } })
   } else {
-    const methods = await catalog.paymentMethods()
-    const wanted = normalize(draft.payment_method)
-    const method = methods.find(m => normalize(m.code) === wanted) || methods.find(m => normalize(m.label) === wanted)
-    if (method && !paymentMentioned(draft.source_text, method)) {
-      // The AI may not invent the payment method: the seller must have said it.
-      reasons.push({ code: 'missing_payment', message: `La forma de pago «${method.label}» no aparece en el pedido del vendedor (no se asume).`, detail: { payment_method: draft.payment_method, ungrounded: true } })
-    } else if (method) paymentCode = method.code
-    else reasons.push({ code: 'invalid_payment', message: `La forma de pago «${draft.payment_method}» no existe en el POS.`, detail: { payment_method: draft.payment_method } })
+    reasons.push({ code: 'missing_payment', message: 'No hay forma de pago «efectivo» activa en el POS para usarla por defecto.' })
   }
-
   let customerId: string | null = null
   if (draft.customer_id) {
     if (await catalog.customerExists(draft.customer_id)) customerId = draft.customer_id
@@ -226,9 +232,9 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
     if (hold > 0) reservations.push({ product_id: id, qty: hold })
   }
 
-  if (reasons.length) return { kind: 'review', reasons, items, reservations, notes, price_alerts: priceAlerts }
+  if (reasons.length) return { kind: 'review', reasons, items, reservations, notes, price_alerts: priceAlerts, payment_defaulted: paymentDefaulted }
   return {
-    kind: 'direct', items, notes, price_alerts: priceAlerts,
+    kind: 'direct', items, notes, price_alerts: priceAlerts, payment_defaulted: paymentDefaulted,
     sale: {
       customer_id: customerId, payment_method: paymentCode, items, currency: 'PEN',
       total: round(items.reduce((sum, item) => sum + item.total, 0), 2)

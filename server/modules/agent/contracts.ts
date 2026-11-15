@@ -101,7 +101,7 @@ export type PriceReviewItem = { product_id: string; name: string; qty: number; u
 export type PriceReview = { status: 'pending' | 'approved' | 'adjusted'; sale_reference: string | null; seller_id: string; created_at: string; items: PriceReviewItem[] }
 export type PriceAlert = { product_id: string; name: string; price_unit: number; unit_cost?: number; level: 'below_cost' }
 /** Informational notes for the seller (quantity defaulted, price changed) and price alerts. Never block. */
-export type DecisionNotes = { notes: string[]; price_alerts: PriceAlert[] }
+export type DecisionNotes = { notes: string[]; price_alerts: PriceAlert[]; /** efectivo taken by default (no payment said) */ payment_defaulted?: boolean }
 export type DraftDecision =
   | ({ kind: 'direct'; sale: SaleDraft; items: DraftItem[] } & DecisionNotes)
   | ({ kind: 'review'; reasons: ReviewReason[]; items: DraftItem[]; reservations: Reservation[] } & DecisionNotes)

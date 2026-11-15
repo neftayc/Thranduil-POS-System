@@ -1354,3 +1354,178 @@ test('pago: uno dicho que no está disponible, o varios distintos → por confir
   const doubt = await makeDraftValidator(makeCatalog().catalog)(draftOf({ payment_method: null, doubts: [{ code: 'missing_payment' }], source_text: 'vende 2 cuadernos A4' }))
   assert.equal(doubt.kind, 'direct')
 })
+
+// ---------------------------------------------------------------- paso 3: registrador simplificado (POS_AGENT_SELECTOR=llm)
+
+const { makeConsolidatedRegistrar, phraseInDictation } = await jiti.import('../server/modules/agent/app/registrar.ts')
+const { saleConsolidatedSchema } = await jiti.import('../server/modules/agent/contracts.ts')
+const { resolveSelectorMode } = await jiti.import('../server/modules/agent/app/runtimeModes.ts')
+
+const DICTADO = 'dos cuadernos A4 y un lapicero azul, pago con yape'
+const cline = o => ({ phrase: 'dos cuadernos A4', product_id: CUADERNO.id, quantity: 2, unit: null, price_said: null, confidence: 'alta', reason: 'cuaderno A4', question: null, options: [], ...o })
+const consolidatedOf = (o = {}) => saleConsolidatedSchema.parse({
+  contract: 'sale-consolidated/1',
+  lines: [cline(), cline({ phrase: 'un lapicero azul', product_id: LAPICERO.id, quantity: 1, reason: 'lapicero azul' })],
+  payment_method: 'efectivo', payment_phrase: null, questions: [], ...o
+})
+const YAPE = { payment_method: 'yape', payment_phrase: 'pago con yape' }
+const register = async (consolidated, dictation = DICTADO, reserved = new Map(), context = {}) => {
+  const { catalog, state } = makeCatalog()
+  return { result: await makeConsolidatedRegistrar(catalog)(consolidated, dictation, reserved, context), state }
+}
+const rcodes = result => result.kind === 'review' ? result.reasons.map(r => r.code) : []
+
+test('registrador: consolidado válido → directo con precio oficial, presentación y pago dichos', async () => {
+  const { result } = await register(consolidatedOf(YAPE))
+  assert.equal(result.kind, 'direct', rcodes(result).join(','))
+  assert.deepEqual(result.sale.items.map(i => [i.product_id, i.qty, i.price_unit, i.total]), [[CUADERNO.id, 2, 5, 10], [LAPICERO.id, 1, 1.5, 1.5]])
+  assert.deepEqual([result.sale.payment_method, result.sale.total, result.payment_defaulted], ['yape', 11.5, false])
+})
+
+test('registrador: id inexistente o inactivo → por confirmar (product_inactive); nunca se registra', async () => {
+  const { result } = await register(consolidatedOf({ lines: [cline({ product_id: randomUUID() })] }), 'dos cuadernos A4')
+  assert.deepEqual(rcodes(result), ['product_inactive'])
+})
+
+test('registrador: cantidad 0, negativa o fraccionaria en unidad → revisión; null → 1 por defecto; docena admite 0,5', async () => {
+  for (const quantity of [0, -1, 1.5]) {
+    const { result } = await register(consolidatedOf({ lines: [cline({ quantity })] }), 'dos cuadernos A4')
+    assert.deepEqual(rcodes(result), ['missing_quantity'], String(quantity))
+  }
+  // No quantity from the selector: the phrase's leading number («dos» → 2), or 1 when it has none.
+  const { result: fromPhrase } = await register(consolidatedOf({ lines: [cline({ quantity: null })] }), 'dos cuadernos A4')
+  assert.deepEqual([fromPhrase.kind, fromPhrase.sale.items[0].qty], ['direct', 2])
+  const { result: none } = await register(consolidatedOf({ lines: [cline({ quantity: null, phrase: 'cuaderno A4' })] }), 'cuaderno A4')
+  assert.deepEqual([none.kind, none.sale.items[0].qty, none.sale.items[0].quantity_defaulted], ['direct', 1, true])
+  const { result: half } = await register(consolidatedOf({ lines: [cline({ quantity: 0.5, unit: 'docena', phrase: 'media docena de cuadernos' })] }), 'media docena de cuadernos')
+  assert.deepEqual([half.kind, half.sale.items[0].qty, half.sale.items[0].unit_name], ['direct', 0.5, 'docena'])
+})
+
+test('registrador: presentación no válida para el producto → unit_unclear; precio oficial 0 → price_unavailable', async () => {
+  const { result } = await register(consolidatedOf({ lines: [cline({ unit: 'millar' })] }), 'dos cuadernos A4')
+  assert.deepEqual(rcodes(result), ['unit_unclear'])
+  const { catalog, state } = makeCatalog()
+  state.prices.set(CUADERNO.id, 0)
+  const zero = await makeConsolidatedRegistrar(catalog)(consolidatedOf({ lines: [cline()] }), 'dos cuadernos A4')
+  assert.deepEqual(rcodes(zero), ['price_unavailable'])
+})
+
+test('registrador: price_said distinto al de lista → por confirmar (price_modified) con lista y dictado', async () => {
+  const { result } = await register(consolidatedOf({ lines: [cline({ price_said: 4 })] }), 'dos cuadernos A4 a 4 soles')
+  assert.deepEqual(rcodes(result), ['price_modified'])
+  assert.deepEqual([result.items[0].price_unit, result.items[0].list_price], [4, 5])
+  const { result: same } = await register(consolidatedOf({ lines: [cline({ price_said: 5 })] }), 'dos cuadernos A4 a 5 soles')
+  assert.equal(same.kind, 'direct')
+})
+
+test('registrador: guardia anti-alucinación — la phrase debe estar en el dictado (normalizada)', async () => {
+  assert.equal(phraseInDictation('Dos CUADERNOS a4, y un lápiz', 'dos cuadernos A4'), true)
+  assert.equal(phraseInDictation('Un lápiz de color', 'un lapiz'), true) // accents
+  assert.equal(phraseInDictation('dos cuadernos', 'tres cuadernos'), false)
+  assert.equal(phraseInDictation('cuadernos', 'cuaderno'), false) // whole words
+  const { result } = await register(consolidatedOf({ lines: [cline({ phrase: 'tres cuadernos A5' })] }), 'dos cuadernos A4')
+  assert.deepEqual(rcodes(result), ['phrase_not_in_order'])
+  assert.deepEqual(result.reservations, [])
+})
+
+test('registrador: confianza baja → pregunta al vendedor con opciones (nombres); sin reserva del producto dudoso', async () => {
+  const { result } = await register(consolidatedOf({ lines: [cline({ confidence: 'baja', question: '¿Cuaderno A4 o lapicero?', options: [CUADERNO.id, LAPICERO.id] })] }), 'dos cuadernos A4')
+  assert.deepEqual(rcodes(result), ['selector_question'])
+  assert.deepEqual(result.reasons[0].detail.options, [{ product_id: CUADERNO.id, name: CUADERNO.name }, { product_id: LAPICERO.id, name: LAPICERO.name }])
+  assert.match(result.reasons[0].message, /¿Cuaderno A4 o lapicero\?/)
+  assert.deepEqual(result.reservations, [])
+  // Without product: also a question; order-level questions too.
+  const { result: none } = await register(consolidatedOf({ lines: [cline({ product_id: null, confidence: 'baja', question: '¿Qué cuaderno?' })], questions: ['¿Para quién es la boleta?'] }), 'dos cuadernos A4')
+  assert.deepEqual(rcodes(none), ['selector_question', 'selector_question'])
+})
+
+test('registrador: stock insuficiente (descontando reservas) → revisión, reserva solo lo disponible', async () => {
+  const { result } = await register(consolidatedOf({ lines: [cline({ quantity: 2 })] }), 'dos cuadernos A4', new Map([[CUADERNO.id, 19]]))
+  assert.deepEqual(rcodes(result), ['insufficient_stock'])
+  assert.deepEqual(result.reservations, [{ product_id: CUADERNO.id, qty: 1 }])
+})
+
+test('registrador: pago — efectivo por defecto sin frase; otro pago solo si su frase está en el dictado; inexistente → revisión', async () => {
+  const { result: cash } = await register(consolidatedOf({ lines: [cline()], payment_method: 'efectivo', payment_phrase: null }), 'dos cuadernos A4')
+  assert.deepEqual([cash.kind, cash.sale.payment_method, cash.payment_defaulted, cash.notes], ['direct', 'efectivo', true, ['Pago: efectivo (por defecto).']])
+  const { result: invented } = await register(consolidatedOf({ lines: [cline()], payment_method: 'yape', payment_phrase: null }), 'dos cuadernos A4')
+  assert.deepEqual(rcodes(invented), ['missing_payment'])
+  const { result: missing } = await register(consolidatedOf({ lines: [cline()], payment_method: 'plin', payment_phrase: 'con plin' }), 'dos cuadernos A4 con plin')
+  assert.deepEqual(rcodes(missing), ['invalid_payment'])
+})
+
+test('orquestador con registrador: consolidado → paso 3 (directo, dry-run y preguntas); borrador legacy → paso actual; sin registrador → invalid_draft', async t => {
+  const registrarFor = catalog => makeConsolidatedRegistrar(catalog)
+  // direct
+  const a = await setup(t, { drafts: [consolidatedOf(YAPE)] })
+  a.dependencies.registrar = registrarFor(a.catalog)
+  const agentA = makeSalesAgent(a.dependencies)
+  const done = await agentA(instruction(DICTADO), ANA)
+  assert.equal(done.status, 'completed')
+  assert.deepEqual([a.sent[0].payment_method, a.sent[0].total], ['yape', 11.5])
+  // question with options reaches the seller
+  const b = await setup(t, { drafts: [consolidatedOf({ lines: [cline({ confidence: 'baja', question: '¿Cuál cuaderno?', options: [CUADERNO.id] })] })] })
+  b.dependencies.registrar = registrarFor(b.catalog)
+  const asked = await makeSalesAgent(b.dependencies)(instruction(DICTADO), ANA)
+  assert.equal(asked.status, 'pending_review')
+  assert.deepEqual(asked.result.reasons[0], { code: 'selector_question', line: 1, message: 'Artículo 1 («dos cuadernos A4»): ¿Cuál cuaderno?', question: '¿Cuál cuaderno?', options: [{ product_id: CUADERNO.id, name: CUADERNO.name }] })
+  assert.equal(b.counts.execute, 0)
+  // dry-run
+  const calls = { n: 0 }
+  const c = await setup(t, { dryRun: true, execute: forbiddenExecute(calls), drafts: [consolidatedOf(YAPE)] })
+  c.dependencies.registrar = registrarFor(c.catalog)
+  const sim = await makeSalesAgent(c.dependencies)(instruction(DICTADO), ANA)
+  assert.deepEqual([sim.result.would_be, sim.result.dry_run, calls.n], ['completed', true, 0])
+  // a legacy draft with the registrar present still goes through validateDraft
+  const d = await setup(t)
+  d.dependencies.registrar = registrarFor(d.catalog)
+  assert.equal((await makeSalesAgent(d.dependencies)(instruction('vende dos cuadernos A4, efectivo'), ANA)).status, 'completed')
+  // legacy mode (no registrar): a consolidated is not accepted
+  const e = await setup(t, { drafts: [consolidatedOf()] })
+  assert.deepEqual(codes(await e.run(instruction(DICTADO))), ['invalid_draft'])
+})
+
+test('orquestador con registrador: el seguimiento recibe el consolidado previo; idempotencia igual', async t => {
+  const seen = []
+  const queue = [consolidatedOf({ lines: [cline({ confidence: 'baja', question: '¿Cuál?' })] }), consolidatedOf()]
+  const s = await setup(t, { buildDraft: async (messages, previous) => { seen.push(previous?.contract ?? null); return queue.shift() } })
+  s.dependencies.registrar = makeConsolidatedRegistrar(s.catalog)
+  const agent = makeSalesAgent(s.dependencies)
+  const first = await agent(instruction(DICTADO), ANA)
+  const req = follow(first.operation_id, 'el A4')
+  const second = await agent(req, ANA)
+  assert.equal(second.status, 'completed')
+  assert.deepEqual(await agent(req, ANA), second)
+  assert.deepEqual(seen, [null, 'sale-consolidated/1'])
+  assert.equal(s.counts.execute, 1)
+})
+
+test('interruptor POS_AGENT_SELECTOR: llm|legacy en tiempo de ejecución; por defecto legacy', () => {
+  assert.equal(resolveSelectorMode({}, {}), 'legacy')
+  assert.equal(resolveSelectorMode({ posAgentSelector: 'legacy' }, { POS_AGENT_SELECTOR: 'llm' }), 'llm')
+  assert.equal(resolveSelectorMode({}, { NUXT_POS_AGENT_SELECTOR: 'LLM' }), 'llm')
+  assert.equal(resolveSelectorMode({ posAgentSelector: 'llm' }, {}), 'llm')
+  assert.equal(resolveSelectorMode({}, { POS_AGENT_SELECTOR: 'otro' }), 'legacy')
+})
+
+test('registrador: «la cantidad va primero» — la quantity debe coincidir con el número inicial de la phrase, o ser 1', async () => {
+  const ok = [
+    ['10 plumones FC 123 Jumbo', 10, null], ['dos cuadernos A4', 2, null], ['diecisiete cuadernos', 17, null],
+    ['cuaderno A4', 1, null], ['un cuaderno A4', 1, null], ['media docena de cuadernos', 0.5, 'docena'],
+    ['media docena de cuadernos', 6, null], ['una docena de cuadernos', 12, null], ['100 hojas bond', 1, null]
+  ]
+  for (const [phrase, quantity, unit] of ok) {
+    const { result } = await register(consolidatedOf({ lines: [cline({ phrase, quantity, unit })] }), phrase)
+    assert.equal(result.kind, 'direct', `${phrase} → ${quantity}: ${rcodes(result)}`)
+    assert.equal(result.sale.items[0].qty, quantity, phrase)
+  }
+  const wrong = [
+    ['10 plumones FC 123 Jumbo', 123], ['10 plumones FC 123 Jumbo', 1], ['dos cuadernos A4', 3],
+    ['cuaderno A4', 2], ['media docena de cuadernos', 6, 'docena'], ['100 hojas bond', 100]
+  ]
+  for (const [phrase, quantity, unit = null] of wrong) {
+    const { result } = await register(consolidatedOf({ lines: [cline({ phrase, quantity, unit })] }), phrase)
+    assert.deepEqual(rcodes(result), ['missing_quantity'], `${phrase} → ${quantity}`)
+    assert.equal(result.reasons[0].detail.ungrounded, true)
+  }
+})

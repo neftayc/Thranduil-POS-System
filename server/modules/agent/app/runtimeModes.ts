@@ -9,6 +9,8 @@
  *     some source AND dry-run is off.
  */
 export type AgentModes = { dryRun: boolean; autoindex: boolean }
+/** Which step-2 agent builds the sale: the new LLM selector (consolidated sale) or the current pipeline. */
+export type SelectorMode = 'llm' | 'legacy'
 type Env = Record<string, string | undefined>
 
 /** Boolean flag: true, '1', 'true', 'yes', 'on' (env values arrive as strings). */
@@ -19,6 +21,11 @@ export const resolveAgentModes = (config: { posAgentDryRun?: unknown; posAgentSe
   const autoindexRequested = [config.posAgentSearchAutoindex, env.POS_AGENT_SEARCH_AUTOINDEX, env.NUXT_POS_AGENT_SEARCH_AUTOINDEX].some(isFlagOn)
   return { dryRun, autoindex: autoindexRequested && !dryRun }
 }
+
+/** POS_AGENT_SELECTOR=llm|legacy (or NUXT_POS_AGENT_SELECTOR / runtimeConfig). Anything else → legacy. */
+export const resolveSelectorMode = (config: { posAgentSelector?: unknown }, env: Env = process.env): SelectorMode =>
+  [env.POS_AGENT_SELECTOR, env.NUXT_POS_AGENT_SELECTOR, config.posAgentSelector]
+    .map(value => String(value ?? '').trim().toLowerCase()).find(value => value === 'llm' || value === 'legacy') as SelectorMode || 'legacy'
 
 export const describeAgentModes = (modes: AgentModes) =>
   `[agente de ventas] modo: ${modes.dryRun ? 'SOLO VALIDACIÓN (dry-run): no registra ventas' : 'REAL: registra ventas'}; ` +

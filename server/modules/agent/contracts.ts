@@ -46,6 +46,34 @@ export const saleDraftSchema = z.object({
 }).strict()
 
 export type SaleDraftV1 = z.infer<typeof saleDraftSchema>
+
+// ---------------------------------------------------------------------------
+// Plan in 3 steps (owner, 2026-11-15): with POS_AGENT_SELECTOR=llm the SELECTOR agent (step 2)
+// delivers the consolidated sale and the simplified REGISTRAR (step 3) validates only what is needed
+// to register it: product id, presentation, quantity, official price, stock, payment and that each
+// phrase is in the dictation. It does not re-interpret the text.
+// ---------------------------------------------------------------------------
+const id64 = z.string().trim().min(1).max(64)
+export const saleConsolidatedSchema = z.object({
+  contract: z.literal('sale-consolidated/1'),
+  lines: z.array(z.object({
+    /** Literal fragment of the dictation this line comes from (anti-hallucination guard). */
+    phrase: z.string().trim().min(1).max(500),
+    product_id: id64.nullable(),
+    quantity: z.number().nullable(),
+    unit: z.string().trim().min(1).max(60).nullable(),
+    price_said: z.number().positive().max(1000000).nullable(),
+    confidence: z.enum(['alta', 'baja']),
+    reason: z.string().max(1000).default(''),
+    question: z.string().trim().max(500).nullable().default(null),
+    options: z.array(id64).max(10).default([])
+  }).strict()).min(1).max(20),
+  payment_method: z.string().trim().max(60).default('efectivo'),
+  /** Literal fragment where the seller said the payment; null when none was said (efectivo). */
+  payment_phrase: z.string().trim().max(200).nullable().default(null),
+  questions: z.array(z.string().trim().min(1).max(500)).max(10).default([])
+}).strict()
+export type SaleConsolidated = z.infer<typeof saleConsolidatedSchema>
 export type DraftDoubt = SaleDraftV1['doubts'][number]
 
 /** Fixed, auditable reasons why process 2 did not register a sale directly. */
@@ -65,6 +93,8 @@ export const REVIEW_REASONS = [
   'pos_rejected',         // create_sale answered with an error: nothing was registered
   'price_override_not_allowed', // NOT USED since 2026-11-15 (kept for old records)
   'unit_unclear',         // the presentation (caja, docena…) the AI proposed was not said by the seller
+  'phrase_not_in_order',  // (registrar) the line's phrase is not in the dictation: possible hallucination
+  'selector_question',    // (registrar) the selector asks the seller something (low confidence, no product, question)
   'price_modified',       // dictated price ≠ list price: always por confirmar; a reviewer approves it at that price
   'price_unverified'      // the draft carries a dictated price that the seller's text does not contain
 ] as const
@@ -126,6 +156,8 @@ export type Operation = {
    * needs to approve it at that price later (list and dictated price per line).
    */
   price_review?: PriceReview
+  /** Last consolidated sale from the selector agent (POS_AGENT_SELECTOR=llm). */
+  consolidated?: SaleConsolidated
   /** A request is being prepared for this operation (agent 1 runs outside the lock). */
   inflight?: { request_id: string; started_at: number }
   /** create_sale was dispatched; `settled` once the outcome (receipt, rejection or indeterminate) was recorded. */
@@ -160,7 +192,9 @@ export interface SalesAgentDependencies {
    * AGENT 1 (AI): turns the conversation into a draft with product IDs (sale-draft/1 or SaleProposal),
    * or into a CatalogAnswer for questions such as «¿tenemos cuadernos Marking?».
    */
-  buildDraft(messages: string[], previous: SaleDraftV1 | null): Promise<unknown>
+  buildDraft(messages: string[], previous: SaleDraftV1 | SaleConsolidated | null): Promise<unknown>
+  /** Step 3 (POS_AGENT_SELECTOR=llm): validates a sale-consolidated/1 from the selector agent. */
+  registrar?(consolidated: SaleConsolidated, dictation: string, reserved: Map<string, number>, context?: ValidationContext): Promise<DraftDecision>
   /** PROCESS 2 (deterministic): re-verifies the draft and decides direct vs review. */
   validate(draft: SaleDraftV1, reserved: Map<string, number>, context?: ValidationContext): Promise<DraftDecision>
   execute(draft: SaleDraft, beforeCommit: () => Promise<void>): Promise<{ saleId: string; total: number }>

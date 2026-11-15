@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import {
   AgentBusyError, AgentConflictError, AgentForbiddenError, SaleNotCommittedError, SaleRejectedByPosError,
-  catalogAnswerSchema,
+  catalogAnswerSchema, saleConsolidatedSchema,
   type AgentResponse, type AgentSeller, type DraftItem, type Instruction, type Operation,
-  type DecisionNotes, type PriceReview, type Reservation, type ReviewReason, type SaleDraftV1, type SalesAgentDependencies, type StockAlert
+  type DecisionNotes, type PriceReview, type Reservation, type ReviewReason, type SaleConsolidated, type SaleDraftV1, type SalesAgentDependencies, type StockAlert
 } from '../contracts'
 import { parseAgentDraft } from './proposalAdapter'
 
@@ -169,7 +169,9 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
           // Agent 1's doubt code (ambiguous_product, product_not_found…) and the ungrounded flag are kept.
           reasons: reasons.map(({ code, line, message, detail }) => ({
             code, ...(line ? { line } : {}), message,
-            ...(detail?.doubt ? { doubt: detail.doubt } : {}), ...(detail?.ungrounded ? { ungrounded: true } : {})
+            ...(detail?.doubt ? { doubt: detail.doubt } : {}), ...(detail?.ungrounded ? { ungrounded: true } : {}),
+            // Selector questions (POS_AGENT_SELECTOR=llm): what to ask the seller and the options to choose from.
+            ...(code === 'selector_question' ? { question: detail?.question ?? null, options: detail?.options ?? [] } : {})
           })),
           pending: pendingText,
           notes: extra.notes, price_alerts: extra.price_alerts, payment_defaulted: Boolean(extra.payment_defaulted), price_review: op.price_review ? 'pending' : null,
@@ -187,7 +189,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
   if (replayed) return replayed
   try {
     // PHASE 1 (short, under the lock): immediate outcomes, or claim the request for this operation.
-    const claim = await locked(async (): Promise<{ response: AgentResponse } | { messages: string[]; previous: SaleDraftV1 | null }> => {
+    const claim = await locked(async (): Promise<{ response: AgentResponse } | { messages: string[]; previous: SaleDraftV1 | SaleConsolidated | null }> => {
       const duplicate = await replay()
       if (duplicate) return { response: duplicate }
       let op = await deps.store.getOperation(id)
@@ -215,7 +217,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       }
       op.inflight = { request_id: request.request_id, started_at: now() }
       await deps.store.saveOperation(op)
-      return { messages: [...op.messages, request.input.text], previous: op.proposal || null }
+      return { messages: [...op.messages, request.input.text], previous: op.consolidated || op.proposal || null }
     })
     if ('response' in claim) return claim.response
 
@@ -259,22 +261,35 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         return marked
       }
       op.messages.push(request.input.text)
-      const parsed = parseAgentDraft(raw, op.messages.join('\n'))
-      if (!parsed.success) {
-        return review([{ code: 'invalid_draft', message: 'El borrador del agente no respeta el contrato (sale-draft/1 o SaleProposal).' }], [], [])
-      }
-      // Grounding uses the seller's own messages, never a text supplied by the AI.
-      const proposal: SaleDraftV1 = { ...parsed.data, source_text: op.messages.join('\n').slice(0, 5000) }
-      op.proposal = proposal
-      if (proposal.intent === 'cancel') return cancel('Operación cancelada. No se registró una venta y se liberó cualquier reserva.')
-      if (proposal.intent !== 'sale') {
-        return finish({ status: 'rejected', operation_id: id, message: 'Esta integración registra ventas. Indica qué productos deseas vender, en qué cantidad y la forma de pago.' })
+      const dictation = op.messages.join('\n')
+      const context = { role: seller.role ?? null }
+      // The decision can be recomputed (e.g. after create_sale rejects) with the same input.
+      let revalidate: () => Promise<Awaited<ReturnType<SalesAgentDependencies['validate']>>>
+      const consolidated = deps.registrar ? saleConsolidatedSchema.safeParse(raw) : null
+      if (consolidated?.success) {
+        // STEP 3 (POS_AGENT_SELECTOR=llm): the selector's consolidated sale goes to the simplified registrar.
+        op.consolidated = consolidated.data
+        revalidate = async () => deps.registrar!(consolidated.data, dictation, await reservedTotals(op.id), context)
+      } else {
+        // Legacy path: agent 1's draft is re-verified by PROCESS 2 (validateDraft).
+        const parsed = parseAgentDraft(raw, dictation)
+        if (!parsed.success) {
+          return review([{ code: 'invalid_draft', message: 'El borrador del agente no respeta el contrato (sale-consolidated/1, sale-draft/1 o SaleProposal).' }], [], [])
+        }
+        // Grounding uses the seller's own messages, never a text supplied by the AI.
+        const proposal: SaleDraftV1 = { ...parsed.data, source_text: dictation.slice(0, 5000) }
+        op.proposal = proposal
+        if (proposal.intent === 'cancel') return cancel('Operación cancelada. No se registró una venta y se liberó cualquier reserva.')
+        if (proposal.intent !== 'sale') {
+          return finish({ status: 'rejected', operation_id: id, message: 'Esta integración registra ventas. Indica qué productos deseas vender, en qué cantidad y la forma de pago.' })
+        }
+        revalidate = async () => deps.validate(proposal, await reservedTotals(op.id), context)
       }
 
-      // PROCESS 2: deterministic verification and decision.
+      // PROCESS 2 / STEP 3: deterministic verification and decision.
       let decision: Awaited<ReturnType<SalesAgentDependencies['validate']>>
       try {
-        decision = await deps.validate(proposal, await reservedTotals(op.id), { role: seller.role ?? null })
+        decision = await revalidate()
       } catch {
         return finish({ status: 'rejected', operation_id: id, message: 'No se pudo verificar el pedido con el catálogo del POS. No se registró una venta. Reintenta con otro request_id.' })
       }
@@ -319,7 +334,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
           // reserving only what is available now (re-checked; falls back to the requested quantities).
           let reservations = holdAll(decision.items)
           try {
-            const recheck = await deps.validate(proposal, await reservedTotals(op.id), { role: seller.role ?? null })
+            const recheck = await revalidate()
             if (recheck.kind === 'review') reservations = recheck.reservations
           } catch {}
           // error.message is only the database error code; details stay in the server log.

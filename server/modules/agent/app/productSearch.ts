@@ -7,6 +7,10 @@
  * (A4/grande vs A5/pequeño) and brand. Similarity alone never makes a sale "high".
  */
 
+import { applyConventions, CUADRIMAX_DIMS, phoneticKey, RULING_WORDS, SIZE_WORDS, SYNONYMS } from './catalogConventions'
+
+export { applyConventions } from './catalogConventions'
+
 export type SearchDoc = {
   id: string
   name: string
@@ -33,6 +37,8 @@ export type MatchDecision = {
   best: RankedCandidate | null
   ranked: RankedCandidate[]
   doubts: string[]
+  /** Product picked by the context selector among equally compatible ones (preselection only). */
+  selected?: string
 }
 
 const STOPWORDS = new Set([
@@ -40,24 +46,6 @@ const STOPWORDS = new Set([
   'vender', 'vende', 'vendo', 'venta', 'quiero', 'dame', 'deme', 'necesito', 'me', 'da', 'tipo', 'marca', 'modelo',
   'pulgada', 'pulgadas', 'medida', 'tamano', 'paquete', 'paquetes', 'und', 'unidad', 'unidades'
 ])
-// Domain synonyms (Peru stationery). Each key also matches any of its values and vice versa.
-const SYNONYMS: Record<string, string[]> = {
-  tajador: ['sacapunta', 'sacapuntas', 'tarjador'],
-  bond: ['boom', 'bon'],
-  boligrafo: ['lapicero'],
-  renglon: ['reglon'],
-  plumon: ['marcador'],
-  borrador: ['goma de borrar'],
-  silicona: ['silicon'],
-  cuaderno: ['cuad', 'cuader'],
-  folder: ['folders', 'carpeta'],
-  cinta: ['scotch', 'scosh', 'scoth', 'tape'],
-  engrapador: ['engrapadora', 'grapadora', 'engrampador'],
-  crayones: ['crayolas'],
-  maskin: ['masking'],
-  posit: ['post-it', 'postit'],
-  rompecabezas: ['puzzle']
-}
 const SYNONYM_INDEX = (() => {
   const index = new Map<string, Set<string>>()
   for (const [key, values] of Object.entries(SYNONYMS)) {
@@ -83,17 +71,6 @@ const UNIT_ALIASES: Array<[RegExp, string]> = [
   [/^(pieza|piezas|piesa|piesas|pzs|pz)$/, 'piezas'],
   [/^(und|unds|u|un|unid|unidad|unidades|colores|pares|leds)$/, 'pack']
 ]
-const RULING_WORDS: Array<[RegExp, string]> = [
-  [/^(cuadriculado|cuadriculada|cuadricula|cuadriculados|cuadros|cuadrito|cuadritos)$/, 'cuadriculado'],
-  [/^(rayado|rayada|rayados|rayas|raya|rayita)$/, 'rayado'],
-  [/^(cuadrimax)$/, 'cuadrimax']
-]
-const SIZE_WORDS: Array<[RegExp, string, string]> = [
-  [/^a4$/, 'a4', 'large'], [/^(grande|grandes)$/, 'grande', 'large'], [/^(oficio)$/, 'oficio', 'large'],
-  [/^a5$/, 'a5', 'small'], [/^(pequeno|pequenos|pequena|pequenas|chico|chica|pq)$/, 'pequeño', 'small'],
-  [/^(mediano|mediana)$/, 'mediano', 'medium'], [/^a3$/, 'a3', 'xlarge']
-]
-
 export const normalizeText = (value: string) => value
   .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/#/g, ' cuadriculado ')
@@ -131,6 +108,8 @@ export const similarWord = (a: string, b: string) => {
   const min = Math.min(sa.length, sb.length)
   if (min >= 4 && editDistance(sa, sb) <= 1) return true
   if (min >= 8 && editDistance(sa, sb) <= 2 && sa[0] === sb[0]) return true
+  // Dictation errors that sound the same (margen / marking → markin); never masking → markin.
+  if (min >= 5 && phoneticKey(sa) === phoneticKey(sb)) return true
   return false
 }
 const fuzzyCanonical = <T>(word: string, table: Array<[RegExp, ...T[]]>) => {
@@ -220,12 +199,35 @@ export const brandVocabulary = (docs: SearchDoc[]) => {
   return brands
 }
 
+/** Ruling of a text: explicit word, or from its grid dimensions (1x1/2x2 = cuadrimax, other = cuadriculado). */
+const rulingOf = (attrs: Attributes) => {
+  const cuadrimax = attrs.dims.some(d => CUADRIMAX_DIMS.has(d))
+  if (attrs.ruling) return attrs.ruling === 'cuadriculado' && cuadrimax ? 'cuadrimax' : attrs.ruling
+  return cuadrimax ? 'cuadrimax' : attrs.dims.length ? 'cuadriculado' : null
+}
+
+/** Type words of a product: its category (cuaderno, cinta, borrador…). */
+const typeWordsOf = (doc: SearchDoc) => parseAttributes(doc.category || '').words
+
+/**
+ * PRODUCT TYPE of the order line: the first word of the order that is the category of some
+ * retrieved product («cuaderno marking 100 hojas» → cuaderno; «cinta marking» → cinta).
+ * null when the order names no category (then nothing is filtered by type).
+ */
+export const lineType = (query: Attributes, docs: SearchDoc[]): string | null => {
+  const categories = [...new Set(docs.flatMap(typeWordsOf))]
+  return query.words.find(word => wordPresent(word, categories)) ?? null
+}
+/** A product is of that type if its category or its name (or a learned synonym) says so. */
+const isOfType = (type: string, doc: SearchDoc) => wordPresent(type, typeWordsOf(doc)) ||
+  wordPresent(type, [...parseAttributes(doc.name).words, ...(doc.synonyms || []).flatMap(text => parseAttributes(text).words)])
+
 /**
  * Scores one candidate against the query. Conflicts are exact contradictions
  * (a different number of sheets, a different brand...). Unknown = the product
  * does not say (e.g. the order says A4 and the name does not mention a size).
  */
-export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<string>, normalizedQuery: string): Omit<RankedCandidate, 'retrieval' | 'score'> => {
+export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<string>, normalizedQuery: string, type: string | null = null): Omit<RankedCandidate, 'retrieval' | 'score'> => {
   const own = parseAttributes(docText(doc))
   const synonymTexts = (doc.synonyms || []).map(normalizeText)
   const synonymWords = synonymTexts.flatMap(text => parseAttributes(text).words)
@@ -234,6 +236,8 @@ export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<st
   const brandWords = normalizeText(doc.brand || '').split(' ').filter(Boolean)
   const matched: string[] = [], unknown: string[] = [], conflicts: string[] = []
   const learned = synonymTexts.some(text => text === normalizedQuery)
+  // A notebook is never a tape: a product of another type is out, whatever the brand or model says.
+  if (type && !learned && !isOfType(type, doc)) conflicts.push(`es ${doc.category ? normalizeText(doc.category) : 'otro tipo de producto'}, no ${type}`)
 
   // Content words (product type, line, colour, brand).
   let covered = 0
@@ -273,11 +277,15 @@ export const scoreCandidate = (query: Attributes, doc: SearchDoc, brands: Set<st
     else if (own.dims.length || theirNumbers.length || own.ruling) conflicts.push(`${dim} no coincide`)
     else unknown.push(`${dim} ${MISSING_MEASURE}`)
   }
-  if (query.ruling) {
-    const theirs = own.ruling || (own.dims.length ? 'cuadriculado' : null)
-    if (theirs === query.ruling) matched.push(query.ruling)
-    else if (theirs) conflicts.push(`pide ${query.ruling} y el producto es ${theirs}`)
-    else unknown.push(`${query.ruling} no confirmado`)
+  // Ruling conventions (catalogConventions.ts): # = cuadriculado, 1x1/2x2 = cuadrimax.
+  const ruling = rulingOf(query)
+  if (ruling) {
+    const theirs = rulingOf(own)
+    if (theirs === ruling) matched.push(ruling)
+    // Cuadrimax is a kind of grid: compatible with «cuadriculado», but not confirmed.
+    else if (ruling === 'cuadriculado' && theirs === 'cuadrimax') unknown.push('cuadriculado ≈ cuadrimax no confirmado')
+    else if (theirs) conflicts.push(`pide ${ruling} y el producto es ${theirs}`)
+    else unknown.push(`${ruling} no confirmado`)
   }
   if (query.size) {
     if (!own.size) unknown.push(`${query.size.label.toUpperCase()} no confirmado`)
@@ -308,12 +316,14 @@ const compareTuples = (a: number[], b: number[]) => {
  * low    = nothing compatible.
  */
 export const decideMatch = (queryText: string, retrieved: RetrievedDoc[], brands: Set<string>): MatchDecision => {
+  queryText = applyConventions(queryText)
   const normalizedQuery = normalizeText(queryText)
   const query = parseAttributes(queryText, true)
+  const type = lineType(query, retrieved)
   const ranked = retrieved.map((doc, index): RankedCandidate => {
     const retrieval = (doc.lexical_rank ? 1 / (RRF_K + doc.lexical_rank) : 0) + (doc.vector_rank ? 1 / (RRF_K + doc.vector_rank) : 0) +
       (!doc.lexical_rank && !doc.vector_rank ? 1 / (RRF_K + index + 1) : 0)
-    const scored = scoreCandidate(query, doc, brands, normalizedQuery)
+    const scored = scoreCandidate(query, doc, brands, normalizedQuery, type)
     const attrTotal = scored.matched.length + scored.unknown.length + scored.conflicts.length
     const attrScore = attrTotal ? scored.matched.length / attrTotal : 1
     const score = (0.5 * scored.coverage + 0.3 * attrScore + 0.2 * Math.min(1, retrieval * RRF_K / 1.2)) * (scored.conflicts.length ? 0.4 : 1)
@@ -365,7 +375,7 @@ export const reasonsFor = (candidate: RankedCandidate) => [
 
 /** Lexical retrieval over an in-memory list (fallback when the hybrid RPC is not installed, and for evaluation). */
 export const retrieveLexical = (queryText: string, docs: SearchDoc[], limit = 40): RetrievedDoc[] => {
-  const query = parseAttributes(queryText, true)
+  const query = parseAttributes(applyConventions(queryText), true)
   const queryNumbers = allNumbers(query)
   return docs.map(doc => {
     const words = [...parseAttributes(docText(doc)).words, ...(doc.synonyms || []).flatMap(s => parseAttributes(s).words)]

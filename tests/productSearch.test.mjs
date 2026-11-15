@@ -55,7 +55,7 @@ test('los números y medidas exactas pesan: 50 hojas no es 100 hojas', () => {
 })
 
 test('rayado, triple renglón y cuadriculado (#) no se confunden', () => {
-  assert.equal(decide('cuaderno markin triple renglon').best.doc.name, 'cuaderno markin triple reglon 100 h')
+  assert.equal(decide('cuaderno markin triple renglon').best.doc.name, 'cuaderno markin triple renglón 100 h')
   assert.equal(decide('cuaderno surco rayado 100 hojas').best.doc.name, 'cuaderno surco rayado 100 h')
   const teens = decide('cuaderno layconsa teens rayado')
   assert.notEqual(teens.confidence, 'high')
@@ -65,7 +65,7 @@ test('A4/grande y A5/pequeño se tratan como tamaños compatibles o en conflicto
   assert.equal(decide('cuaderno anillado a4').best.doc.name, 'Cuaderno Anillado A4 100h')
   const small = decide('cuaderno surco pequeño 100h')
   assert.equal(small.confidence, 'high')
-  assert.equal(small.best.doc.name, 'cuaderno surco pqueño 100 h')
+  assert.equal(small.best.doc.name, 'cuaderno surco pequeño 100 h')
 })
 
 test('la marca pedida descarta otras marcas', () => {

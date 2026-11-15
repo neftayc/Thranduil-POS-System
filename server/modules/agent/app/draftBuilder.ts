@@ -2,6 +2,7 @@ import { saleDraftSchema, type Product, type SaleDraftV1 } from '../contracts'
 import type { SaleProposal } from './agent1Contracts'
 import { makeCatalogAnswerer } from './catalogAnswers'
 import { makeSalePreparer, type AgentCatalog } from './prepareSale'
+import type { ProductSelector } from './contextSelection'
 import type { OrderInterpreter } from '../infra/openaiOrderInterpreter'
 
 export type CatalogAnswer = { kind: 'catalog_answer'; message: string; result: Record<string, unknown> }
@@ -53,9 +54,9 @@ const emptyDraft = (intent: SaleDraftV1['intent'], sourceText: string): SaleDraf
 export const makeHybridDraftBuilder = (
   interpret: OrderInterpreter,
   catalog: AgentCatalog,
-  options: { answerCatalogQuestions?: boolean } = {}
+  options: { answerCatalogQuestions?: boolean; selector?: ProductSelector } = {}
 ) => {
-  const prepare = makeSalePreparer(catalog)
+  const prepare = makeSalePreparer(catalog, { selector: options.selector })
   const answer = makeCatalogAnswerer(catalog)
   return async (messages: string[], previous: SaleDraftV1 | null): Promise<SaleDraftV1 | CatalogAnswer> => {
     const sourceText = messages.join('\n')
@@ -86,7 +87,11 @@ export const makeHybridDraftBuilder = (
     }
     if (parsed.intent !== 'sale') return emptyDraft(parsed.intent, sourceText)
     // Stock and reservations are process 2's job: it recomputes available stock itself.
-    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered, checkStock: false })
+    // Options of each line, so a clarification («es el Markin») resolves THAT line (only when lines still align).
+    const lineOptions = parsed.items.length === previousItems.length
+      ? previousItems.map(line => choosing(line) ? products.filter(p => p.id === line.product_id || line.candidates.includes(p.id)) : [])
+      : undefined
+    const { proposal } = await prepare(parsed, products, new Map(), { lastMessage: messages[messages.length - 1], offered, checkStock: false, lineOptions })
     return toSaleDraft(proposal, sourceText)
   }
 }

@@ -153,7 +153,7 @@ const reviewCases = [
   ['low_confidence', { items: [line({ confidence: 'medium' })] }],
   ['product_unresolved', { items: [line({ product_id: null, candidates: [CUADERNO.id, LAPICERO.id], confidence: 'low' })] }],
   ['product_inactive', { items: [line({ product_id: randomUUID() })] }],
-  ['missing_quantity', { items: [line({ quantity: null })] }],
+  ['missing_quantity', { items: [line({ quantity: null })], source_text: 'vende 2 o 3 cuadernos, efectivo' }],
   ['missing_quantity', { items: [line({ quantity: 0 })] }],
   ['price_unavailable', { items: [line({ unit: 'millar' })] }],
   ['price_changed', { items: [line({ price_unit: 4.5 })] }],
@@ -736,7 +736,7 @@ test('control: solo con POS_AGENT_SEARCH_AUTOINDEX=1 y fuera de dry-run se index
 // ---------------------------------------------------------------- security review fixes
 
 const { resolveAgentModes, describeAgentModes, memoizeByKey } = await jiti.import('../server/modules/agent/app/runtimeModes.ts')
-const { paymentMentioned, quantityGrounded } = await jiti.import('../server/modules/agent/app/grounding.ts')
+const { paymentMentioned, quantityGrounded, resolveQuantity: quantityResolver } = await jiti.import('../server/modules/agent/app/grounding.ts')
 
 test('M2: el dry-run se activa en tiempo de ejecución si cualquier fuente lo pide (también en un build de producción)', () => {
   // runtimeConfig baked at build time as false, but the process is launched with the variable:
@@ -925,9 +925,13 @@ test('cantidad: la cantidad que sí se dice se respeta y sigue exigiendo groundi
   // The AI says 2 but the seller wrote "tres": not grounded and "tres" unclaimed → review.
   const wrong = await setup(t, { drafts: [draftOf({ items: [line({ quantity: 2 })] })] })
   assert.deepEqual(codes(await wrong.run(instruction('vende tres cuadernos A4, efectivo'))), ['missing_quantity'])
-  // The AI drops a quantity the seller did say: review, never a silent 1.
-  const dropped = await setup(t, { drafts: [draftOf({ items: [line({ quantity: null })] })] })
-  const response = await dropped.run(instruction('vende tres cuadernos A4, efectivo'))
+  // One-line order and the AI dropped the quantity: it is taken from the seller's text ("tres" → 3).
+  const inferred = await setup(t, { drafts: [draftOf({ items: [line({ quantity: null })] })] })
+  assert.equal((await inferred.run(instruction('vende tres cuadernos A4, efectivo'))).status, 'completed')
+  assert.equal(inferred.sent[0].items[0].qty, 3)
+  // Two lines and the AI dropped one quantity: ambiguous → review, never a silent 1.
+  const dropped = await setup(t, { drafts: [draftOf({ items: [line({ quantity: null }), line({ product_id: LAPICERO.id, quantity: 2, price_unit: 1.5, query: 'lapicero azul' })] })] })
+  const response = await dropped.run(instruction('vende tres cuadernos A4 y 2 lapiceros, efectivo'))
   assert.deepEqual(codes(response), ['missing_quantity'])
   assert.match(response.message, /no pude asignar/)
   assert.equal(dropped.counts.execute + wrong.counts.execute, 0)
@@ -1033,4 +1037,69 @@ test('dry-run con precio dictado y cantidad por defecto: would_be completed con 
   assert.equal(response.result.total, 4)
   assert.equal(response.result.notes.length, 2)
   assert.equal(calls.n, 0)
+})
+
+// ---------------------------------------------------------------- cantidades en palabras (ensayo real)
+
+test('palabras: «dos cuadernos markin», «tres cintas masking», «una goma en barra», «media docena de lapiceros» = 6, «cuaderno 100 hojas» = 1', async () => {
+  const cases = [
+    ['dos cuadernos markin 100 hojas cuadriculado, efectivo', 'cuaderno markin 100 hojas cuadriculado', null, 2],
+    ['tres cintas masking, efectivo', 'cinta masking', null, 3],
+    ['una goma en barra, efectivo', 'goma en barra', null, 1],
+    ['media docena de lapiceros, efectivo', 'lapicero', null, 6],
+    ['cuaderno 100 hojas, efectivo', 'cuaderno 100 hojas', null, 1],
+    // The AI proposes the quantity correctly:
+    ['dos cuadernos markin 100 hojas cuadriculado, efectivo', 'cuaderno markin 100 hojas cuadriculado', 2, 2],
+    ['tres cintas masking, efectivo', 'cinta masking', 3, 3],
+    ['media docena de lapiceros, efectivo', 'lapicero', 6, 6],
+    // The AI left the quantity inside the description (what happened in the rehearsal):
+    ['dos cuadernos markin 100 hojas cuadriculado, efectivo', 'dos cuadernos markin 100 hojas cuadriculado', 2, 2],
+    ['dos cuadernos markin 100 hojas cuadriculado, efectivo', 'dos cuadernos markin 100 hojas cuadriculado', null, 2],
+    ['tres cintas masking, efectivo', 'tres cintas masking', 3, 3],
+    ['diecisiete sobres manila, efectivo', 'sobre manila', null, 17]
+  ]
+  for (const [text, query, quantity, expected] of cases) {
+    const { catalog } = makeCatalog()
+    const result = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity, query, price_unit: null })], source_text: text }))
+    assert.equal(result.kind === 'direct' ? result.sale.items[0].qty : `review:${result.reasons.map(r => r.code)}`, expected, `${text} | ${query} | ${quantity}`)
+  }
+})
+
+test('palabras: números grandes en español (hasta cien y más) se reconocen como cantidad', () => {
+  const { resolveQuantity } = { resolveQuantity: quantityResolver }
+  for (const [text, query, expected] of [
+    ['veinticinco sobres manila', 'sobre manila', 25], ['treinta y cinco lapiceros', 'lapicero', 35],
+    ['cuarenta cuadernos', 'cuaderno', 40], ['cien sobres manila', 'sobre manila', 100], ['quinientos clips', 'clip', 500]
+  ]) {
+    assert.deepEqual(resolveQuantity(text, expected, query), { ok: true, quantity: expected, defaulted: false }, text)
+    assert.equal(resolveQuantity(text, null, query, [], { singleLine: true }).quantity, expected, `${text} (inferida)`)
+  }
+})
+
+test('palabras: «uno» o un número dentro del nombre del producto no cuenta como cantidad', async () => {
+  const { catalog } = makeCatalog()
+  // "Pegamento Uno" — the AI proposes 1 or nothing: 1 by default, not a "said" quantity of 1 extra.
+  const uno = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: null, query: 'pegamento uno', price_unit: null })], source_text: 'vende dos pegamento uno, efectivo' }))
+  assert.equal(uno.kind, 'direct')
+  assert.equal(uno.sale.items[0].qty, 2)
+  // "100 hojas bond" at the start is the product, not the quantity.
+  const bond = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: null, query: '100 hojas bond', price_unit: null })], source_text: '100 hojas bond, efectivo' }))
+  assert.equal(bond.kind, 'direct')
+  assert.equal(bond.sale.items[0].qty, 1)
+  // "una docena" with the dozen presentation is 1 dozen; without it, 12 units.
+  const dozen = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: null, unit: 'docena', price_unit: null })], source_text: 'una docena de cuadernos, efectivo' }))
+  assert.equal(dozen.sale.items[0].qty, 1)
+  const units = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: null, price_unit: null })], source_text: 'una docena de cuadernos, efectivo' }))
+  assert.equal(units.sale.items[0].qty, 12)
+})
+
+test('el dictado «$1» se lee como un sol: es precio, no cantidad', async () => {
+  const { moneyMentions } = await jiti.import('../server/modules/agent/app/grounding.ts')
+  assert.deepEqual(moneyMentions('Un lápiz de $1. Vender.'), [1])
+  assert.deepEqual(moneyMentions('dos cuadernos a $4.50'), [4.5])
+  assert.equal(quantityResolver('dos cuadernos a $4.50', null, 'cuaderno', [], { singleLine: true }).quantity, 2)
+  const { catalog } = makeCatalog()
+  const result = await makeDraftValidator(catalog)(draftOf({ items: [line({ quantity: null, price_said: 4 })], source_text: 'dos cuadernos a $4, efectivo' }), new Map(), { role: 'owner' })
+  assert.equal(result.kind, 'direct')
+  assert.deepEqual([result.sale.items[0].qty, result.sale.items[0].price_unit], [2, 4])
 })

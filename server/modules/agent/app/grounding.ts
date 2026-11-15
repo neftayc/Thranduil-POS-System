@@ -4,7 +4,8 @@
  * produced by the AI).
  */
 
-export const normalizeText = (text: string) => ` ${text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+// Voice dictation writes «un sol» as «$1»: «$» is read as soles (same as «s/»).
+export const normalizeText = (text: string) => ` ${text.replace(/\$/g, ' s ').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/(\d),(\d)/g, '$1.$2').replace(/[^a-z0-9.\s]/g, ' ').replace(/\.(?!\d)/g, ' ').replace(/\s+/g, ' ').trim()} `
 
 const has = (haystack: string, phrase: string) => {
@@ -86,6 +87,27 @@ export const quantityMentions = (text: string) => {
   return counts
 }
 
+/**
+ * The AI sometimes leaves the quantity inside the product description ("dos cuadernos marking…").
+ * A number at the START of the description (not followed by an attribute: "100 hojas bond" keeps it)
+ * is the quantity, not part of the product, so it is removed before comparing.
+ */
+export const descriptionWithoutQuantity = (description: string) => {
+  const words = normalizeText(description).trim().split(' ').filter(Boolean)
+  let start = 0
+  if (words[0] === 'media' && words[1] === 'docena') start = 2
+  else if (words[0] === 'un' && words[1] === 'par') start = 2
+  else {
+    const found = numberAt(words, 0)
+    if (found && !ATTRIBUTE_WORDS.has(words[found.end + 1] || '')) {
+      start = found.end + 1
+      if (['docena', 'docenas', 'par', 'pares', 'decena', 'decenas'].includes(words[start])) start++
+    }
+  }
+  if (start && words[start] === 'de') start++
+  return start ? words.slice(start).join(' ') : description
+}
+
 /** Every number written in a text, descriptions included ("cuaderno 100 hojas a4" → 100). */
 const allNumbers = (text: string) => {
   const words = normalizeText(text).trim().split(' ').filter(Boolean)
@@ -118,7 +140,7 @@ export const priceGrounded = (text: string, unitPrice: number, quantity: number)
   moneyMentions(text).some(amount => Math.abs(amount - unitPrice) <= 0.005 || Math.abs(amount - unitPrice * quantity) <= 0.01)
 
 export type QuantityDecision =
-  | { ok: true; quantity: number; defaulted: boolean }
+  | { ok: true; quantity: number; defaulted: boolean; inferred?: boolean }
   | { ok: false; reason: 'ungrounded' | 'unassigned' }
 
 /**
@@ -130,13 +152,24 @@ export type QuantityDecision =
  *    goes to review: it may be an amount the parser does not understand.
  * `others` = quantities proposed for the other lines of the same order.
  */
-export const resolveQuantity = (text: string, quantity: number | null, productDescription: string, others: number[] = []): QuantityDecision => {
+export const resolveQuantity = (
+  text: string, quantity: number | null, description: string, others: number[] = [],
+  options: { singleLine?: boolean; unit?: string | null } = {}
+): QuantityDecision => {
+  const productDescription = descriptionWithoutQuantity(description)
   if (quantity !== null && quantityGrounded(text, quantity, productDescription)) return { ok: true, quantity, defaulted: false }
   // Written quantities not explained by this line's description nor claimed by other lines.
   const free = new Map(quantityMentions(text))
   for (const [value, n] of quantityMentions(productDescription)) free.set(value, (free.get(value) || 0) - n)
   for (const value of others) if (free.has(value)) free.set(value, free.get(value)! - 1)
-  const unexplained = [...free].some(([value, n]) => n > 0 && value !== 1)
+  // "docena" / "media docena" mean 1 / 0.5 when the presentation is a dozen, and 12 / 6 units otherwise.
+  const dozens = /docena/.test(normalizeText(options.unit || ''))
+  const relevant = [...free].filter(([value, n]) => n > 0 && value !== 1 && (dozens ? value !== 12 && value !== 6 : value !== 0.5))
+  const unexplained = relevant.length > 0
+  if (unexplained && quantity === null && options.singleLine && relevant.length === 1 && relevant[0][1] === 1) {
+    // One-line order and the AI dropped the quantity: take the only one the seller wrote ("dos cuadernos" → 2).
+    return { ok: true, quantity: relevant[0][0], defaulted: false, inferred: true }
+  }
   if (unexplained) return { ok: false, reason: quantity === null ? 'unassigned' : 'ungrounded' }
   if (quantity === null || quantity === 1 || allNumbers(productDescription).has(quantity)) return { ok: true, quantity: 1, defaulted: true }
   return { ok: false, reason: 'ungrounded' }
@@ -147,7 +180,8 @@ export const resolveQuantity = (text: string, quantity: number | null, productDe
  * number in the line's own product description (so "cuaderno a4 100" with quantity 100 is not
  * enough; "100 cuadernos a4 100" is).
  */
-export const quantityGrounded = (text: string, quantity: number, productDescription: string) => {
+export const quantityGrounded = (text: string, quantity: number, description: string) => {
+  const productDescription = descriptionWithoutQuantity(description)
   const written = quantityMentions(text).get(quantity) || 0
   const inDescription = [...quantityMentions(productDescription)].filter(([value]) => value === quantity).reduce((sum, [, n]) => sum + n, 0)
   return written > inDescription

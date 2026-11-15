@@ -259,7 +259,12 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   existe y está activo, seguridad `high`, ninguna duda y una cantidad válida;
 - **cantidad**: la que escribió el vendedor; **si no dijo cantidad, es 1** (aviso «no se
   indicó cantidad, se toma 1»; `items[].quantity_defaulted`). También es 1 si el modelo
-  tomó un número de la descripción («cuaderno 100 hojas a4» → 1). Va a revisión
+  tomó un número de la descripción («cuaderno 100 hojas a4» → 1). Las cantidades en palabras
+  cuentan («dos», «tres», «quince», «veinticinco», «treinta y cinco», «cien», «una docena»,
+  «media docena» = 6 unidades, o 0.5 si la presentación es docena). Si la IA deja la cantidad
+  al inicio de la descripción («dos cuadernos markin…») se separa de ella; en un pedido de
+  **una línea**, si la IA no puso cantidad y el vendedor escribió exactamente una, se toma esa
+  («dos cuadernos» → 2). Va a revisión
   (`missing_quantity`) si el modelo propone una cantidad que el vendedor no escribió, o si
   el vendedor escribió una cantidad (distinta de 1) que ninguna línea recoge (por ejemplo,
   el modelo la perdió): nunca se vende 1 en silencio en ese caso;
@@ -267,7 +272,8 @@ Se registra **directo** a nombre del vendedor identificado solo si:
   debe coincidir con `price_unit` del borrador (tolerancia S/ 0.005); si no, `price_changed`.
   Si el borrador no trae precio, se usa el oficial;
 - **precio dictado** (`price_said` distinto del de lista): es la venta que hace el vendedor,
-  pero solo cuenta si el vendedor lo **escribió** como monto («a 4 soles», «s/ 4.50»,
+  pero solo cuenta si el vendedor lo **escribió** como monto («a 4 soles», «s/ 4.50», «$4»
+  —el dictado escribe «un sol» como «$1»—,
   «4 soles», o el total: «2 por 9 soles» → 4.50 c/u). Si no aparece: `price_unverified`.
   Con rol `owner` o `manager` se registra **directo** a ese precio: se envía a `create_sale`
   `price_unit` = dictado y `manual_discount_reason` = «Precio dictado por voz (lista S/ X)»

@@ -120,7 +120,7 @@ export const makeDraftValidator = (catalog: ValidationCatalog) => async (
     }
     // "Si no se dice cantidad es 1": a quantity the seller wrote is used; otherwise 1.
     const others = draft.items.filter((_, i) => i !== index).map(other => other.quantity).filter((q): q is number => q !== null)
-    const decided = resolveQuantity(draft.source_text, line.quantity, line.query, others)
+    const decided = resolveQuantity(draft.source_text, line.quantity, line.query, others, { singleLine: draft.items.length === 1, unit: line.unit })
     if (!decided.ok) {
       reasons.push({
         code: 'missing_quantity', line: n, detail: { quantity: line.quantity, ungrounded: true },

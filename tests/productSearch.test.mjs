@@ -157,15 +157,17 @@ test('agente 1: producto inexistente → seguridad baja, sin product_id', async 
   assert.match(result.question, /no encontré «calculadora casio»/)
 })
 
-test('agente 1: falta la forma de pago o la cantidad → por confirmar', async () => {
+test('agente 1: falta la forma de pago → por confirmar; sin cantidad se toma 1 (no es duda)', async () => {
   const prepare = makeSalePreparer(catalogFrom(snapshot))
   const noPay = await prepare({ ...sale('cuaderno markin cuadriculado 100 a4', 1), payment_method: null }, [], new Map())
   assert.equal(noPay.draft, undefined)
   assert.equal(noPay.proposal.confidence, 'medium')
   assert.equal(noPay.proposal.payment_method, null)
   const noQty = await prepare(sale('cuaderno markin cuadriculado 100 a4', null), [], new Map())
-  assert.equal(noQty.proposal.items[0].qty, null)
-  assert.equal(noQty.proposal.items[0].confidence, 'medium')
+  assert.equal(noQty.proposal.items[0].qty, null) // process 2 records the default of 1
+  assert.equal(noQty.proposal.items[0].confidence, 'high')
+  assert.deepEqual(noQty.proposal.items[0].doubts, [])
+  assert.equal(noQty.proposal.items[0].total, noQty.proposal.items[0].price_unit) // priced as 1
   assert.ok(noQty.proposal.items[0].product_id)
 })
 
@@ -244,7 +246,7 @@ test('buildDraft (caso Markin): sale-draft/1 válido para el proceso 2, que deci
   const parsed = parseAgentDraft(draft, 'x')
   assert.equal(parsed.success, true)
   const markin = byName('Cuaderno Markin # 100 h')
-  assert.deepEqual(parsed.data.items, [{ product_id: markin.id, candidates: parsed.data.items[0].candidates, quantity: 2, unit: null, price_unit: 4.5, confidence: 'high', doubts: [], query: 'cuaderno markin cuadriculado 100 a4' }])
+  assert.deepEqual(parsed.data.items, [{ product_id: markin.id, candidates: parsed.data.items[0].candidates, quantity: 2, unit: null, price_unit: 4.5, price_said: null, confidence: 'high', doubts: [], query: 'cuaderno markin cuadriculado 100 a4' }])
   assert.equal(parsed.data.payment_method, 'efectivo')
   assert.deepEqual(parsed.data.doubts, [])
   const decision = await makeDraftValidator(catalog)(parsed.data, new Map())
@@ -268,7 +270,7 @@ test('buildDraft: empate → ambiguous_product con candidatos reales; el proceso
   assert.equal(decision.kind, 'review')
 })
 
-test('buildDraft: códigos de duda (no encontrado, sin cantidad, sin forma de pago)', async () => {
+test('buildDraft: códigos de duda (no encontrado, sin forma de pago); sin cantidad no es duda', async () => {
   const catalog = catalogFrom(snapshot)
   const order = { intent: 'sale', items: [
     { query: 'calculadora casio', sku: null, quantity: 1, unit: null, product_id: null },
@@ -281,7 +283,7 @@ test('buildDraft: códigos de duda (no encontrado, sin cantidad, sin forma de pa
   assert.equal(draft.items[0].doubts[0].code, 'product_not_found')
   assert.ok(draft.items[1].product_id)
   assert.equal(draft.items[1].quantity, null)
-  assert.deepEqual(draft.items[1].doubts.map(d => d.code), ['missing_quantity'])
+  assert.deepEqual(draft.items[1].doubts.map(d => d.code), [])
   assert.equal(draft.payment_method, null)
   assert.deepEqual(draft.doubts.map(d => d.code), ['missing_payment'])
 })

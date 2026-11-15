@@ -16,6 +16,8 @@ export const orderInterpretationSchema = z.object({
     sku: z.string().nullable(),
     quantity: z.number().nullable(),
     unit: z.string().nullable(),
+    /** Unit price the seller dictated, or null (process 2 checks it against the seller's text). */
+    price: z.number().nullable().optional(),
     product_id: z.string().nullable(),
     // What the order says, separated (optional for callers that do not provide it).
     product: z.string().nullable().optional(),
@@ -43,6 +45,8 @@ export type ProposalItem = {
   unit_name: string | null
   factor: number | null
   price_unit: number | null
+  /** Unit price the seller dictated (from the interpretation), or null. */
+  price_said?: number | null
   total: number | null
   /** stock_on_hand − units reserved by other ventas por confirmar (base unit). */
   stock_available: number | null

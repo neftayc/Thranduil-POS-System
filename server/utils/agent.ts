@@ -104,5 +104,5 @@ export const getAgentHandler = (event: H3Event, seller: ActiveSeller) => {
     stockLevels: ids => catalog.stockLevels(ids),
     reviewTtlMs: Number(config.posAgentReviewTtlHours || 48) * 60 * 60 * 1000
   })
-  return (instruction: Parameters<typeof agent>[0]) => agent(instruction, { id: seller.user_id })
+  return (instruction: Parameters<typeof agent>[0]) => agent(instruction, { id: seller.user_id, role: seller.role })
 }

@@ -7,8 +7,9 @@ import { brandVocabulary, decideMatch, retrieveLexical, type RetrievedDoc, type 
 import type { Embedder } from './openaiEmbeddings'
 import { makeProductSearchIndexer } from './productSearchIndexer'
 
-const columns = 'id, name, sku, brand, unit, stock_on_hand'
-const product = (row: any): Product => ({ id: row.id, name: row.name, sku: row.sku, brand: row.brand, unit: row.unit, stock: Number(row.stock_on_hand) })
+// avg_cost (per base unit) lets process 2 warn about a dictated price below cost.
+const columns = 'id, name, sku, brand, unit, stock_on_hand, avg_cost'
+const product = (row: any): Product => ({ id: row.id, name: row.name, sku: row.sku, brand: row.brand, unit: row.unit, stock: Number(row.stock_on_hand), avg_cost: row.avg_cost === null || row.avg_cost === undefined ? null : Number(row.avg_cost) })
 // IDs from the AI draft are untrusted: a malformed one is "not found", not a database error.
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 const stopwords = new Set(['de', 'del', 'el', 'la', 'los', 'las', 'un', 'una', 'con', 'para', 'hoja', 'hojas'])

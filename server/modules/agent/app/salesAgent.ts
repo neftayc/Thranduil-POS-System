@@ -3,7 +3,7 @@ import {
   AgentBusyError, AgentConflictError, AgentForbiddenError, SaleNotCommittedError, SaleRejectedByPosError,
   catalogAnswerSchema,
   type AgentResponse, type AgentSeller, type DraftItem, type Instruction, type Operation,
-  type Reservation, type ReviewReason, type SaleDraftV1, type SalesAgentDependencies, type StockAlert
+  type DecisionNotes, type Reservation, type ReviewReason, type SaleDraftV1, type SalesAgentDependencies, type StockAlert
 } from '../contracts'
 import { parseAgentDraft } from './proposalAdapter'
 
@@ -23,6 +23,13 @@ const alertText = (alerts: StockAlert[]) => alerts.length
     ? `${a.name} agotado`
     : `${a.name}: quedan ${a.available} ${a.unit} (mínimo ${a.min_stock})`).join('; ')}.`
   : ''
+
+/** Notes (quantity defaulted, price changed) and below-cost alerts, appended to every answer. */
+const notesText = (extra: DecisionNotes) => [
+  ...extra.notes.map(note => ` ${note}`),
+  ...extra.price_alerts.map(a => ` Alerta de precio: ${a.name} se vende a S/ ${a.price_unit.toFixed(2)}, bajo su costo S/ ${a.unit_cost.toFixed(2)}.`)
+].join('')
+const NO_NOTES: DecisionNotes = { notes: [], price_alerts: [] }
 
 const holdAll = (items: DraftItem[]): Reservation[] => {
   const totals = new Map<string, number>()
@@ -120,7 +127,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         delete op!.reservations
         return finish({ status: 'rejected', operation_id: id, message })
       }
-      const review = async (reasons: ReviewReason[], items: DraftItem[], reservations: Reservation[]) => {
+      const review = async (reasons: ReviewReason[], items: DraftItem[], reservations: Reservation[], extra: DecisionNotes = NO_NOTES) => {
         op!.state = 'review'
         op!.reasons = reasons
         op!.reservations = reservations
@@ -129,7 +136,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         const pendingText = reasons.map(r => r.message).join(' ')
         return finish({
           status: 'pending_review', operation_id: id,
-          message: `Venta por confirmar guardada (referencia ${id}). No se registró todavía: se validará en el POS. Motivo: ${pendingText}${reservations.length ? ' Se reservó el stock disponible de los artículos identificados.' : ''}${alertText(alerts)}`,
+          message: `Venta por confirmar guardada (referencia ${id}). No se registró todavía: se validará en el POS. Motivo: ${pendingText}${reservations.length ? ' Se reservó el stock disponible de los artículos identificados.' : ''}${notesText(extra)}${alertText(alerts)}`,
           result: {
             reference: id,
             // Agent 1's doubt code (ambiguous_product, product_not_found…) and the ungrounded flag are kept.
@@ -138,6 +145,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
               ...(detail?.doubt ? { doubt: detail.doubt } : {}), ...(detail?.ungrounded ? { ungrounded: true } : {})
             })),
             pending: pendingText,
+            notes: extra.notes, price_alerts: extra.price_alerts,
             items, reservations,
             review_expires_at: new Date(op!.expires_at).toISOString(),
             alerts,
@@ -198,11 +206,11 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
       // PROCESS 2: deterministic verification and decision.
       let decision: Awaited<ReturnType<SalesAgentDependencies['validate']>>
       try {
-        decision = await deps.validate(proposal, await reservedTotals(op.id))
+        decision = await deps.validate(proposal, await reservedTotals(op.id), { role: seller.role ?? null })
       } catch {
         return finish({ status: 'rejected', operation_id: id, message: 'No se pudo verificar el pedido con el catálogo del POS. No se registró una venta. Reintenta con otro request_id.' })
       }
-      if (decision.kind === 'review') return review(decision.reasons, decision.items, decision.reservations)
+      if (decision.kind === 'review') return review(decision.reasons, decision.items, decision.reservations, decision)
 
       op.draft = decision.sale
       delete op.reasons
@@ -213,8 +221,8 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         const alerts = await alertsFor(op.draft.items.map(i => i.product_id), holdAll(op.draft.items), op.id)
         return finish({
           status: 'rejected', operation_id: id,
-          message: `Con datos reales se habría registrado directamente por S/ ${op.draft.total.toFixed(2)}.${alertText(alerts)}`,
-          result: { would_be: 'completed', reference: null, total: op.draft.total, currency: op.draft.currency, items: op.draft.items, alerts }
+          message: `Con datos reales se habría registrado directamente por S/ ${op.draft.total.toFixed(2)}.${notesText(decision)}${alertText(alerts)}`,
+          result: { would_be: 'completed', reference: null, total: op.draft.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts }
         })
       }
       try {
@@ -227,8 +235,8 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
         const alerts = await alertsFor(op.draft.items.map(i => i.product_id))
         return await finish({
           status: 'completed', operation_id: id,
-          message: `Venta registrada correctamente (referencia ${result.saleId}).${alertText(alerts)}`,
-          result: { reference: result.saleId, total: result.total, currency: op.draft.currency, items: op.draft.items, alerts }
+          message: `Venta registrada correctamente (referencia ${result.saleId}).${notesText(decision)}${alertText(alerts)}`,
+          result: { reference: result.saleId, total: result.total, currency: op.draft.currency, items: op.draft.items, alerts, notes: decision.notes, price_alerts: decision.price_alerts }
         })
       } catch (error) {
         // A storage error after receiving the receipt must not report a failed sale.
@@ -241,7 +249,7 @@ export const makeSalesAgent = (deps: SalesAgentDependencies) => async (request: 
           // reserving only what is available now (re-checked; falls back to the requested quantities).
           let reservations = holdAll(decision.items)
           try {
-            const recheck = await deps.validate(proposal, await reservedTotals(op.id))
+            const recheck = await deps.validate(proposal, await reservedTotals(op.id), { role: seller.role ?? null })
             if (recheck.kind === 'review') reservations = recheck.reservations
           } catch {}
           // error.message is only the database error code; details stay in the server log.

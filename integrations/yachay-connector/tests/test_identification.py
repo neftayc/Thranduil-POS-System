@@ -11,7 +11,7 @@ from yachay_connector.selection import SelectionSigner
 async def identify(service, fake, session="sess-ana"):
     started = await service.select_system("pos")
     fake.identification.update(status="approved", session=session)
-    return await service.check_identification(started["selection_token"])
+    return await service.check_identification(started["selection_token"], "472")
 
 
 def instruction_calls(fake):
@@ -47,11 +47,13 @@ async def test_check_identification_pending_then_approved(pos_identified):
     token = (await service.select_system("pos"))["selection_token"]
     assert (await service.check_identification(token))["status"] == "pending_identification"
     fake.identification["status"] = "approved"
-    active = await service.check_identification(token)
+    assert (await service.check_identification(token))["status"] == "requires_match"
+    active = await service.check_identification(token, "472")
     assert active["status"] == "selected"
     assert active["seller"] == {"name": "Ana Pérez", "role": "cashier"}
     assert active["message"].startswith("Sesión activa como Ana Pérez (cashier).")
     assert "si no es él o ella" in active["message"]
+    assert fake.seen[-2].read() and b'"match_code":"472"' in fake.seen[-2].content.replace(b" ", b"")
     assert active["prepared_context"]["system_id"] == "pos"
     assert "sess-ana" not in active["selection_token"]
     selection = service.signer.verify(active["selection_token"])
@@ -184,3 +186,24 @@ async def test_statuses_the_pos_never_returns_are_rejected(pos_identified):
             lambda _req, s=status: httpx.Response(200, json={"status": s, "operation_id": "op-1"})))
         with pytest.raises(ConnectorError, match="no reconocido"):
             await service.send_instruction(token, "vende un lápiz", str(uuid.uuid4()))
+
+
+@pytest.mark.asyncio
+async def test_number_matching_is_required_and_never_guessed(pos_identified):
+    service, fake = pos_identified
+    token = (await service.select_system("pos"))["selection_token"]
+    fake.identification["status"] = "approved"
+    needs = await service.check_identification(token)
+    assert needs["status"] == "requires_match"
+    assert "Nunca lo inventes" in needs["message"]
+    assert "selection_token" not in needs
+    wrong = await service.check_identification(token, "111")
+    assert wrong["status"] == "match_mismatch"
+    assert "Quedan 2 intentos" in wrong["message"]
+    with pytest.raises(ConnectorError, match="solo dígitos"):
+        await service.check_identification(token, "abc")
+    active = await service.check_identification(token, " 4 7 2 ")
+    assert active["status"] == "selected"
+    fake.identification["status"] = "denied"
+    with pytest.raises(ConnectorError, match="no coincidió"):
+        await service.check_identification((await service.select_system("pos"))["selection_token"], "999")

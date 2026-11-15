@@ -152,8 +152,8 @@ class Connector:
             response["seller"] = seller
             response["message"] = (
                 f"Sesión activa como {seller['name']} ({seller['role']}). Muéstrale al vendedor este "
-                "nombre y rol antes de operar: si no es él o ella, que no dicte pedidos, vuelva a "
-                "seleccionar el sistema y pida al dueño revocar esta sesión en el POS."
+                "nombre y rol: si no es él o ella, que no dicte pedidos y pida al dueño revocar esta "
+                "sesión en el POS."
             )
         return response
 
@@ -190,23 +190,44 @@ class Connector:
             ),
         }
 
-    async def check_identification(self, selection_token: str) -> dict[str, Any]:
+    async def check_identification(self, selection_token: str, match_code: str | None = None) -> dict[str, Any]:
         system, selection = self._verify(selection_token)
+        if match_code is not None:
+            match_code = str(match_code).strip().replace(" ", "")
+            if not match_code.isdigit() or not 1 <= len(match_code) <= 8:
+                raise ConnectorError("El número debe tener solo dígitos, tal como lo muestra la página del sistema")
         if not system.requires_identification:
             raise ConnectorError("Este sistema no requiere identificación")
         if selection.state == "active":
             raise ConnectorError("La identificación ya está completa; usa el selection_token vigente")
         if selection.state != "pending" or not selection.ref:
             raise ConnectorError("Selección inválida; vuelve a seleccionar el sistema")
-        data = await self._identification(system, {"action": "status", "identification_id": selection.ref})
+        body: dict[str, Any] = {"action": "status", "identification_id": selection.ref}
+        if match_code:
+            body["match_code"] = match_code
+        data = await self._identification(system, body)
         status = data.get("status")
         if status == "pending":
             return {
                 "status": "pending_identification", "active_system": system.id,
                 "message": "El código aún no fue aprobado. Pide al vendedor completar la aprobación y vuelve a llamar check_identification con el mismo selection_token.",
             }
+        if status == "requires_match":
+            # Number matching: the number is shown ONLY on the seller's page, so a phisher who
+            # started this request elsewhere cannot finish it.
+            return {
+                "status": "requires_match", "active_system": system.id,
+                "message": "El código ya fue aprobado. Pide al vendedor el número que le muestra la página del sistema y vuelve a llamar check_identification con match_code. Nunca lo inventes ni lo adivines.",
+            }
+        if status == "match_mismatch":
+            left = data.get("attempts_left")
+            left_text = f" Quedan {left} intentos." if isinstance(left, int) and 0 < left < 10 else ""
+            return {
+                "status": "match_mismatch", "active_system": system.id,
+                "message": f"El número no coincide con el de la página.{left_text} Pide al vendedor que lo lea de nuevo.",
+            }
         if status in {"expired", "denied"}:
-            reason = "venció" if status == "expired" else "fue rechazado"
+            reason = "venció" if status == "expired" else "fue rechazado o el número no coincidió"
             raise ConnectorError(f"El código de identificación {reason}. Vuelve a seleccionar el sistema para obtener uno nuevo.")
         session = data.get("session")
         seller = data.get("seller")

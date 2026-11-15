@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto'
 
 /**
  * Seller identification for the Yachay connector (device-flow style).
@@ -7,7 +7,10 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID, 
  *    only its hash is stored), a short user code and the link of THIS POS (/vincular).
  * 2. The seller opens the link, signs in with HIS/HER POS user and approves the code. The
  *    POS opens a dedicated Supabase session for the seller (never the service key).
- * 3. The connector polls with the handle and receives, ONCE, an opaque session reference.
+ * 3. Number matching: after approving, the PAGE shows a 3-digit number that must be typed in
+ *    the Claude chat. A phisher who started the request in their own chat never sees the
+ *    victim's page, so they cannot complete it.
+ * 4. The connector polls with the handle + number and receives, ONCE, an opaque session reference.
  *    Every later call carries it in X-Yachay-Session; the POS re-validates the seller.
  *
  * No password, token or reference is ever logged or returned in error messages.
@@ -16,6 +19,9 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID, 
 export const SELLER_ROLES = new Set(['owner', 'manager', 'cashier'])
 export const IDENTIFICATION_TTL_SECONDS = 600
 export const MAX_APPROVAL_FAILURES = 5
+export const MAX_MATCH_FAILURES = 3
+/** Time to type the number in Claude after approving on the page. */
+export const MATCH_TTL_SECONDS = 300
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const LIMA_OFFSET_MS = -5 * 60 * 60 * 1000 // Peru has no DST.
 
@@ -43,6 +49,10 @@ export type IdentificationRecord = {
   session_ref_enc?: string
   seller?: { name: string; role: string }
   session_expires_at?: number
+  /** Created at approval; revoked if the number is never matched. */
+  session_id?: string
+  match_hash?: string
+  match_failures?: number
 }
 
 export type SellerSessionRecord = {
@@ -225,6 +235,27 @@ export const makeSellerSessions = (deps: {
     return session
   }
 
+  /**
+   * Revokes in the POS first (immediate effect), then closes the Supabase session with a
+   * valid access token (refreshing it if needed). A failure to close it is logged and reported.
+   */
+  const revokeSession = (id: string): Promise<{ revoked: boolean; supabase_signed_out: boolean }> =>
+    lock(`session:${id}`, async () => {
+      const session = await deps.store.getSession(id)
+      if (!session) return { revoked: false, supabase_signed_out: false }
+      if (!session.revoked_at) await deps.store.saveSession({ ...session, revoked_at: now() })
+      let tokens: AuthTokens
+      try {
+        tokens = deps.sealer.open<AuthTokens>(session.tokens_enc)
+        if (tokens.expires_at * 1000 <= now() + 30_000) tokens = await deps.auth.refresh(tokens.refresh_token)
+      } catch {
+        // Refresh failed: the Supabase session is already invalid (or unreachable); nothing to close.
+        log(`no se pudo renovar la sesión de Supabase de la vinculación ${id} para cerrarla; ya está revocada en el POS`)
+        return { revoked: true, supabase_signed_out: false }
+      }
+      return { revoked: true, supabase_signed_out: await signOutQuietly(tokens.access_token, id) }
+    })
+
   return {
     async start(verificationUrl: string) {
       const secret = randomBytes(32).toString('base64url')
@@ -244,18 +275,37 @@ export const makeSellerSessions = (deps: {
       }
     },
 
-    async status(handle: string) {
+    /**
+     * Connector polling. After approval the reference is delivered only with the number shown on
+     * the /vincular page (match_code). 3 wrong numbers or the time running out deny the request
+     * and revoke the session created at approval. approved → delivered is atomic (exactly once).
+     */
+    async status(handle: string, matchCode?: string) {
       const parts = splitRef(handle)
       if (!parts) return { status: 'denied' as const }
-      // approved → delivered is atomic: the session reference is delivered exactly once.
       return lock(`identification:${parts.id}`, async () => {
         const record = await deps.store.getIdentification(parts.id)
         if (!record || !sameHash(parts.secret, record.secret_hash)) return { status: 'denied' as const }
         if (record.status === 'denied') return { status: 'denied' as const }
-        if (record.status === 'delivered' || (record.status === 'pending' && record.expires_at <= now())) return { status: 'expired' as const }
-        if (record.status === 'pending') return { status: 'pending' as const }
+        if (record.status === 'delivered') return { status: 'expired' as const }
+        if (record.status === 'pending') return { status: record.expires_at <= now() ? 'expired' as const : 'pending' as const }
+        // approved: waiting for the number shown on the page
+        const fail = async <S extends 'expired' | 'denied'>(status: S) => {
+          await deps.store.saveIdentification({ ...record, status: 'denied', session_ref_enc: undefined, match_hash: undefined })
+          if (record.session_id) await revokeSession(record.session_id)
+          return { status }
+        }
+        if (record.expires_at <= now()) return fail('expired')
+        const given = String(matchCode || '').replace(/\D/g, '')
+        if (!given) return { status: 'requires_match' as const }
+        if (!record.match_hash || !sameHash(given, record.match_hash)) {
+          const failures = (record.match_failures || 0) + 1
+          if (failures >= MAX_MATCH_FAILURES) return fail('denied')
+          await deps.store.saveIdentification({ ...record, match_failures: failures })
+          return { status: 'match_mismatch' as const, attempts_left: MAX_MATCH_FAILURES - failures }
+        }
         const session = deps.sealer.open<string>(record.session_ref_enc!)
-        await deps.store.saveIdentification({ ...record, status: 'delivered', session_ref_enc: undefined })
+        await deps.store.saveIdentification({ ...record, status: 'delivered', session_ref_enc: undefined, match_hash: undefined })
         return { status: 'approved' as const, session, seller: record.seller!, expires_at: Math.floor(record.session_expires_at! / 1000) }
       })
     },
@@ -317,11 +367,15 @@ export const makeSellerSessions = (deps: {
           tokens_enc: deps.sealer.seal(tokens)
         }
         await deps.store.saveSession(session)
+        const matchCode = String(randomInt(100, 1000))
         await deps.store.saveIdentification({
           ...record, status: 'approved', session_ref_enc: deps.sealer.seal(`${session.id}.${secret}`),
-          seller: { name: profile.name, role: profile.role }, session_expires_at: session.expires_at
+          seller: { name: profile.name, role: profile.role }, session_expires_at: session.expires_at,
+          session_id: session.id, match_hash: sha256(matchCode).toString('hex'), match_failures: 0,
+          expires_at: now() + MATCH_TTL_SECONDS * 1000
         })
-        return { name: profile.name, role: profile.role, expires_at: session.expires_at }
+        // Shown ONLY on the seller's /vincular page; it must be typed in the Claude chat.
+        return { name: profile.name, role: profile.role, expires_at: session.expires_at, match_code: matchCode }
       })
     },
 
@@ -366,26 +420,8 @@ export const makeSellerSessions = (deps: {
         }))
     },
 
-    /**
-     * Revokes in the POS first (immediate effect), then closes the Supabase session with a
-     * valid access token (refreshing it if needed). A failure to close it is logged and reported.
-     */
     async revoke(id: string): Promise<{ revoked: boolean; supabase_signed_out: boolean }> {
-      return lock(`session:${id}`, async () => {
-        const session = await deps.store.getSession(id)
-        if (!session) return { revoked: false, supabase_signed_out: false }
-        if (!session.revoked_at) await deps.store.saveSession({ ...session, revoked_at: now() })
-        let tokens: AuthTokens
-        try {
-          tokens = deps.sealer.open<AuthTokens>(session.tokens_enc)
-          if (tokens.expires_at * 1000 <= now() + 30_000) tokens = await deps.auth.refresh(tokens.refresh_token)
-        } catch {
-          // Refresh failed: the Supabase session is already invalid (or unreachable); nothing to close.
-          log(`no se pudo renovar la sesión de Supabase de la vinculación ${id} para cerrarla; ya está revocada en el POS`)
-          return { revoked: true, supabase_signed_out: false }
-        }
-        return { revoked: true, supabase_signed_out: await signOutQuietly(tokens.access_token, id) }
-      })
+      return revokeSession(id)
     }
   }
 }

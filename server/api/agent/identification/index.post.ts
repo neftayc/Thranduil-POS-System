@@ -5,7 +5,11 @@ import { getSellerSessions, getVerificationUrl, requireAgentCredential } from '.
 // yachay-identification/1 — called ONLY by the connector (service credential).
 const schema = z.discriminatedUnion('action', [
   z.object({ protocol: z.literal('yachay-identification/1'), action: z.literal('start') }).strict(),
-  z.object({ protocol: z.literal('yachay-identification/1'), action: z.literal('status'), identification_id: z.string().min(1).max(512) }).strict()
+  z.object({
+    protocol: z.literal('yachay-identification/1'), action: z.literal('status'), identification_id: z.string().min(1).max(512),
+    // Number shown on /vincular after approving, typed by the seller in the Claude chat.
+    match_code: z.string().regex(/^\d{1,8}$/).optional()
+  }).strict()
 ])
 
 export default defineEventHandler(async (event) => {
@@ -14,5 +18,5 @@ export default defineEventHandler(async (event) => {
   if (!parsed.success) throw createError({ statusCode: 400, statusMessage: 'Contrato yachay-identification/1 inválido' })
   const sessions = getSellerSessions(event)
   if (parsed.data.action === 'start') return sessions.start(getVerificationUrl(event))
-  return sessions.status(parsed.data.identification_id)
+  return sessions.status(parsed.data.identification_id, parsed.data.match_code)
 })

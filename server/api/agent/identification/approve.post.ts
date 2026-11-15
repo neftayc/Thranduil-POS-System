@@ -17,7 +17,8 @@ export default defineEventHandler(async (event) => {
   }
   try {
     const seller = await getSellerSessions(event).approve(field('user_code', 16), field('email', 254), field('password', 256), getRequestIP(event) || 'desconocida')
-    return { ok: true, seller: { name: seller.name, role: seller.role }, expires_at: new Date(seller.expires_at).toISOString() }
+    // match_code goes only to the seller's page; it must be typed in the Claude chat.
+    return { ok: true, seller: { name: seller.name, role: seller.role }, expires_at: new Date(seller.expires_at).toISOString(), match_code: seller.match_code }
   } catch (error) {
     if (error instanceof IdentificationError) throw createError({ statusCode: 400, statusMessage: error.message })
     if ((error as any)?.statusCode) throw error

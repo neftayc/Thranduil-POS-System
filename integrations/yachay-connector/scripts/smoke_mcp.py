@@ -93,6 +93,12 @@ async def main():
                 await asyncio.sleep(5)
                 checked = tool_data(await rpc(100 + attempt, "tools/call", {"name": "check_identification", "arguments": {"selection_token": token}}))
                 identification_status = checked.get("status")
+            for attempt in range(3):
+                if identification_status not in {"requires_match", "match_mismatch"}:
+                    break
+                number = input("Escribe el número que muestra la página: ").strip()
+                checked = tool_data(await rpc(200 + attempt, "tools/call", {"name": "check_identification", "arguments": {"selection_token": token, "match_code": number}}))
+                identification_status = checked.get("status")
             assert identification_status == "selected", "La identificación no se completó"
             seller = checked["seller"]
             token = checked["selection_token"]

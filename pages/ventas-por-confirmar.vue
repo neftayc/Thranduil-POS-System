@@ -10,7 +10,7 @@ type CaseReason = { code: string; label: string; message: string; line: number |
 type ReviewCase = {
   id: string; version: string; seller_id: string; seller_name: string | null; saved_at: string; expires_at: string
   dictation: string[]; reasons: CaseReason[]; lines: CaseLine[]; payment_method: string; payment_defaulted: boolean
-  price_review: boolean; notes: string[]
+  price_review: boolean; notes: string[]; expired: boolean
 }
 type EditLine = {
   key: number; phrase: string; product_id: string | null; name: string | null; quantity: number; unit: string | null
@@ -18,16 +18,20 @@ type EditLine = {
   search: string; results: Array<{ id: string; name: string; sale_price: number | null; unit: string | null }>
 }
 type Checked = { name: string; qty: number; unit_name: string; price_unit: number; list_price?: number; total: number; below_cost: boolean; unit_cost: number | null } | null
-type Preview = { ok: boolean; errors: Array<{ line: number | null; message: string }>; lines: Checked[]; total: number; dry_run: boolean }
+type Preview = {
+  ok: boolean; errors: Array<{ line: number | null; message: string }>; lines: Checked[]; total: number; dry_run: boolean
+  changes: Array<{ line: number; message: string }>; changes_token: string | null
+}
 type Edit = {
   lines: EditLine[]; payment_method: string; note: string; preview: Preview | null; previewKey: string
-  busy: boolean; message: string; error: boolean; done: boolean
+  busy: boolean; message: string; error: boolean; done: boolean; acceptChanges: boolean
 }
 
 const cases = ref<ReviewCase[]>([])
 const paymentMethods = ref<Array<{ code: string; label: string }>>([])
 const dryRun = ref(false)
 const loading = ref(false)
+const filter = ref<'pending' | 'expired' | 'all'>('pending')
 const listMessage = ref('')
 const edits = reactive<Record<string, Edit>>({})
 let lineKey = 0
@@ -47,14 +51,14 @@ const toEdit = (c: ReviewCase): Edit => ({
     price_unit: l.price_said !== null ? String(l.price_said) : '',
     price_said: l.price_said, list_price: l.list_price, options: l.options, reasons: l.reasons, search: '', results: []
   })),
-  payment_method: c.payment_method || 'efectivo', note: '', preview: null, previewKey: '', busy: false, message: '', error: false, done: false
+  payment_method: c.payment_method || 'efectivo', note: '', preview: null, previewKey: '', busy: false, message: '', error: false, done: false, acceptChanges: false
 })
 
 const load = async () => {
   loading.value = true
   listMessage.value = ''
   try {
-    const data = await $fetch<{ dry_run: boolean; cases: ReviewCase[]; payment_methods: Array<{ code: string; label: string }> }>('/api/agent/review')
+    const data = await $fetch<{ dry_run: boolean; cases: ReviewCase[]; payment_methods: Array<{ code: string; label: string }> }>('/api/agent/review', { query: { filter: filter.value } })
     dryRun.value = data.dry_run
     paymentMethods.value = data.payment_methods || []
     cases.value = data.cases || []
@@ -72,6 +76,7 @@ const payload = (c: ReviewCase) => {
   return {
     version: c.version,
     payment_method: e.payment_method,
+    accept_changes: e.acceptChanges && e.preview?.changes_token ? e.preview.changes_token : undefined,
     note: e.note,
     lines: e.lines.map(l => ({
       product_id: l.product_id, quantity: Number(l.quantity), unit: l.unit || null,
@@ -79,10 +84,10 @@ const payload = (c: ReviewCase) => {
     }))
   }
 }
-const keyOf = (c: ReviewCase) => JSON.stringify(payload(c))
+const keyOf = (c: ReviewCase) => JSON.stringify({ ...payload(c), accept_changes: undefined })
 const previewFresh = (c: ReviewCase) => {
   const e = edits[c.id]
-  return Boolean(e.preview?.ok && e.previewKey === keyOf(c))
+  return Boolean(e.preview?.ok && e.previewKey === keyOf(c) && (!e.preview.changes.length || e.acceptChanges))
 }
 
 const verify = async (c: ReviewCase) => {
@@ -92,7 +97,8 @@ const verify = async (c: ReviewCase) => {
   try {
     const body = payload(c)
     e.preview = await $fetch<Preview>(`/api/agent/review/${c.id}/preview`, { method: 'POST', body })
-    e.previewKey = JSON.stringify(body)
+    e.previewKey = keyOf(c)
+    e.acceptChanges = false
     e.error = !e.preview.ok
     e.message = e.preview.ok ? `Todo verificado. Total ${money(e.preview.total)}.` : 'Corrige lo indicado antes de aprobar.'
   } catch (err: any) {
@@ -181,13 +187,22 @@ onMounted(load)
             verifica y aprueba; o anúlala. Mientras esperan, su stock queda reservado.
           </p>
         </div>
-        <button class="ui-btn-secondary" :disabled="loading" @click="load">{{ loading ? 'Cargando…' : 'Actualizar' }}</button>
+        <div class="flex flex-wrap items-center gap-2">
+          <select v-model="filter" class="ui-select w-40" @change="load">
+            <option value="pending">Pendientes</option>
+            <option value="expired">Vencidas</option>
+            <option value="all">Todas</option>
+          </select>
+          <button class="ui-btn-secondary" :disabled="loading" @click="load">{{ loading ? 'Cargando…' : 'Actualizar' }}</button>
+        </div>
       </div>
       <div v-if="dryRun" class="ui-alert mt-4">
         Modo simulación (POS_AGENT_DRY_RUN): aprobar solo muestra lo que se registraría; no se crea ninguna venta.
       </div>
       <div v-if="listMessage" class="ui-alert-error mt-4">{{ listMessage }}</div>
-      <p v-if="!loading && !cases.length && !listMessage" class="ui-empty-state mt-4">No hay ventas por confirmar.</p>
+      <p v-if="!loading && !cases.length && !listMessage" class="ui-empty-state mt-4">
+        {{ filter === 'expired' ? 'No hay ventas vencidas.' : filter === 'all' ? 'No hay ventas por confirmar ni vencidas.' : 'No hay ventas por confirmar.' }}
+      </p>
     </section>
 
     <section v-for="c in cases" :key="c.id" class="ui-card">
@@ -196,9 +211,13 @@ onMounted(load)
           <h3 class="text-base font-semibold text-slate-800">
             {{ c.seller_name || 'Vendedor ' + c.seller_id.slice(0, 8) }}
             <span class="ui-meta-chip ml-2">{{ formatDate(c.saved_at) }}</span>
-            <span class="ui-pill-low ml-2">{{ hoursLeft(c.expires_at) }}</span>
+            <span v-if="c.expired" class="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Vencida</span>
+            <span v-else class="ui-pill-low ml-2">{{ hoursLeft(c.expires_at) }}</span>
           </h3>
           <p class="mt-1 text-xs text-slate-500">Referencia {{ c.id }}</p>
+          <p v-if="c.expired" class="mt-1 text-xs text-red-700">
+            Venció el {{ formatDate(c.expires_at) }}: ya no tiene stock reservado. Al aprobar se vuelven a revisar el stock y el precio.
+          </p>
         </div>
       </div>
 
@@ -290,6 +309,15 @@ onMounted(load)
         <ul v-if="edits[c.id].preview && !edits[c.id].preview!.ok" class="ui-alert-error mt-4 list-disc pl-6">
           <li v-for="(err, i) in edits[c.id].preview!.errors" :key="i">{{ err.message }}</li>
         </ul>
+
+        <div v-if="edits[c.id].preview?.ok && edits[c.id].preview!.changes.length" class="ui-alert mt-4">
+          <p class="font-semibold">Cambió desde el dictado:</p>
+          <p v-for="(ch, i) in edits[c.id].preview!.changes" :key="i">{{ ch.message }}</p>
+          <label class="mt-2 flex items-center gap-2">
+            <input v-model="edits[c.id].acceptChanges" type="checkbox" />
+            Acepto estos cambios y quiero registrar la venta con los datos actuales.
+          </label>
+        </div>
 
         <div class="mt-5 flex flex-wrap gap-3">
           <button class="ui-btn-secondary" :disabled="edits[c.id].busy" @click="verify(c)">Verificar</button>

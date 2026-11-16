@@ -292,15 +292,115 @@ test('pantalla vieja: si el vendedor corrigió la venta, aprobar pide recargar',
   } finally { await t.cleanup() }
 })
 
-test('vencidas: no se listan ni se resuelven (decisión del dueño pendiente)', async () => {
+test('vencidas: misma lista con filtro Pendientes (por defecto) / Vencidas / Todas y marca vencida', async () => {
+  const t = await setup()
+  try {
+    const old = await priceModifiedSale(t)
+    t.tick(48 * 3600_000 + 1)
+    const fresh = await t.dictate('3 lapiceros a 2 soles', consolidated([{ phrase: '3 lapiceros a 2 soles', product_id: LAPICERO.id, quantity: 3, price_said: 2 }]))
+    assert.deepEqual((await t.desk.list()).map(c => [c.id, c.expired]), [[fresh.operation_id, false]])
+    assert.deepEqual((await t.desk.list('pending')).map(c => c.id), [fresh.operation_id])
+    assert.deepEqual((await t.desk.list('expired')).map(c => [c.id, c.expired]), [[old, true]])
+    assert.deepEqual((await t.desk.list('all')).map(c => [c.id, c.expired]), [[old, true], [fresh.operation_id, false]])
+    await assert.rejects(t.desk.approve(randomUUID(), { version: 'x', lines: [], payment_method: 'efectivo' }, OWNER), ReviewNotFoundError)
+  } finally { await t.cleanup() }
+})
+
+test('vencida sin cambios: al aprobar se re-chequea stock (ya sin reserva) y se registra una sola vez', async () => {
   const t = await setup()
   try {
     const id = await priceModifiedSale(t)
-    const [c] = await t.desk.list()
     t.tick(48 * 3600_000 + 1)
-    assert.equal((await t.desk.list()).length, 0)
-    await assert.rejects(t.desk.approve(id, prefilled(c), OWNER), /venció/)
-    await assert.rejects(t.desk.approve(randomUUID(), prefilled(c), OWNER), ReviewNotFoundError)
+    assert.equal((await t.reserved()).size, 0, 'la reserva ya se liberó')
+    const [c] = await t.desk.list('expired')
+    const preview = await t.desk.preview(id, prefilled(c))
+    assert.equal(preview.ok, true)
+    assert.deepEqual(preview.changes, [])
+    const done = await t.desk.approve(id, prefilled(c), OWNER)
+    assert.equal(done.status, 'completed')
+    assert.deepEqual(await t.desk.approve(id, prefilled(c), OWNER), done)
+    assert.equal(t.calls.desk.length, 1)
+    assert.equal(t.calls.desk[0].items[0].price_unit, 6)
+    assert.equal((await t.desk.list('all')).length, 0)
+  } finally { await t.cleanup() }
+})
+
+test('vencida: si otra venta tomó el stock, se muestra y no se registra', async () => {
+  const t = await setup()
+  try {
+    const id = await priceModifiedSale(t)
+    t.tick(48 * 3600_000 + 1)
+    // A new pending sale now holds 19 of the 20 notebooks; the expired one needs 2.
+    await t.dictate('19 cuadernos a 6 soles', consolidated([{ phrase: '19 cuadernos a 6 soles', product_id: CUADERNO.id, quantity: 19, price_said: 6 }]))
+    const [c] = await t.desk.list('expired')
+    const preview = await t.desk.preview(id, prefilled(c))
+    assert.equal(preview.ok, false)
+    assert.match(preview.errors[0].message, /Stock insuficiente de Cuaderno.*hay 1 .*19 reservadas/)
+    await assert.rejects(t.desk.approve(id, prefilled(c), OWNER), ReviewInvalidError)
+    assert.equal(t.calls.desk.length, 0)
+    assert.equal((await t.store.getOperation(id)).state, 'review')
+  } finally { await t.cleanup() }
+})
+
+test('vencida: si cambió el precio de lista, se muestra y no se registra hasta aceptar ese cambio', async () => {
+  const t = await setup()
+  try {
+    const answer = await t.dictate('2 cuadernos', consolidated([{ phrase: '2 cuadernos', product_id: CUADERNO.id, quantity: 2, confidence: 'baja', question: '¿A4?' }]))
+    assert.equal(answer.status, 'pending_review')
+    t.tick(48 * 3600_000 + 1)
+    t.state.prices.set(CUADERNO.id, 5.5)
+    const [c] = await t.desk.list('expired')
+    assert.equal(c.lines[0].list_price, 5)
+    const preview = await t.desk.preview(c.id, prefilled(c))
+    assert.equal(preview.ok, true)
+    assert.equal(preview.total, 11)
+    assert.match(preview.changes[0].message, /cambió de S\/ 5\.00 a S\/ 5\.50/)
+    assert.ok(preview.changes_token)
+    await assert.rejects(t.desk.approve(c.id, prefilled(c), OWNER), err =>
+      err instanceof ReviewInvalidError && err.changes.length === 1 && /venció y cambió/.test(err.message))
+    await assert.rejects(t.desk.approve(c.id, { ...prefilled(c), accept_changes: 'otro' }, OWNER), ReviewInvalidError)
+    assert.equal(t.calls.desk.length, 0, 'nada registrado sin aceptar')
+    const done = await t.desk.approve(c.id, { ...prefilled(c), accept_changes: preview.changes_token }, OWNER)
+    assert.equal(done.status, 'completed')
+    assert.equal(t.calls.desk[0].items[0].price_unit, 5.5)
+    // A pending (not expired) sale is not subject to this check.
+    t.state.prices.set(CUADERNO.id, 6)
+    const live = await t.dictate('1 cuaderno', consolidated([{ phrase: '1 cuaderno', product_id: CUADERNO.id, quantity: 1, confidence: 'baja', question: '¿A4?' }]))
+    const [p] = await t.desk.list()
+    t.state.prices.set(CUADERNO.id, 7)
+    assert.deepEqual((await t.desk.preview(live.operation_id, prefilled(p))).changes, [])
+  } finally { await t.cleanup() }
+})
+
+test('vencida: anular funciona igual que una pendiente', async () => {
+  const t = await setup()
+  try {
+    const id = await priceModifiedSale(t)
+    t.tick(48 * 3600_000 + 1)
+    const [c] = await t.desk.list('expired')
+    const res = await t.desk.annul(id, { version: c.version, note: 'no volvió' }, OWNER)
+    assert.match(res.message, /anulada en el POS/)
+    assert.deepEqual(await t.desk.annul(id, { version: c.version }, OWNER), res)
+    const op = await t.store.getOperation(id)
+    assert.equal(op.state, 'cancelled')
+    assert.equal(op.review.decision, 'annulled')
+    assert.equal((await t.desk.list('all')).length, 0)
+  } finally { await t.cleanup() }
+})
+
+test('vencida en simulación (dry-run): aprobar solo muestra lo que haría', async () => {
+  let executorCalls = 0
+  const t = await setup({ dryRun: true, execute: async () => { executorCalls++; throw new Error('no') } })
+  try {
+    const id = await priceModifiedSale(t)
+    t.tick(48 * 3600_000 + 1)
+    const [c] = await t.desk.list('expired')
+    const done = await t.desk.approve(id, prefilled(c), OWNER)
+    assert.equal(done.result.would_be, 'completed')
+    assert.equal(done.result.dry_run, true)
+    assert.deepEqual(await t.desk.approve(id, prefilled(c), OWNER), done)
+    assert.equal(executorCalls, 0)
+    assert.equal((await t.store.getOperation(id)).state, 'simulated')
   } finally { await t.cleanup() }
 })
 

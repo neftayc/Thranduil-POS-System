@@ -14,7 +14,8 @@ export default defineEventHandler(async (event) => {
       version: String(body.version || ''),
       lines: Array.isArray(body.lines) ? body.lines : [],
       payment_method: String(body.payment_method || ''),
-      note: typeof body.note === 'string' ? body.note : undefined
+      note: typeof body.note === 'string' ? body.note : undefined,
+      accept_changes: typeof body.accept_changes === 'string' ? body.accept_changes : undefined
     }, { id: reviewer.id, role: reviewer.role })
   } catch (error) {
     throw reviewHttpError(error)

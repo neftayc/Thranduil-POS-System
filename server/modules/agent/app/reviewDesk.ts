@@ -76,11 +76,19 @@ export type ReviewCase = {
   reservations: Array<{ product_id: string; qty: number }>
   price_review: boolean
   notes: string[]
+  /** Past POS_AGENT_REVIEW_TTL_HOURS: its reservation was released; stock and price are re-checked on approval. */
+  expired: boolean
 }
+/** Status filter of the review list (owner, 2026-11-16: expired ones in the same list, with a filter). */
+export type ReviewFilter = 'pending' | 'expired' | 'all'
 
 /** What the reviewer submits. price_unit null = official list price. */
 export type ResolutionLine = { product_id: string; quantity: number; unit: string | null; price_unit: number | null }
-export type Resolution = { version: string; lines: ResolutionLine[]; payment_method: string; note?: string }
+export type Resolution = {
+  version: string; lines: ResolutionLine[]; payment_method: string; note?: string
+  /** Expired sale: the changes_token of the preview whose changes (list price) the reviewer accepted. */
+  accept_changes?: string
+}
 export type Reviewer = { id: string; role: string }
 
 export type CheckedLine = DraftItem & { below_cost: boolean; unit_cost: number | null }
@@ -91,14 +99,19 @@ export type CheckResult = {
   total: number
   payment_method: string | null
   payment_methods: Array<{ code: string; label: string }>
+  /** Expired sale only: what changed since the seller dictated it (list price). Approval needs them accepted. */
+  changes: Array<{ line: number; message: string }>
+  changes_token: string | null
 }
 
 export class ReviewNotFoundError extends Error {}
-/** The operation cannot be resolved now (already resolved, changed, expired, being edited). */
+/** The operation cannot be resolved now (already resolved, changed, being edited). */
 export class ReviewConflictError extends Error {}
 /** The resolution does not pass the fact checks: nothing was registered. */
 export class ReviewInvalidError extends Error {
-  constructor (public errors: CheckResult['errors']) { super(errors.map(e => e.message).join(' ')) }
+  constructor (public errors: CheckResult['errors'], public changes: CheckResult['changes'] = [], public changesToken: string | null = null) {
+    super(errors.map(e => e.message).join(' '))
+  }
 }
 /** create_sale was dispatched and its answer was lost: indeterminate, a person must reconcile it. */
 export class ReviewPendingError extends Error {}
@@ -118,10 +131,12 @@ export const operationVersion = (op: Operation) => createHash('sha256')
   .update(JSON.stringify([op.state, op.messages.length, op.expires_at, op.reasons || [], op.reservations || []]))
   .digest('hex').slice(0, 16)
 
-const isLive = (op: Operation, now: number) => op.state === 'review' && op.expires_at > now
+const isExpired = (op: Operation, now: number) => op.expires_at <= now
+const matchesFilter = (op: Operation, now: number, filter: ReviewFilter) => op.state === 'review' &&
+  (filter === 'all' || (filter === 'expired') === isExpired(op, now))
 
 /** Turns an operation file into what the review screen shows. Reads only the file (no catalog calls). */
-export const describeOperation = (op: Operation, reviewTtlMs: number): ReviewCase => {
+export const describeOperation = (op: Operation, reviewTtlMs: number, now = Date.now()): ReviewCase => {
   const result = (op.response?.result || {}) as Record<string, any>
   const items: DraftItem[] = Array.isArray(result.items) ? result.items : []
   const names = new Map<string, string>()
@@ -183,7 +198,8 @@ export const describeOperation = (op: Operation, reviewTtlMs: number): ReviewCas
     payment_defaulted: Boolean(result.payment_defaulted) || (op.consolidated ? !op.consolidated.payment_phrase : !op.proposal?.payment_method),
     reservations: op.reservations || [],
     price_review: op.price_review?.status === 'pending',
-    notes: Array.isArray(result.notes) ? result.notes : []
+    notes: Array.isArray(result.notes) ? result.notes : [],
+    expired: isExpired(op, now)
   }
 }
 
@@ -200,11 +216,11 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
     }
   }
 
-  /** Live ventas por confirmar, oldest first. Expired ones are NOT listed (decision pending with the owner). */
-  const list = async (): Promise<ReviewCase[]> => (await store.listOperations())
-    .filter(op => isLive(op, now()))
+  /** Ventas por confirmar, oldest first: pending (live, default), expired (reservation released) or all. */
+  const list = async (filter: ReviewFilter = 'pending'): Promise<ReviewCase[]> => (await store.listOperations())
+    .filter(op => matchesFilter(op, now(), filter))
     .sort((a, b) => a.expires_at - b.expires_at)
-    .map(op => describeOperation(op, deps.reviewTtlMs))
+    .map(op => describeOperation(op, deps.reviewTtlMs, now()))
 
   /** Fact checks over the reviewer's resolution. Never trusts the file's prices or names. */
   const check = async (op: Operation, resolution: Pick<Resolution, 'lines' | 'payment_method'>): Promise<CheckResult & { sale: SaleDraft | null }> => {
@@ -215,8 +231,12 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
     if (!lines.length) errors.push({ line: null, message: 'La venta no tiene líneas.' })
     if (lines.length > MAX_LINES) errors.push({ line: null, message: `Máximo ${MAX_LINES} líneas.` })
     const dictated = new Map<string, number[]>()
-    for (const l of describeOperation(op, deps.reviewTtlMs).lines) {
+    const listSeen = new Map<string, number>() // product|unit → list price when the seller dictated it
+    const changes: CheckResult['changes'] = []
+    const expired = isExpired(op, now())
+    for (const l of describeOperation(op, deps.reviewTtlMs, now()).lines) {
       if (l.product_id && l.price_said !== null) dictated.set(l.product_id, [...(dictated.get(l.product_id) || []), l.price_said])
+      if (l.product_id && l.list_price !== null && l.unit) listSeen.set(`${l.product_id}|${l.unit}`, l.list_price)
     }
 
     for (const [index, line] of lines.slice(0, MAX_LINES).entries()) {
@@ -236,6 +256,10 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
       }
       if (!quantityFitsUnit(quantity, quote.unit_name)) { fail(`la cantidad ${quantity} no es válida para la presentación «${quote.unit_name}».`); continue }
       const official = round(quote.price)
+      const seen = listSeen.get(`${product.id}|${quote.unit_name}`)
+      if (expired && seen !== undefined && Math.abs(seen - official) > PRICE_TOLERANCE) {
+        changes.push({ line: n, message: `Línea ${n}: el precio de lista de ${product.name} cambió de ${money(seen)} a ${money(official)} desde el dictado.` })
+      }
       const asked = line.price_unit === null || line.price_unit === undefined || (line.price_unit as unknown) === '' ? null : Number(line.price_unit)
       if (asked !== null && (!Number.isFinite(asked) || asked <= 0 || asked > 1000000)) { fail(`el precio ${line.price_unit} no es válido.`); continue }
       if (asked === null && official <= 0) { fail(`${product.name} no tiene precio de lista: indica el precio.`); continue }
@@ -275,8 +299,10 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
     const items = checked.filter((i): i is CheckedLine => Boolean(i))
     const total = round(items.reduce((sum, item) => sum + item.total, 0), 2)
     const ok = !errors.length
+    const changesToken = changes.length ? createHash('sha256').update(JSON.stringify(changes)).digest('hex').slice(0, 16) : null
     return {
       ok, errors, lines: checked, total, payment_method: method?.code || null, payment_methods: methods,
+      changes, changes_token: changesToken,
       sale: ok ? {
         customer_id: null, payment_method: method!.code, currency: 'PEN', total,
         items: items.map(({ below_cost: _b, unit_cost: _u, ...item }) => item)
@@ -302,7 +328,6 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
       throw new ReviewPendingError('Esta venta se envió al POS y su resultado está pendiente de conciliación. Verifica en el historial de ventas antes de hacer algo más.')
     }
     if (op.state !== 'review') throw new ReviewConflictError(`Esta operación ya no está por confirmar (estado: ${op.state}).`)
-    if (op.expires_at <= now()) throw new ReviewConflictError('Esta venta por confirmar venció; su reserva ya se liberó.')
     if (op.inflight && now() - op.inflight.started_at < SELLER_EDITING_MS) throw new ReviewConflictError('El vendedor está corrigiendo esta venta en este momento. Espera unos segundos y recarga.')
     if (!version || version !== operationVersion(op)) throw new ReviewConflictError('La venta cambió desde que la abriste (el vendedor la corrigió). Recarga la lista.')
     return null
@@ -324,7 +349,12 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
     const previous = guard(op, resolution.version, 'approve')
     if (previous) return previous
     const verified = await check(op, resolution)
-    if (!verified.ok || !verified.sale) throw new ReviewInvalidError(verified.errors)
+    if (!verified.ok || !verified.sale) throw new ReviewInvalidError(verified.errors, verified.changes, verified.changes_token)
+    // Expired sale: something changed since the dictation (list price) → show it, register nothing,
+    // until the reviewer accepts exactly those changes.
+    if (verified.changes.length && resolution.accept_changes !== verified.changes_token) {
+      throw new ReviewInvalidError([{ line: null, message: 'La venta venció y cambió desde el dictado: revisa los cambios y acéptalos para registrarla.' }, ...verified.changes], verified.changes, verified.changes_token)
+    }
     const sale = verified.sale
     const at = new Date(now()).toISOString()
     const note = String(resolution.note || '').trim().slice(0, 500) || undefined

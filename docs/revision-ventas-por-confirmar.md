@@ -4,8 +4,9 @@ Pantalla **/ventas-por-confirmar** (menú «Ventas por confirmar»). Solo para *
 (rol en Supabase Auth, RPC `user_role`).
 
 ## Qué muestra
-Las ventas que el agente de voz dejó **por confirmar** (`state: "review"`) y que aún no vencen
-(`POS_AGENT_REVIEW_TTL_HOURS`, 48 h por defecto). La más antigua sale primero. Para cada una:
+Las ventas que el agente de voz dejó **por confirmar** (`state: "review"`). Por defecto se ven las que
+aún no vencen (`POS_AGENT_REVIEW_TTL_HOURS`, 48 h por defecto); el filtro muestra también las vencidas.
+La más antigua sale primero. Para cada una:
 vendedor, hora, cuánto falta para que venza, lo que dictó, los motivos en lenguaje claro y sus líneas
 (producto, cantidad, presentación, precio dictado y de lista, opciones que propuso el agente).
 Mientras espera, su stock queda reservado.
@@ -38,18 +39,24 @@ El vendedor que pregunte por esa venta en Claude recibe lo que decidió el revis
   lo que se registraría (`would_be: "completed"`) y nunca llama a `create_sale`.
 
 ## Ventas vencidas
-Hoy **no se listan**: al vencer se libera su reserva y el archivo se conserva. La decisión sobre qué
-hacer con ellas está pendiente del dueño.
+Decisión del dueño (16 nov 2026): van en la **misma lista**, con el filtro **Pendientes** (por defecto),
+**Vencidas** o **Todas**, y cada una lleva la insignia **Vencida**. Al vencer pierden su reserva de stock,
+pero el archivo se conserva. Por eso, al **verificar o aprobar** una vencida:
+- **Stock**: se vuelve a revisar con lo disponible hoy. Si ya no alcanza, se muestra y no se registra.
+- **Precio de lista**: si cambió desde el dictado, se muestra («cambió de S/ X a S/ Y») y no se registra
+  hasta que el revisor marca «Acepto estos cambios». Ese aviso vale solo para esos cambios exactos.
+- **Anular**, la idempotencia y la simulación funcionan igual que en una pendiente.
 
 ## API (todas exigen rol propietario o encargado)
 | Método | Ruta | Qué hace |
 |---|---|---|
-| GET | `/api/agent/review` | `{ dry_run, ttl_hours, payment_methods, cases[] }` |
+| GET | `/api/agent/review?filter=pending\|expired\|all` | `{ dry_run, filter, ttl_hours, payment_methods, cases[] }` (cada caso con `expired`) |
 | POST | `/api/agent/review/:id/preview` | `{ lines, payment_method }` → verificación sin registrar |
-| POST | `/api/agent/review/:id/approve` | `{ version, lines, payment_method, note? }` → registra (o simula) |
+| POST | `/api/agent/review/:id/approve` | `{ version, lines, payment_method, note?, accept_changes? }` → registra (o simula) |
 | POST | `/api/agent/review/:id/annul` | `{ version, note? }` → anula y libera la reserva |
 
 `lines[]` = `{ product_id, quantity, unit, price_unit }` (`price_unit: null` = lista).
-Respuestas de error: 404 no existe; 409 ya resuelta, cambió, vencida, el vendedor la está editando o
-pendiente de conciliación (`data.pending`); 422 no pasó la verificación (`data.errors[]`).
+Respuestas de error: 404 no existe; 409 ya resuelta, cambió, el vendedor la está editando o
+pendiente de conciliación (`data.pending`); 422 no pasó la verificación (`data.errors[]`; en vencidas, `data.changes[]` y `data.changes_token`, que se
+reenvía como `accept_changes` para aceptar esos cambios). `preview` devuelve también `changes` y `changes_token`.
 La lógica está en `server/modules/agent/app/reviewDesk.ts` y los tests en `tests/reviewDesk.test.mjs`.

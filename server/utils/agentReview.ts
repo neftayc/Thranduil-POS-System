@@ -62,7 +62,7 @@ export const sellerNames = async (accessToken: string, ids: string[]) => {
 /** Maps the desk's errors to HTTP answers with a Spanish message. */
 export const reviewHttpError = (error: unknown) => {
   if (error instanceof ReviewNotFoundError) return createError({ statusCode: 404, statusMessage: error.message })
-  if (error instanceof ReviewInvalidError) return createError({ statusCode: 422, statusMessage: 'La venta no pasó la verificación.', data: { errors: error.errors } })
+  if (error instanceof ReviewInvalidError) return createError({ statusCode: 422, statusMessage: 'La venta no pasó la verificación.', data: { errors: error.errors, changes: error.changes, changes_token: error.changesToken } })
   if (error instanceof ReviewPendingError) return createError({ statusCode: 409, statusMessage: error.message, data: { pending: true } })
   if (error instanceof ReviewConflictError) return createError({ statusCode: 409, statusMessage: error.message })
   if ((error as any)?.statusCode) return error as any

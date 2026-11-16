@@ -1,10 +1,13 @@
 export default defineNuxtConfig({
   ssr: false,
+  // Agent worktrees (with their own node_modules) and SQL/backups are not app code: don't watch them (EMFILE).
+  ignore: ['.claude/**', 'supabase/**', 'integrations/**/.venv/**'],
   devServer: {
     host: '0.0.0.0'
   },
   vite: {
     server: {
+      watch: { ignored: ['**/.claude/**', '**/supabase/**', '**/.venv/**'] },
       allowedHosts: ['68bd-181-176-84-173.ngrok-free.app', 'localhost', '.ngrok-free.app']
     }
   },

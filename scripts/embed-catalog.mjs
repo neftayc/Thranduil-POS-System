@@ -19,14 +19,14 @@ const envVars = Object.fromEntries(
 )
 Object.assign(process.env, envVars)
 
-const SUPABASE_URL    = process.env.NUXT_PUBLIC_SUPABASE_URL
+const SUPABASE_URL    = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY    = process.env.SUPABASE_SERVICE_ROLE || process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
 const OPENAI_API_KEY  = process.env.OPENAI_API_KEY
 const ACCESS_TOKEN    = process.env.AUTH_TOKEN // optional: user JWT for auth
 const BATCH_SIZE      = 50
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !OPENAI_API_KEY) {
-  console.error('❌ Faltan variables: NUXT_PUBLIC_SUPABASE_URL, OPENAI_API_KEY')
+  console.error('❌ Faltan variables: SUPABASE_URL, OPENAI_API_KEY')
   process.exit(1)
 }
 

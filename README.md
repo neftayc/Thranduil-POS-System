@@ -49,12 +49,32 @@ Sistema para registrar productos, inventario, ventas, compras, clientes y usuari
 - Node.js 20.11+
 - Cuenta y proyecto en Supabase
 
+## Base de datos y entornos
+
+El esquema vive en `supabase/migrations/` (Supabase CLI). La primera migracion,
+`20261116120000_baseline.sql`, es el esquema real de produccion al 2026-11-16.
+Los SQL anteriores (schema.sql, fix_*, patch_*, import_*) estan en `supabase/archive/`
+solo como historial: no se ejecutan.
+
+Entornos: **local** (Docker, `supabase start`), **staging** y **produccion**.
+
+```bash
+supabase start                 # levanta Supabase local (API en http://127.0.0.1:54321)
+supabase db reset --local      # reconstruye la base local desde las migraciones
+supabase migration new nombre  # nueva migracion (siempre asi, nunca SQL a mano en produccion)
+supabase db push --linked      # aplica en el proyecto vinculado, tras probar en local
+```
+
+Reglas:
+- Ningun cambio de esquema se ejecuta a mano en produccion: todo es una migracion.
+- Cada migracion se prueba en local (`db reset`) antes de `db push`.
+- Respaldo de produccion (`supabase db dump --linked`) antes de cada `db push`.
+- Rollbacks de migraciones arriesgadas en `supabase/rollbacks/`.
+
 ## Configuracion rapida
 
-1. Crea un proyecto en Supabase.
-2. En el SQL Editor, ejecuta el script:
-   - `supabase/schema.sql`
-3. Copia `.env.example` a `.env` y completa tus claves:
+1. Levanta Supabase local (`supabase start`) o vincula un proyecto (`supabase link`).
+2. Copia `.env.example` a `.env` y completa tus claves:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE` (necesario para gestion de usuarios)
@@ -68,13 +88,6 @@ Nota: la app consume Supabase solo desde el backend (endpoints en `server/api/*`
 - `product_prices`: historial y precio actual de venta
 - `inventory_balances`: stock disponible, costo promedio y stock minimo
 - `stock_movements`: movimientos (compra, venta, ajuste)
-
-## Migracion desde version anterior
-
-- Si ya ejecutaste una version previa del esquema, vuelve a ejecutar `supabase/schema.sql`.
-- El script sincroniza datos legacy:
-  - `products.sale_price` -> `product_prices`
-  - `products.stock_on_hand`, `products.avg_cost`, `products.min_stock` -> `inventory_balances`
 
 ## Instalacion
 

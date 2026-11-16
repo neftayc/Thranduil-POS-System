@@ -7,6 +7,34 @@ type SupabaseConfig = {
   supabaseServiceRole: string
 }
 
+const isLocalSupabaseUrl = (url: string) => {
+  try {
+    const { hostname } = new URL(url)
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname.endsWith('.localhost')
+  } catch {
+    return false
+  }
+}
+
+// Guard against touching a remote database by accident while developing.
+// In development (`nuxt dev`, scripts), a remote Supabase URL requires APP_ENV=production|staging set on purpose,
+// and APP_ENV=local only accepts a local URL. Deployed builds (NODE_ENV=production) are not affected.
+const assertEnvironmentMatches = (supabaseUrl: string) => {
+  const appEnv = String(process.env.APP_ENV || '').trim().toLowerCase()
+  const local = isLocalSupabaseUrl(supabaseUrl)
+  const developing = process.env.NODE_ENV !== 'production'
+
+  if (appEnv === 'local' && !local) {
+    throw createError({ statusCode: 500, statusMessage: 'APP_ENV=local pero SUPABASE_URL apunta a una base remota' })
+  }
+  if (developing && !local && appEnv !== 'production' && appEnv !== 'staging') {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'SUPABASE_URL remota en desarrollo: define APP_ENV=production o APP_ENV=staging a propósito'
+    })
+  }
+}
+
 const getSupabaseConfig = (): SupabaseConfig => {
   // Use env vars directly to avoid depending on Nuxt's virtual `#imports` module during build-time evaluation.
   // Nuxt runtimeConfig is still sourced from the same env vars in `nuxt.config.ts`.
@@ -20,6 +48,8 @@ const getSupabaseConfig = (): SupabaseConfig => {
   if (!supabaseAnonKey) {
     throw createError({ statusCode: 500, statusMessage: 'Falta SUPABASE_ANON_KEY' })
   }
+
+  assertEnvironmentMatches(supabaseUrl)
 
   return { supabaseUrl, supabaseAnonKey, supabaseServiceRole }
 }

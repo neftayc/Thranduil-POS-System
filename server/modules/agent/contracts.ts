@@ -165,6 +165,19 @@ export type Operation = {
   response?: AgentResponse
   reservations?: Reservation[]
   expires_at: number
+  /** Decision of a reviewer (owner/manager) in the POS review screen (reviewDesk.ts). Kept for audit. */
+  review?: ReviewResolution
+}
+/** What a reviewer decided on a venta por confirmar. */
+export type ReviewResolution = {
+  decision: 'approved' | 'annulled' | 'simulated'
+  reviewer_id: string
+  reviewer_role: string
+  at: string
+  note?: string
+  /** Approved/simulated: the sale sent (or that would be sent) to create_sale, with list and sold price per line. */
+  sale?: SaleDraft
+  sale_id?: string
 }
 /** Agent 1's answer to a catalog question: informational, never a sale. */
 export const catalogAnswerSchema = z.object({

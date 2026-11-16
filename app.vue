@@ -87,6 +87,15 @@ const navItems = computed<NavItem[]>(() => {
     },
   ];
 
+  if (userRole.value === "owner" || userRole.value === "manager") {
+    base.push({
+      to: "/ventas-por-confirmar",
+      label: "Ventas por confirmar",
+      hint: "Revisa lo que dejó el agente de voz",
+      group: "operacion",
+    });
+  }
+
   if (userRole.value === "owner") {
     base.push({
       to: "/product-profitability",

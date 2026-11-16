@@ -32,9 +32,12 @@ El vendedor que pregunte por esa venta en Claude recibe lo que decidió el revis
 - Si el POS rechaza la venta, no se registró nada y sigue por confirmar con su reserva.
 - Si se pierde la respuesta del POS, la venta queda **pendiente de conciliación**. Revisa el historial
   de ventas y **no la apruebes de nuevo**.
-- La venta queda a nombre de **quien la aprueba** (`created_by`). `create_sale` exige ser propietario o
-  encargado para vender a un precio distinto del de lista. El vendedor original queda en el archivo de
-  la operación.
+- **A nombre de quién** (decisión del dueño, 16 nov 2026): la venta aprobada queda a nombre del
+  **vendedor** que la dictó (`sales.sold_by`), y se guarda **quién la aprobó** (`sales.approved_by`).
+  `created_by` sigue siendo quien la registró (el revisor). Requiere la migración
+  `supabase/migrations/20261116_sales_attribution.sql` (rollback en `supabase/rollbacks/`). Mientras no
+  esté aplicada, la venta se registra igual, pero a nombre del revisor, y queda un aviso en el log del
+  servidor. Los reportes por vendedor deben leer `coalesce(sold_by, created_by)`.
 - **Simulación** (`POS_AGENT_DRY_RUN=1`): lee las ventas de `.data/agent/dry-run`. Aprobar solo muestra
   lo que se registraría (`would_be: "completed"`) y nunca llama a `create_sale`.
 

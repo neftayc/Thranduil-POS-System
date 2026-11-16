@@ -6,7 +6,7 @@
     "dev": "nuxt dev --host",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "test:agent": "node --test --test-concurrency=1 tests/agent.test.mjs tests/sellerSessions.test.mjs tests/productSearch.test.mjs tests/contextSelection.test.mjs tests/salesSelector.test.mjs tests/reviewDesk.test.mjs",
+    "test:agent": "node --test --test-concurrency=1 tests/agent.test.mjs tests/sellerSessions.test.mjs tests/productSearch.test.mjs tests/contextSelection.test.mjs tests/salesSelector.test.mjs tests/reviewDesk.test.mjs tests/salesAttribution.test.mjs",
     "eval:search": "node scripts/eval/hybrid-search.mjs",
     "bench:selector": "node scripts/selector-benchmark.mjs",
     "snapshot:selector": "node scripts/selector-catalog-snapshot.mjs",

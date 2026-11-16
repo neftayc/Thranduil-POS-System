@@ -144,6 +144,9 @@ test('opción A: aprobar registra a precio dictado conservando el de lista, una 
     assert.equal(sent.price_unit, 6)
     assert.equal(sent.list_price, 5)
     assert.match(sent.manual_reason, /Precio dictado por vendedor, aprobado en revisión \(lista S\/ 5\.00\)/)
+    // Owner (2026-11-16): the sale belongs to the seller who dictated it; the reviewer is the approver.
+    assert.equal(t.calls.desk[0].sold_by, SELLER.id)
+    assert.equal(t.calls.desk[0].approved_by, OWNER.id)
     assert.equal(t.calls.agent, 0)
 
     const again = await t.desk.approve(id, prefilled(c), OWNER)
@@ -465,6 +468,9 @@ test('e2e simulación (dry-run): dictado → por confirmar → aprobar muestra l
     assert.equal(op.state, 'simulated')
     assert.equal(op.review.decision, 'simulated')
     assert.equal(op.review.sale.items[0].list_price, 5)
+    assert.equal(op.review.sale.sold_by, SELLER.id)
+    assert.equal(op.review.sale.approved_by, OWNER.id)
+    assert.equal(done.result.sold_by, SELLER.id)
     assert.equal((await t.reserved()).size, 0)
     assert.deepEqual(await t.desk.approve(c.id, resolution, OWNER), done)
     assert.equal(executorCalls, 0)

@@ -355,7 +355,8 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
     if (verified.changes.length && resolution.accept_changes !== verified.changes_token) {
       throw new ReviewInvalidError([{ line: null, message: 'La venta venció y cambió desde el dictado: revisa los cambios y acéptalos para registrarla.' }, ...verified.changes], verified.changes, verified.changes_token)
     }
-    const sale = verified.sale
+    // Owner's decision (2026-11-16): the sale belongs to the SELLER who dictated it; the reviewer is stored as approver.
+    const sale: SaleDraft = { ...verified.sale, sold_by: op.seller_id, approved_by: reviewer.id }
     const at = new Date(now()).toISOString()
     const note = String(resolution.note || '').trim().slice(0, 500) || undefined
     const base = { reviewer_id: reviewer.id, reviewer_role: reviewer.role, at, ...(note ? { note } : {}), sale }
@@ -369,7 +370,7 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
       op.response = mark({
         status: 'rejected', operation_id: op.id,
         message: `Con datos reales se habría registrado en revisión por ${money(sale.total)}.`,
-        result: { would_be: 'completed', reference: null, total: sale.total, currency: sale.currency, items: sale.items, payment_method: sale.payment_method, reviewed_by: reviewer.id }
+        result: { would_be: 'completed', reference: null, total: sale.total, currency: sale.currency, items: sale.items, payment_method: sale.payment_method, sold_by: sale.sold_by, reviewed_by: reviewer.id }
       })
       await store.saveOperation(op)
       return op.response
@@ -412,7 +413,7 @@ export const makeReviewDesk = (deps: ReviewDeskDependencies) => {
     op.response = {
       status: 'completed', operation_id: op.id,
       message: `Venta registrada en revisión (referencia ${result.saleId}) por ${money(sale.total)}.`,
-      result: { reference: result.saleId, total: sale.total, currency: sale.currency, items: sale.items, payment_method: sale.payment_method, reviewed_by: reviewer.id }
+      result: { reference: result.saleId, total: sale.total, currency: sale.currency, items: sale.items, payment_method: sale.payment_method, sold_by: sale.sold_by, reviewed_by: reviewer.id }
     }
     try { await store.saveOperation(op) } catch {} // the sale exists: never report it as failed
     return op.response

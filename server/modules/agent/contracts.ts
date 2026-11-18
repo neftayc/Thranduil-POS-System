@@ -125,6 +125,10 @@ export type DraftItem = {
 /** What is sent to create_sale. Only built when every check passed. */
 export type SaleDraft = {
   customer_id: string | null; payment_method: string; items: DraftItem[]; total: number; currency: string
+  /** Seller the sale belongs to (create_sale p_sold_by). Omitted = whoever registers it (auth.uid()). */
+  sold_by?: string
+  /** Owner/manager who approved a venta por confirmar (create_sale p_approved_by = auth.uid()). */
+  approved_by?: string
 }
 /** unit_cost is present only for roles that may see costs (owner/manager). */
 export type PriceReviewItem = { product_id: string; name: string; qty: number; unit_name: string; list_price: number; price_unit: number; below_cost: boolean }
@@ -165,6 +169,19 @@ export type Operation = {
   response?: AgentResponse
   reservations?: Reservation[]
   expires_at: number
+  /** Decision of a reviewer (owner/manager) in the POS review screen (reviewDesk.ts). Kept for audit. */
+  review?: ReviewResolution
+}
+/** What a reviewer decided on a venta por confirmar. */
+export type ReviewResolution = {
+  decision: 'approved' | 'annulled' | 'simulated'
+  reviewer_id: string
+  reviewer_role: string
+  at: string
+  note?: string
+  /** Approved/simulated: the sale sent (or that would be sent) to create_sale, with list and sold price per line. */
+  sale?: SaleDraft
+  sale_id?: string
 }
 /** Agent 1's answer to a catalog question: informational, never a sale. */
 export const catalogAnswerSchema = z.object({

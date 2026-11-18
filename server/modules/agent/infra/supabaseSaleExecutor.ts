@@ -36,23 +36,38 @@ export const makeSupabaseSaleExecutor = (authorize: () => Promise<string>, rpc: 
   await beforeCommit()
   // From here on, only a definitive database answer may be reported as "not registered".
   // The orchestrator never retries this call.
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('create_sale sin respuesta (timeout)')), options.timeoutMs ?? DEFAULT_RPC_TIMEOUT_MS)
-  })
-  let answer: Awaited<ReturnType<RpcCall>>
-  try {
-    answer = await Promise.race([rpc(token, {
-      p_customer_id: draft.customer_id,
-      p_payment_method: draft.payment_method,
-      // A price different from the list price needs manual_discount_reason (owner/manager only, enforced by create_sale).
-      p_items: draft.items.map(item => ({
-        product_id: item.product_id, qty: item.qty, unit_name: item.unit_name, price_unit: item.price_unit,
-        ...(item.manual_reason ? { manual_discount_reason: item.manual_reason } : {})
-      }))
-    }), timeout])
-  } finally {
-    if (timer) clearTimeout(timer)
+  const call = async (args: Record<string, unknown>) => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('create_sale sin respuesta (timeout)')), options.timeoutMs ?? DEFAULT_RPC_TIMEOUT_MS)
+    })
+    try {
+      return await Promise.race([rpc(token, args), timeout])
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
+  }
+  const base = {
+    p_customer_id: draft.customer_id,
+    p_payment_method: draft.payment_method,
+    // A price different from the list price needs manual_discount_reason (owner/manager only, enforced by create_sale).
+    p_items: draft.items.map(item => ({
+      product_id: item.product_id, qty: item.qty, unit_name: item.unit_name, price_unit: item.price_unit,
+      ...(item.manual_reason ? { manual_discount_reason: item.manual_reason } : {})
+    }))
+  }
+  // Attribution (migration 20261116_sales_attribution): only sent when present, so the agent's direct
+  // sales call create_sale exactly as before (the database records sold_by = auth.uid() by default).
+  const attribution = {
+    ...(draft.sold_by ? { p_sold_by: draft.sold_by } : {}),
+    ...(draft.approved_by ? { p_approved_by: draft.approved_by } : {})
+  }
+  let answer = await call({ ...base, ...attribution })
+  // PGRST202 = PostgREST found no create_sale with those parameters: the migration is not applied yet.
+  // Nothing was executed, so it is safe to register without attribution (as before the migration).
+  if (Object.keys(attribution).length && answer.error?.code === 'PGRST202') {
+    log('[agente de ventas] create_sale sin p_sold_by/p_approved_by (falta la migración 20261116_sales_attribution): la venta queda a nombre de quien la registra', { code: answer.error.code })
+    answer = await call(base)
   }
   const { data, error } = answer
   if (error) {

@@ -1387,16 +1387,11 @@ test('registrador: id inexistente o inactivo → por confirmar (product_inactive
   assert.deepEqual(rcodes(result), ['product_inactive'])
 })
 
-test('registrador: cantidad 0, negativa o fraccionaria en unidad → revisión; null → 1 por defecto; docena admite 0,5', async () => {
-  for (const quantity of [0, -1, 1.5]) {
+test('registrador: cantidad ausente, 0, negativa o fraccionaria en unidad → revisión; docena admite 0,5', async () => {
+  for (const quantity of [null, 0, -1, 1.5]) {
     const { result } = await register(consolidatedOf({ lines: [cline({ quantity })] }), 'dos cuadernos A4')
     assert.deepEqual(rcodes(result), ['missing_quantity'], String(quantity))
   }
-  // No quantity from the selector: the phrase's leading number («dos» → 2), or 1 when it has none.
-  const { result: fromPhrase } = await register(consolidatedOf({ lines: [cline({ quantity: null })] }), 'dos cuadernos A4')
-  assert.deepEqual([fromPhrase.kind, fromPhrase.sale.items[0].qty], ['direct', 2])
-  const { result: none } = await register(consolidatedOf({ lines: [cline({ quantity: null, phrase: 'cuaderno A4' })] }), 'cuaderno A4')
-  assert.deepEqual([none.kind, none.sale.items[0].qty, none.sale.items[0].quantity_defaulted], ['direct', 1, true])
   const { result: half } = await register(consolidatedOf({ lines: [cline({ quantity: 0.5, unit: 'docena', phrase: 'media docena de cuadernos' })] }), 'media docena de cuadernos')
   assert.deepEqual([half.kind, half.sale.items[0].qty, half.sale.items[0].unit_name], ['direct', 0.5, 'docena'])
 })
@@ -1418,14 +1413,32 @@ test('registrador: price_said distinto al de lista → por confirmar (price_modi
   assert.equal(same.kind, 'direct')
 })
 
-test('registrador: guardia anti-alucinación — la phrase debe estar en el dictado (normalizada)', async () => {
-  assert.equal(phraseInDictation('Dos CUADERNOS a4, y un lápiz', 'dos cuadernos A4'), true)
-  assert.equal(phraseInDictation('Un lápiz de color', 'un lapiz'), true) // accents
-  assert.equal(phraseInDictation('dos cuadernos', 'tres cuadernos'), false)
-  assert.equal(phraseInDictation('cuadernos', 'cuaderno'), false) // whole words
-  const { result } = await register(consolidatedOf({ lines: [cline({ phrase: 'tres cuadernos A5' })] }), 'dos cuadernos A4')
-  assert.deepEqual(rcodes(result), ['phrase_not_in_order'])
-  assert.deepEqual(result.reservations, [])
+test('registrador: la phrase NO tiene que ser literal del dictado (puntuación y autocorrecciones de voz, Ref. c4d9a7e3)', async () => {
+  assert.equal(phraseInDictation('Dos CUADERNOS a4, y un lápiz', 'dos cuadernos A4'), true) // still used for the payment phrase
+  const dictado = 'dos cuadernos A4, ...10 unidades de papel arcoíris a colores'
+  const { result } = await register(consolidatedOf({ lines: [cline({ phrase: '10 unidades de papel arcoíris a colores', quantity: 2 })] }), dictado)
+  assert.equal(result.kind, 'direct', rcodes(result).join(','))
+  const { result: paraphrase } = await register(consolidatedOf({ lines: [cline({ phrase: 'cuadernos A4 (dos)' })] }), 'dos cuadernos A4')
+  assert.equal(paraphrase.kind, 'direct', rcodes(paraphrase).join(','))
+  assert.ok(!rcodes(paraphrase).includes('phrase_not_in_order'))
+})
+
+test('registrador: el dictado no influye en la decisión (puntos, «...», muletillas o texto vacío: solo hechos del POS)', async () => {
+  const cases = [
+    consolidatedOf({ lines: [cline()] }),
+    consolidatedOf({ lines: [cline({ quantity: 3 })], payment_method: 'yape', payment_phrase: 'yape' }),
+    consolidatedOf({ lines: [cline({ price_said: 4 })] }),
+    consolidatedOf({ lines: [cline({ product_id: randomUUID() })] }),
+    consolidatedOf({ lines: [cline()], payment_method: 'plin' })
+  ]
+  const dictations = ['dos cuadernos A4', '', 'eh... este, ya, ...perdón, ¿ya? o sea... ¡listo!', 'tres reglas, pago con transferencia, a 9 soles, no yape']
+  for (const consolidated of cases) {
+    const outcomes = await Promise.all(dictations.map(async d => {
+      const { result } = await register(consolidated, d)
+      return JSON.stringify([result.kind, rcodes(result), result.items.map(i => [i.qty, i.price_unit]), result.sale?.payment_method ?? null])
+    }))
+    assert.equal(new Set(outcomes).size, 1, outcomes.join(' | '))
+  }
 })
 
 test('registrador: confianza baja → pregunta al vendedor con opciones (nombres); sin reserva del producto dudoso', async () => {
@@ -1445,11 +1458,13 @@ test('registrador: stock insuficiente (descontando reservas) → revisión, rese
   assert.deepEqual(result.reservations, [{ product_id: CUADERNO.id, qty: 1 }])
 })
 
-test('registrador: pago — efectivo por defecto sin frase; otro pago solo si su frase está en el dictado; inexistente → revisión', async () => {
+test('registrador: pago — efectivo por defecto; el del selector se acepta tal cual (sin releer el texto); inexistente → revisión', async () => {
   const { result: cash } = await register(consolidatedOf({ lines: [cline()], payment_method: 'efectivo', payment_phrase: null }), 'dos cuadernos A4')
   assert.deepEqual([cash.kind, cash.sale.payment_method, cash.payment_defaulted, cash.notes], ['direct', 'efectivo', true, ['Pago: efectivo (por defecto).']])
-  const { result: invented } = await register(consolidatedOf({ lines: [cline()], payment_method: 'yape', payment_phrase: null }), 'dos cuadernos A4')
-  assert.deepEqual(rcodes(invented), ['missing_payment'])
+  const { result: yape } = await register(consolidatedOf({ lines: [cline()], payment_method: 'yape', payment_phrase: 'yape...' }), 'dos cuadernos A4, pago con yape...')
+  assert.deepEqual([yape.kind, yape.sale.payment_method, yape.payment_defaulted], ['direct', 'yape', false])
+  const { result: noPhrase } = await register(consolidatedOf({ lines: [cline()], payment_method: 'yape', payment_phrase: null }), 'dos cuadernos A4')
+  assert.deepEqual([noPhrase.kind, noPhrase.sale.payment_method], ['direct', 'yape'])
   const { result: missing } = await register(consolidatedOf({ lines: [cline()], payment_method: 'plin', payment_phrase: 'con plin' }), 'dos cuadernos A4 con plin')
   assert.deepEqual(rcodes(missing), ['invalid_payment'])
 })
@@ -1508,24 +1523,15 @@ test('interruptor POS_AGENT_SELECTOR: llm|legacy en tiempo de ejecución; por de
   assert.equal(resolveSelectorMode({}, { POS_AGENT_SELECTOR: 'otro' }), 'legacy')
 })
 
-test('registrador: «la cantidad va primero» — la quantity debe coincidir con el número inicial de la phrase, o ser 1', async () => {
-  const ok = [
-    ['10 plumones FC 123 Jumbo', 10, null], ['dos cuadernos A4', 2, null], ['diecisiete cuadernos', 17, null],
-    ['cuaderno A4', 1, null], ['un cuaderno A4', 1, null], ['media docena de cuadernos', 0.5, 'docena'],
-    ['media docena de cuadernos', 6, null], ['una docena de cuadernos', 12, null], ['100 hojas bond', 1, null]
+test('registrador: la cantidad del selector se acepta tal cual (la regla «la cantidad va primero» la aplica el paso 2)', async () => {
+  const cases = [
+    ['10 plumones FC 123 Jumbo', 10, null], ['dos cuadernos A4', 2, null], ['cuaderno A4', 1, null],
+    ['media docena de cuadernos', 0.5, 'docena'], ['media docena de cuadernos', 6, null], ['100 hojas bond', 1, null],
+    ['perdón, ...10 cuadernos', 10, null], ['dos cuadernos A4', 3, null]
   ]
-  for (const [phrase, quantity, unit] of ok) {
+  for (const [phrase, quantity, unit] of cases) {
     const { result } = await register(consolidatedOf({ lines: [cline({ phrase, quantity, unit })] }), phrase)
     assert.equal(result.kind, 'direct', `${phrase} → ${quantity}: ${rcodes(result)}`)
     assert.equal(result.sale.items[0].qty, quantity, phrase)
-  }
-  const wrong = [
-    ['10 plumones FC 123 Jumbo', 123], ['10 plumones FC 123 Jumbo', 1], ['dos cuadernos A4', 3],
-    ['cuaderno A4', 2], ['media docena de cuadernos', 6, 'docena'], ['100 hojas bond', 100]
-  ]
-  for (const [phrase, quantity, unit = null] of wrong) {
-    const { result } = await register(consolidatedOf({ lines: [cline({ phrase, quantity, unit })] }), phrase)
-    assert.deepEqual(rcodes(result), ['missing_quantity'], `${phrase} → ${quantity}`)
-    assert.equal(result.reasons[0].detail.ungrounded, true)
   }
 })

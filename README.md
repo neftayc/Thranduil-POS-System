@@ -68,7 +68,7 @@ Entornos: **local** (Docker, tu computadora) y **produccion** (Supabase + Vercel
 | `pnpm db:refresh` | Respalda produccion y trae esa copia fresca a local |
 | `pnpm db:backup` | Respalda produccion en `~/papeleria-backups/` |
 | `pnpm db:pending` | Muestra que migraciones le faltan a produccion (solo lectura) |
-| `pnpm db:release` | Publica: aplica migraciones en produccion y luego sube el codigo a `main` (Vercel lo despliega) |
+| `pnpm db:release` | Publica: aplica migraciones en produccion y luego sube el codigo a `main` |
 
 ### Flujo de un cambio (de local a produccion)
 
@@ -80,16 +80,19 @@ Entornos: **local** (Docker, tu computadora) y **produccion** (Supabase + Vercel
 5. Cuando la revision pase: `pnpm db:release` desde tu rama. Hace, en este orden:
    revisa que la rama tenga lo ultimo de `main` y que la revision de GitHub paso; prueba en local;
    respalda produccion; aplica las migraciones (pide escribir `produccion`); sube los commits a
-   `main` (pide escribir `publicar`). Vercel ve el cambio en `main` y publica la app solo.
+   `main` (pide escribir `publicar`).
+6. Publica la app a mano: `pnpm dlx vercel --prod` (el deploy automatico esta apagado por ahora).
 
 Primero la base, despues la app: por eso no se sube a `main` a mano cuando hay migraciones.
 Las migraciones deben ser compatibles con la version anterior de la app (agregar columnas o
 funciones si; borrar o renombrar se hace en dos publicaciones).
 
-### Vercel (configuracion de una sola vez)
-- Proyecto conectado al repositorio de GitHub (Settings -> Git), rama de produccion `main`.
-- `vercel.json` ignora cualquier rama distinta de `main`: no hay vistas previas, asi ninguna
-  rama de prueba puede escribir en la base real.
+### Vercel
+- **Deploy automatico apagado por ahora.** `vercel.json` (`ignoreCommand`) cancela cualquier build
+  que venga de GitHub, incluida `main`. La app se publica solo a mano con `pnpm dlx vercel --prod`.
+- Para encenderlo: conectar el repo en Vercel (Settings -> Git, rama de produccion `main`) y cambiar
+  `ignoreCommand` a `[ -n "$VERCEL_GIT_COMMIT_REF" ] && [ "$VERCEL_GIT_COMMIT_REF" != "main" ]`
+  (publica solo `main`; las demas ramas no, asi ninguna rama de prueba escribe en la base real).
 - Variables de entorno de Production: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`
   y el resto de `.env.production.local`.
 

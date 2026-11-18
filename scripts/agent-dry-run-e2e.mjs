@@ -83,9 +83,10 @@ const step3 = [
   ['consolidado válido', 'dos cuadernos markin cuadriculados de 100 hojas, yape', cons([cl('dos cuadernos markin')], { payment_method: 'yape', payment_phrase: 'yape' }), 'completed', r => r.result.items[0].qty === 2 && r.result.payment_method === 'yape'],
   ['sin pago → efectivo', 'dos cuadernos markin', cons([cl('dos cuadernos markin')]), 'completed', r => r.result.payment_defaulted === true],
   ['confianza baja → pregunta con opciones', 'dos cuadernos de 100 hojas', cons([cl('dos cuadernos', { confidence: 'baja', question: '¿Markin u otro?', options: [markin.id, other.id] })]), 'pending_review', r => r.result.reasons[0].options.length === 2],
-  ['frase inventada → revisión', 'dos cuadernos markin', cons([cl('tres reglas de 30 cm')]), 'pending_review', r => r.result.reasons[0].code === 'phrase_not_in_order'],
+  ['frase no literal (autocorrección de voz) → directo', 'dos cuadernos, ...perdón, dos cuadernos markin', cons([cl('2 cuadernos Markin')]), 'completed', r => r.result.items[0].qty === 2],
   ['precio dictado → por confirmar', 'dos cuadernos markin a 4 soles', cons([cl('dos cuadernos markin a 4 soles', { price_said: 4 })]), 'pending_review', r => r.result.reasons[0].code === 'price_modified'],
-  ['yape no dicho → revisión', 'dos cuadernos markin', cons([cl('dos cuadernos markin')], { payment_method: 'yape' }), 'pending_review', r => r.result.reasons[0].code === 'missing_payment'],
+  ['pago del selector tal cual (yape con «...») → directo', 'dos cuadernos markin, ...yape', cons([cl('dos cuadernos markin')], { payment_method: 'yape', payment_phrase: '...yape' }), 'completed', r => r.result.payment_method === 'yape'],
+  ['pago inexistente → revisión', 'dos cuadernos markin con plin', cons([cl('dos cuadernos markin')], { payment_method: 'plin' }), 'pending_review', r => r.result.reasons[0].code === 'invalid_payment'],
   ['id inexistente → revisión', 'dos cuadernos markin', cons([cl('dos cuadernos markin', { product_id: randomUUID() })]), 'pending_review', r => r.result.reasons[0].code === 'product_inactive']
 ]
 for (const [name, text, consolidated, expected, check] of step3) {

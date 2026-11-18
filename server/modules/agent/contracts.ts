@@ -93,7 +93,7 @@ export const REVIEW_REASONS = [
   'pos_rejected',         // create_sale answered with an error: nothing was registered
   'price_override_not_allowed', // NOT USED since 2026-11-15 (kept for old records)
   'unit_unclear',         // the presentation (caja, docena…) the AI proposed was not said by the seller
-  'phrase_not_in_order',  // (registrar) the line's phrase is not in the dictation: possible hallucination
+  'phrase_not_in_order',  // (retired) literal-phrase guard of the registrar; kept so stored operations still parse
   'selector_question',    // (registrar) the selector asks the seller something (low confidence, no product, question)
   'price_modified',       // dictated price ≠ list price: always por confirmar; a reviewer approves it at that price
   'price_unverified'      // the draft carries a dictated price that the seller's text does not contain
@@ -125,6 +125,10 @@ export type DraftItem = {
 /** What is sent to create_sale. Only built when every check passed. */
 export type SaleDraft = {
   customer_id: string | null; payment_method: string; items: DraftItem[]; total: number; currency: string
+  /** Seller the sale belongs to (create_sale p_sold_by). Omitted = whoever registers it (auth.uid()). */
+  sold_by?: string
+  /** Owner/manager who approved a venta por confirmar (create_sale p_approved_by = auth.uid()). */
+  approved_by?: string
 }
 /** unit_cost is present only for roles that may see costs (owner/manager). */
 export type PriceReviewItem = { product_id: string; name: string; qty: number; unit_name: string; list_price: number; price_unit: number; below_cost: boolean }
@@ -165,6 +169,19 @@ export type Operation = {
   response?: AgentResponse
   reservations?: Reservation[]
   expires_at: number
+  /** Decision of a reviewer (owner/manager) in the POS review screen (reviewDesk.ts). Kept for audit. */
+  review?: ReviewResolution
+}
+/** What a reviewer decided on a venta por confirmar. */
+export type ReviewResolution = {
+  decision: 'approved' | 'annulled' | 'simulated'
+  reviewer_id: string
+  reviewer_role: string
+  at: string
+  note?: string
+  /** Approved/simulated: the sale sent (or that would be sent) to create_sale, with list and sold price per line. */
+  sale?: SaleDraft
+  sale_id?: string
 }
 /** Agent 1's answer to a catalog question: informational, never a sale. */
 export const catalogAnswerSchema = z.object({

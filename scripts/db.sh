@@ -123,7 +123,7 @@ ci_state() {
 
 confirm() { printf '\n%s ' "$1"; local a; read -r a; [ "$a" = "$2" ]; }
 
-# Release = migrations to production first, then code to main (Vercel deploys main on its own).
+# Release = migrations to production first, then code to main. Vercel auto-deploy is off for now (vercel.json): deploy by hand.
 cmd_release() {
   require_docker; require_linked
   say "1/6 Revisando el repositorio"
@@ -174,7 +174,7 @@ cmd_release() {
     say "4/6 y 5/6 Sin migraciones: no se toca la base"
   fi
 
-  say "6/6 Publicar el código (Vercel despliega main desde GitHub)"
+  say "6/6 Subir el código a main"
   if [ "$ahead" -eq 0 ]; then ok "El código ya estaba en main; nada que subir."; return; fi
   git log --oneline origin/main..HEAD | sed 's/^/      /'
   if ! confirm "Escribe publicar para subir estos commits a main:" publicar; then
@@ -183,7 +183,7 @@ cmd_release() {
   fi
   git push origin HEAD:main
   [ "$branch" = "main" ] || git fetch -q origin main:main
-  ok "Código en main. Vercel lo publica en 1-3 minutos (revisa el panel de Vercel)."
+  ok "Código en main. El deploy automático de Vercel está apagado: publica la app con  pnpm dlx vercel --prod"
 }
 
 case "${1:-}" in

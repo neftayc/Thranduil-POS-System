@@ -1,7 +1,8 @@
 import type { AgentStore } from '../contracts'
 import { reservedFromOperations } from '../app/reservations'
 import { makeSelectorBuildDraft, type CatalogAnswerer, type SelectorCatalog } from '../app/salesSelector'
-import { makeOpenAISelectorModel } from './openaiSalesSelector'
+import { makeOpenAIReviewerModel, makeOpenAISelectorModel } from './openaiSalesSelector'
+import { makeSalesReviewer } from '../app/salesReviewer'
 import { makeSupabaseSelectorCatalog } from './supabaseSelectorCatalog'
 
 /** One selector catalog per process and store (its memory cache is shared by every request). */
@@ -20,6 +21,8 @@ export const makeLlmSalesSelector = (options: { apiKey: string; model: string; s
   }
   return makeSelectorBuildDraft({
     model: makeOpenAISelectorModel(options.apiKey, options.model || 'gpt-5.4'),
+    // Second AI pass (owner: «no omitir nada; si es incoherencia, preguntar»).
+    reviewer: makeSalesReviewer(makeOpenAIReviewerModel(options.apiKey, options.model || 'gpt-5.4')),
     catalog,
     answer: options.answer
   })

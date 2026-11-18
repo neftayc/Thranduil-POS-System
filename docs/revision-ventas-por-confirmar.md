@@ -34,9 +34,9 @@ El vendedor que pregunte por esa venta en Claude recibe lo que decidió el revis
   de ventas y **no la apruebes de nuevo**.
 - **A nombre de quién** (decisión del dueño, 16 nov 2026): la venta aprobada queda a nombre del
   **vendedor** que la dictó (`sales.sold_by`), y se guarda **quién la aprobó** (`sales.approved_by`).
-  `created_by` sigue siendo quien la registró (el revisor). Requiere la migración
-  `supabase/migrations/20261116_sales_attribution.sql` (rollback en `supabase/rollbacks/`). Mientras no
-  esté aplicada, la venta se registra igual, pero a nombre del revisor, y queda un aviso en el log del
+  `created_by` sigue siendo quien la registró (el revisor). Usa la migración
+  `supabase/migrations/20261116_sales_attribution.sql`, aplicada en producción el 16 nov 2026 (rollback en
+  `supabase/rollbacks/`). En una base que no la tenga, la venta se registra igual, pero a nombre del revisor, y queda un aviso en el log del
   servidor. Los reportes por vendedor deben leer `coalesce(sold_by, created_by)`.
 - **Simulación** (`POS_AGENT_DRY_RUN=1`): lee las ventas de `.data/agent/dry-run`. Aprobar solo muestra
   lo que se registraría (`would_be: "completed"`) y nunca llama a `create_sale`.

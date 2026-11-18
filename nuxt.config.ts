@@ -40,7 +40,6 @@ export default defineNuxtConfig({
     posAgentStorageDir: process.env.POS_AGENT_STORAGE_DIR || '.data/agent',
     supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
-    geminiApiKey: process.env.GEMINI_API_KEY || '',
     // Server-only Supabase credentials (do not expose to the client)
     supabaseUrl: process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL || '',
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY || process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || '',

@@ -10,7 +10,17 @@
     "eval:search": "node scripts/eval/hybrid-search.mjs",
     "bench:selector": "node scripts/selector-benchmark.mjs",
     "snapshot:selector": "node scripts/selector-catalog-snapshot.mjs",
-    "index:products": "node scripts/index-product-search.mjs"
+    "index:products": "node scripts/index-product-search.mjs",
+    "db:start": "bash scripts/db.sh start",
+    "db:stop": "bash scripts/db.sh stop",
+    "db:status": "bash scripts/db.sh status",
+    "db:new": "bash scripts/db.sh new",
+    "db:reset": "bash scripts/db.sh reset",
+    "db:refresh": "bash scripts/db.sh refresh",
+    "db:backup": "bash scripts/db.sh backup",
+    "db:check": "bash scripts/db.sh check",
+    "db:pending": "bash scripts/db.sh pending",
+    "db:release": "bash scripts/db.sh release"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

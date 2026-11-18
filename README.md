@@ -56,20 +56,49 @@ El esquema vive en `supabase/migrations/` (Supabase CLI). La primera migracion,
 Los SQL anteriores (schema.sql, fix_*, patch_*, import_*) estan en `supabase/archive/`
 solo como historial: no se ejecutan.
 
-Entornos: **local** (Docker, `supabase start`), **staging** y **produccion**.
+Entornos: **local** (Docker, tu computadora) y **produccion** (Supabase + Vercel).
 
-```bash
-supabase start                 # levanta Supabase local (API en http://127.0.0.1:54321)
-supabase db reset --local      # reconstruye la base local desde las migraciones
-supabase migration new nombre  # nueva migracion (siempre asi, nunca SQL a mano en produccion)
-supabase db push --linked      # aplica en el proyecto vinculado, tras probar en local
-```
+### Comandos
 
-Reglas:
-- Ningun cambio de esquema se ejecuta a mano en produccion: todo es una migracion.
-- Cada migracion se prueba en local (`db reset`) antes de `db push`.
-- Respaldo de produccion (`supabase db dump --linked`) antes de cada `db push`.
+| Comando | Que hace |
+|---|---|
+| `pnpm db:start` / `pnpm db:stop` | Enciende / apaga Supabase local (los datos se conservan) |
+| `pnpm db:new nombre` | Crea una migracion nueva en `supabase/migrations/` |
+| `pnpm db:reset` | Reconstruye la base local desde las migraciones y carga la ultima copia de produccion |
+| `pnpm db:refresh` | Respalda produccion y trae esa copia fresca a local |
+| `pnpm db:backup` | Respalda produccion en `~/papeleria-backups/` |
+| `pnpm db:pending` | Muestra que migraciones le faltan a produccion (solo lectura) |
+| `pnpm db:release` | Publica: aplica migraciones en produccion y luego sube el codigo a `main` (Vercel lo despliega) |
+
+### Flujo de un cambio (de local a produccion)
+
+1. Crea una rama: `git switch -c mi-cambio`.
+2. `pnpm db:start`, y si cambias la base: `pnpm db:new nombre` y escribe el SQL.
+3. `pnpm db:reset` y prueba en `pnpm dev`. Haz commit.
+4. `git push -u origin mi-cambio`: la revision automatica de GitHub (CI) aplica todas las
+   migraciones en una base temporal, revisa las funciones SQL, compila y corre los tests.
+5. Cuando la revision pase: `pnpm db:release` desde tu rama. Hace, en este orden:
+   revisa que la rama tenga lo ultimo de `main` y que la revision de GitHub paso; prueba en local;
+   respalda produccion; aplica las migraciones (pide escribir `produccion`); sube los commits a
+   `main` (pide escribir `publicar`). Vercel ve el cambio en `main` y publica la app solo.
+
+Primero la base, despues la app: por eso no se sube a `main` a mano cuando hay migraciones.
+Las migraciones deben ser compatibles con la version anterior de la app (agregar columnas o
+funciones si; borrar o renombrar se hace en dos publicaciones).
+
+### Vercel (configuracion de una sola vez)
+- Proyecto conectado al repositorio de GitHub (Settings -> Git), rama de produccion `main`.
+- `vercel.json` ignora cualquier rama distinta de `main`: no hay vistas previas, asi ninguna
+  rama de prueba puede escribir en la base real.
+- Variables de entorno de Production: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`
+  y el resto de `.env.production.local`.
+
+### Reglas
+- Ningun cambio se ejecuta a mano en produccion: todo es una migracion (tambien las reparaciones de datos).
+- Nunca se edita una migracion que ya se aplico en produccion: se crea otra.
 - Rollbacks de migraciones arriesgadas en `supabase/rollbacks/`.
+- En local, `.env` apunta a Supabase local (`APP_ENV=local`); la configuracion de produccion
+  vive en `.env.production.local` (no se commitea).
 
 ## Configuracion rapida
 

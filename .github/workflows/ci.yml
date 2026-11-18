@@ -1,0 +1,46 @@
+# Revisión automática: en cada push a cualquier rama (y en PRs).
+# `pnpm db:release` exige que esta revisión haya pasado antes de publicar una rama.
+# No usa claves de producción: levanta una base temporal y aplica todas las migraciones desde cero.
+name: CI
+
+on:
+  pull_request:
+  push:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migraciones:
+    name: Migraciones aplican limpio
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.72.7
+      - name: Nombres de migraciones
+        run: bash scripts/db.sh check
+      - name: Aplicar todas las migraciones en una base temporal
+        run: |
+          supabase db start
+          supabase db reset --local
+      - name: Revisar errores en funciones SQL
+        run: supabase db lint --local --level error --fail-on error
+
+  app:
+    name: Build y tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test:agent

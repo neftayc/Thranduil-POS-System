@@ -24,6 +24,7 @@ const productFilters = reactive({
   category: "all",
   fifoWithStock: false,
 });
+const pageSizeOptions = [25, 50, 100];
 
 const form = reactive({
   id: "",
@@ -36,6 +37,7 @@ const form = reactive({
   sale_price: 0,
   stock_on_hand: 0,
   avg_cost: 0,
+  real_cost: 0,
   min_stock: 0,
   active: true,
   unit_conversions: [] as Array<{
@@ -70,11 +72,52 @@ const priceAdjust = reactive({
 
 const roundMoney = (value: number) => Number(Math.max(0, value).toFixed(2));
 
+const hasFifoPending = (product: any) => {
+  if (product?.fifo_has_pending === true) return true;
+  if (product?.fifo_has_pending === false) return false;
+  const fifoQty = Number(product?.fifo_next_qty || 0);
+  const stock = Number(product?.stock_on_hand || 0);
+  if (!Number.isFinite(fifoQty) || !Number.isFinite(stock)) return false;
+  if (fifoQty <= 0 || stock <= 0) return false;
+  return fifoQty < stock - 0.0005;
+};
+
+const resolveRealCost = (product: any) => {
+  const cachedCost = Number(product?.real_cost || 0);
+  if (Number.isFinite(cachedCost) && cachedCost > 0) return cachedCost;
+
+  if (!hasFifoPending(product)) {
+    const lastCost = Number(product?.last_purchase_cost || 0);
+    if (Number.isFinite(lastCost) && lastCost > 0) return lastCost;
+  }
+
+  const nextCost = Number(product?.fifo_next_cost || 0);
+  if (Number.isFinite(nextCost) && nextCost > 0) return nextCost;
+
+  const stockQty = Number(product?.fifo_stock_qty || 0);
+  const stockValue = Number(product?.fifo_stock_value || 0);
+  if (
+    Number.isFinite(stockQty) &&
+    Number.isFinite(stockValue) &&
+    stockQty > 0 &&
+    stockValue > 0
+  ) {
+    return stockValue / stockQty;
+  }
+
+  return 0;
+};
+
+const calculateMarginPct = (salePrice: any, cost: any) => {
+  const sale = Number(salePrice || 0);
+  const baseCost = Number(cost || 0);
+  if (!Number.isFinite(sale) || !Number.isFinite(baseCost)) return null;
+  if (sale <= 0 || baseCost <= 0) return null;
+  return Number((((sale - baseCost) / baseCost) * 100).toFixed(2));
+};
+
 const currentMarginPct = computed(() => {
-  const cost = Number(form.avg_cost || 0);
-  const sale = Number(form.sale_price || 0);
-  if (cost <= 0 || sale <= 0) return null;
-  return Number((((sale - cost) / cost) * 100).toFixed(2));
+  return calculateMarginPct(form.sale_price, form.real_cost);
 });
 
 const applyPriceAdjustment = (direction: "up" | "down") => {
@@ -98,11 +141,11 @@ const applyPriceAdjustment = (direction: "up" | "down") => {
 };
 
 const setPriceFromMargin = () => {
-  const cost = Number(form.avg_cost || 0);
+  const cost = Number(form.real_cost || 0);
   const margin = Number(priceAdjust.margin_pct || 0);
 
   if (!Number.isFinite(cost) || cost <= 0) {
-    message.value = "Define primero un costo promedio mayor a 0.";
+    message.value = "Define primero un costo real mayor a 0.";
     return;
   }
 
@@ -112,7 +155,7 @@ const setPriceFromMargin = () => {
   }
 
   form.sale_price = roundMoney(cost * (1 + margin / 100));
-  message.value = `Precio base calculado por margen: S/ ${form.sale_price.toFixed(2)}`;
+  message.value = `Precio base calculado desde costo real: S/ ${form.sale_price.toFixed(2)}`;
 };
 
 const normalizeSalePrice = (value: any) => roundMoney(Number(value || 0));
@@ -128,6 +171,7 @@ const resetForm = () => {
   form.sale_price = 0;
   form.stock_on_hand = 0;
   form.avg_cost = 0;
+  form.real_cost = 0;
   form.min_stock = 0;
   form.active = true;
   form.unit_conversions = [];
@@ -170,6 +214,7 @@ const loadProducts = async () => {
     products.value = (data.products || []).map((item) => ({
       ...item,
       sale_price: normalizeSalePrice(item.sale_price),
+      real_cost: Number(resolveRealCost(item).toFixed(4)),
     }));
     inlinePriceOriginal.value = Object.fromEntries(
       products.value.map((item) => [
@@ -177,6 +222,7 @@ const loadProducts = async () => {
         normalizeSalePrice(item.sale_price),
       ]),
     );
+    pagination.page = 1;
   } catch (err: any) {
     message.value =
       err?.data?.statusMessage ||
@@ -513,6 +559,7 @@ const editProduct = async (product: any) => {
   form.sale_price = Number(product.sale_price || 0);
   form.stock_on_hand = Number(product.stock_on_hand || 0);
   form.avg_cost = Number(product.avg_cost || 0);
+  form.real_cost = Number(resolveRealCost(product).toFixed(4));
   form.min_stock = Number(product.min_stock || 0);
   form.active = product.active !== false;
   form.unit_conversions = [];
@@ -533,32 +580,8 @@ const formatStockQty = (value: any) => {
   return String(Math.round(numeric));
 };
 
-const hasFifoPending = (product: any) => {
-  if (product?.fifo_has_pending === true) return true;
-  if (product?.fifo_has_pending === false) return false;
-  const fifoQty = Number(product?.fifo_next_qty || 0);
-  const stock = Number(product?.stock_on_hand || 0);
-  if (!Number.isFinite(fifoQty) || !Number.isFinite(stock)) return false;
-  if (fifoQty <= 0 || stock <= 0) return false;
-  return fifoQty < stock - 0.0005;
-};
-
 const fifoCostDisplay = (product: any) => {
-  if (!hasFifoPending(product)) {
-    const lastCost = Number(product?.last_purchase_cost || 0);
-    if (lastCost > 0) return lastCost.toFixed(2);
-  }
-
-  const nextCost = Number(product?.fifo_next_cost || 0);
-  if (nextCost > 0) return nextCost.toFixed(2);
-
-  const stockQty = Number(product?.fifo_stock_qty || 0);
-  if (stockQty > 0) {
-    const stockValue = Number(product?.fifo_stock_value || 0);
-    return (stockValue / stockQty).toFixed(2);
-  }
-
-  return "0.00";
+  return resolveRealCost(product).toFixed(2);
 };
 
 const fifoStockHint = (product: any) => {
@@ -598,6 +621,72 @@ const filteredProducts = computed(() => {
     return true;
   });
 });
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 25,
+});
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredProducts.value.length / pagination.pageSize)),
+);
+
+const currentPage = computed(() =>
+  Math.min(Math.max(1, pagination.page), totalPages.value),
+);
+
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * pagination.pageSize;
+  return filteredProducts.value.slice(start, start + pagination.pageSize);
+});
+
+const paginationStart = computed(() => {
+  if (!filteredProducts.value.length) return 0;
+  return (currentPage.value - 1) * pagination.pageSize + 1;
+});
+
+const paginationEnd = computed(() =>
+  Math.min(filteredProducts.value.length, currentPage.value * pagination.pageSize),
+);
+
+const goToPage = (page: number) => {
+  pagination.page = Math.min(totalPages.value, Math.max(1, page));
+};
+
+watch(
+  () => [
+    search.value,
+    productFilters.stockZero,
+    productFilters.latestWeek,
+    productFilters.missingPresentation,
+    productFilters.salePriceZero,
+    productFilters.status,
+    productFilters.category,
+    productFilters.fifoWithStock,
+  ],
+  () => {
+    pagination.page = 1;
+  },
+);
+
+watch(
+  () => pagination.pageSize,
+  () => {
+    pagination.page = 1;
+  },
+);
+
+watch(
+  totalPages,
+  (value) => {
+    if (!filteredProducts.value.length) {
+      pagination.page = 1;
+      return;
+    }
+    if (pagination.page > value) pagination.page = value;
+  },
+  { immediate: true },
+);
 
 const normalizeKey = (value: string) =>
   String(value || "")
@@ -1084,11 +1173,28 @@ onMounted(loadProducts);
       </div>
 
       <div
-        class="px-6 py-3 flex justify-between items-center bg-white border-b border-slate-100"
+        class="px-6 py-3 flex flex-col gap-3 bg-white border-b border-slate-100 sm:flex-row sm:items-center sm:justify-between"
       >
-        <span class="text-sm font-semibold text-slate-500"
-          >Mostrando {{ filteredProducts.length }} resultados</span
-        >
+        <span class="text-sm font-semibold text-slate-500">
+          <template v-if="filteredProducts.length">
+            Mostrando {{ paginationStart }}-{{ paginationEnd }} de
+            {{ filteredProducts.length }} resultados
+          </template>
+          <template v-else>Mostrando 0 resultados</template>
+        </span>
+
+        <label class="flex items-center gap-2 text-sm font-medium text-slate-500">
+          <span>Por página</span>
+          <select v-model.number="pagination.pageSize" class="ui-select h-9 w-24">
+            <option
+              v-for="size in pageSizeOptions"
+              :key="`page-size-${size}`"
+              :value="size"
+            >
+              {{ size }}
+            </option>
+          </select>
+        </label>
       </div>
 
       <div
@@ -1122,7 +1228,7 @@ onMounted(loadProducts);
             </tr>
           </thead>
           <tbody>
-            <tr v-for="product in filteredProducts" :key="product.id">
+            <tr v-for="product in paginatedProducts" :key="product.id">
               <td>{{ product.sku || "-" }}</td>
               <td>
                 <p class="font-semibold text-slate-800">{{ product.name }}</p>
@@ -1184,15 +1290,15 @@ onMounted(loadProducts);
                   Guardando...
                 </p>
                 <p
-                  v-else-if="Number(product.avg_cost || 0) > 0"
+                  v-else-if="Number(product.real_cost || 0) > 0"
                   class="mt-1 text-[11px] text-slate-500"
                 >
                   Margen:
                   <span
                     :class="
                       ((Number(product.sale_price || 0) -
-                        Number(product.avg_cost || 0)) /
-                        Number(product.avg_cost || 0)) *
+                        Number(product.real_cost || 0)) /
+                        Number(product.real_cost || 0)) *
                         100 <
                       0
                         ? 'text-red-500'
@@ -1201,8 +1307,8 @@ onMounted(loadProducts);
                     >{{
                       (
                         ((Number(product.sale_price || 0) -
-                          Number(product.avg_cost || 0)) /
-                          Number(product.avg_cost || 0)) *
+                          Number(product.real_cost || 0)) /
+                          Number(product.real_cost || 0)) *
                         100
                       ).toFixed(1)
                     }}%</span
@@ -1245,6 +1351,46 @@ onMounted(loadProducts);
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div
+        v-if="filteredProducts.length"
+        class="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <p class="text-sm text-slate-500">
+          Página {{ currentPage }} de {{ totalPages }}
+        </p>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            class="ui-btn-secondary px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="currentPage === 1"
+            @click="goToPage(1)"
+          >
+            Primera
+          </button>
+          <button
+            class="ui-btn-secondary px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="currentPage === 1"
+            @click="goToPage(currentPage - 1)"
+          >
+            Anterior
+          </button>
+          <button
+            class="ui-btn-secondary px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="currentPage === totalPages"
+            @click="goToPage(currentPage + 1)"
+          >
+            Siguiente
+          </button>
+          <button
+            class="ui-btn-secondary px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="currentPage === totalPages"
+            @click="goToPage(totalPages)"
+          >
+            Última
+          </button>
+        </div>
       </div>
 
       <p
@@ -1416,7 +1562,8 @@ onMounted(loadProducts);
                             {{ Number(form.sale_price || 0).toFixed(2) }}</span
                           >
                           <span v-if="currentMarginPct !== null" class="ml-2"
-                            >Margen estimado: {{ currentMarginPct }}%</span
+                            >Margen estimado (costo real):
+                            {{ currentMarginPct }}%</span
                           >
                         </p>
                       </div>
@@ -1467,7 +1614,7 @@ onMounted(loadProducts);
                         class="ui-btn-secondary px-3 py-2"
                         @click="setPriceFromMargin"
                       >
-                        Calcular desde costo promedio
+                        Calcular desde costo real
                       </button>
                     </div>
                   </div>

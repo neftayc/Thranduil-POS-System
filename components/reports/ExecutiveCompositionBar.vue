@@ -58,10 +58,10 @@ const hasSales = computed(() => salesBase.value > 0)
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <section class="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-sm">
     <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h3 class="text-lg font-bold text-slate-800">Composicion del total</h3>
+        <h3 class="text-lg font-bold text-slate-800">Composición del total</h3>
         <p class="text-sm font-medium text-slate-500">
           Lectura ejecutiva de ventas, costo y utilidad bruta.
         </p>
@@ -103,15 +103,15 @@ const hasSales = computed(() => salesBase.value > 0)
       </p>
 
       <div class="grid gap-3 md:grid-cols-3">
-        <div class="rounded-2xl bg-slate-50 p-4">
+        <div class="rounded-2xl border border-white/70 bg-white p-4 shadow-sm">
           <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Ventas totales</p>
           <p class="mt-2 text-2xl font-bold text-slate-800">{{ formatMoney(salesTotal) }}</p>
         </div>
-        <div class="rounded-2xl bg-slate-50 p-4">
+        <div class="rounded-2xl border border-white/70 bg-white p-4 shadow-sm">
           <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Costo de ventas</p>
           <p class="mt-2 text-2xl font-bold text-rose-600">{{ formatMoney(cogsTotal) }}</p>
         </div>
-        <div class="rounded-2xl bg-slate-50 p-4">
+        <div class="rounded-2xl border border-white/70 bg-white p-4 shadow-sm">
           <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Ganancia bruta</p>
           <p class="mt-2 text-2xl font-bold" :class="grossProfitTotal >= 0 ? 'text-emerald-600' : 'text-rose-600'">
             {{ formatMoney(grossProfitTotal) }}

@@ -16,7 +16,7 @@ export const makeSupabasePurchasesRepository = (accessToken: string): PurchasesR
       const [uomRes, suppliersRes, productsRes, conversionsRes, historyRes] = await Promise.all([
         supabase.from('uom_catalog').select('code, label').eq('active', true).order('label'),
         supabase.from('suppliers').select('id, name').order('name'),
-        supabase.from('product_catalog').select('id, name, unit, avg_cost').order('name'),
+        supabase.from('product_catalog').select('id, sku, name, brand, unit, avg_cost').order('name'),
         supabase
           .from('product_unit_conversions')
           .select('product_id, unit_name, factor_to_base, is_active')

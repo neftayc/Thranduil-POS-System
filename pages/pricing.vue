@@ -3,6 +3,8 @@ import { matchesTokensAndFuzzy } from '~/utils/productSearch'
 
 definePageMeta({ middleware: ['owner'] })
 
+const route = useRoute()
+
 const loading = ref(false)
 const saving = ref(false)
 const message = ref('')
@@ -10,6 +12,8 @@ const message = ref('')
 const products = ref<any[]>([])
 const units = ref<Array<{ code: string; label: string }>>([])
 const customerGroups = ref<Array<{ code: string; label: string }>>([])
+const productConversions = ref<Array<{ unit_name: string; factor_to_base: number; is_active: boolean }>>([])
+const autoPresentationRows = ref<any[]>([])
 
 const selectedProductId = ref('')
 const productSearch = ref('')
@@ -85,6 +89,15 @@ const clearProductSearch = () => {
   productSearchOpen.value = true
 }
 
+const syncProductFromQuery = () => {
+  const queryProductId = String(route.query.product_id || '').trim()
+  if (!queryProductId || !products.value.length) return false
+  const queryProduct = products.value.find((product) => String(product.id || '') === queryProductId)
+  if (!queryProduct) return false
+  selectProduct(queryProduct)
+  return true
+}
+
 const isSelectedProductOption = (product: any) =>
   String(product?.id || '') === String(selectedProductId.value || '')
 
@@ -131,6 +144,73 @@ const unitLabel = (code: string) =>
 const customerGroupLabel = (code: string) =>
   customerGroups.value.find((item) => item.code === code)?.label || code || 'Todos'
 
+const normalizeUnitCode = (value: unknown) => String(value || '').trim().toLowerCase()
+
+const availablePresentationUnits = computed(() => {
+  const map = new Map<string, { code: string; label: string; factor_to_base: number; is_base: boolean }>()
+  const baseUnit = String(selectedProduct.value?.unit || '').trim()
+  if (baseUnit) {
+    map.set(normalizeUnitCode(baseUnit), {
+      code: baseUnit,
+      label: unitLabel(baseUnit),
+      factor_to_base: 1,
+      is_base: true
+    })
+  }
+
+  for (const row of productConversions.value) {
+    const unitName = String(row?.unit_name || '').trim()
+    const factor = Number(row?.factor_to_base || 0)
+    if (!unitName || !Number.isFinite(factor) || factor <= 0) continue
+    map.set(normalizeUnitCode(unitName), {
+      code: unitName,
+      label: unitLabel(unitName),
+      factor_to_base: factor,
+      is_base: false
+    })
+  }
+
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.is_base !== b.is_base) return a.is_base ? -1 : 1
+    if (a.factor_to_base !== b.factor_to_base) return a.factor_to_base - b.factor_to_base
+    return a.label.localeCompare(b.label)
+  })
+})
+
+const detectedPresentationUnits = computed(() =>
+  availablePresentationUnits.value.filter((item) => !item.is_base)
+)
+
+const advancedPresentationRules = computed(() =>
+  presentationRules.value.filter((rule) => {
+    const hasCustomerGroup = Boolean(String(rule?.customer_group || '').trim())
+    const isDetectedUnit = detectedPresentationUnits.value.some(
+      (unit) => normalizeUnitCode(unit.code) === normalizeUnitCode(rule?.unit_name)
+    )
+    return hasCustomerGroup || !isDetectedUnit
+  })
+)
+
+const syncAutoPresentationRows = () => {
+  autoPresentationRows.value = detectedPresentationUnits.value.map((unit) => {
+    const existingRule = presentationRules.value.find(
+      (rule) =>
+        normalizeUnitCode(rule?.unit_name) === normalizeUnitCode(unit.code) &&
+        !rule?.customer_group
+    )
+
+    return {
+      id: existingRule?.id || '',
+      unit_name: unit.code,
+      factor_to_base: unit.factor_to_base,
+      price_uom: Number(existingRule?.price_uom || 0),
+      priority: Number(existingRule?.priority || 100),
+      active: existingRule ? existingRule.active !== false : true,
+      exists: Boolean(existingRule)
+    }
+  })
+}
+
 const toIsoOrNull = (value: string) => {
   const raw = String(value || '').trim()
   if (!raw) return null
@@ -160,6 +240,8 @@ const loadRules = async () => {
     wholesaleTiers.value = []
     promotions.value = []
     customerGroupPrices.value = []
+    productConversions.value = []
+    autoPresentationRows.value = []
     return
   }
 
@@ -167,21 +249,68 @@ const loadRules = async () => {
   message.value = ''
   try {
     const productId = selectedProductId.value
-    const data = await $fetch<{
-      presentationRules: any[]
-      wholesaleTiers: any[]
-      promotions: any[]
-      customerGroupPrices: any[]
-    }>(`/api/pricing/rules?product_id=${encodeURIComponent(productId)}`)
+    const [data, conversionsData] = await Promise.all([
+      $fetch<{
+        presentationRules: any[]
+        wholesaleTiers: any[]
+        promotions: any[]
+        customerGroupPrices: any[]
+      }>(`/api/pricing/rules?product_id=${encodeURIComponent(productId)}`),
+      $fetch<{ items: Array<{ unit_name: string; factor_to_base: number; is_active: boolean }> }>(
+        `/api/products/${encodeURIComponent(productId)}/conversions`
+      )
+    ])
 
     presentationRules.value = normalizeRuleDates(data.presentationRules || [])
     wholesaleTiers.value = normalizeRuleDates(data.wholesaleTiers || [])
     promotions.value = normalizeRuleDates(data.promotions || [])
     customerGroupPrices.value = normalizeRuleDates(data.customerGroupPrices || [])
+    productConversions.value = (conversionsData?.items || []).filter((item) => item?.is_active !== false)
+    syncAutoPresentationRows()
   } catch (err: any) {
     message.value = err?.data?.statusMessage || err?.message || 'No se pudieron cargar reglas de venta.'
   } finally {
     loading.value = false
+  }
+}
+
+const saveAutoPresentationRow = async (row: any) => {
+  if (!selectedProductId.value) return
+  saving.value = true
+  message.value = ''
+  try {
+    if (row.id) {
+      await $fetch(`/api/pricing/presentation/${row.id}`, {
+        method: 'PATCH',
+        body: {
+          unit_name: row.unit_name,
+          customer_group: null,
+          price_uom: Number(row.price_uom || 0),
+          priority: Number(row.priority || 100),
+          active: row.active !== false
+        }
+      })
+      message.value = 'Precio por presentación actualizado.'
+    } else {
+      await $fetch('/api/pricing/presentation', {
+        method: 'POST',
+        body: {
+          product_id: selectedProductId.value,
+          unit_name: row.unit_name,
+          customer_group: null,
+          price_uom: Number(row.price_uom || 0),
+          priority: Number(row.priority || 100),
+          active: row.active !== false
+        }
+      })
+      message.value = 'Precio por presentación creado.'
+    }
+
+    await loadRules()
+  } catch (err: any) {
+    message.value = err?.data?.statusMessage || err?.message || 'No se pudo guardar el precio por presentación.'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -195,11 +324,15 @@ const loadCatalogs = async () => {
     units.value = data.units || []
     customerGroups.value = data.customerGroups || []
 
-    if (!selectedProductId.value && products.value.length) {
+    const syncedFromQuery = syncProductFromQuery()
+
+    if (!syncedFromQuery && !selectedProductId.value && products.value.length) {
       selectedProductId.value = products.value[0].id
     }
 
-    await loadRules()
+    if ((!syncedFromQuery && !selectedProductId.value) || !products.value.length) {
+      await loadRules()
+    }
   } catch (err: any) {
     message.value = err?.data?.statusMessage || err?.message || 'No se pudieron cargar datos de configuración.'
   } finally {
@@ -511,6 +644,14 @@ watch(selectedProductId, () => {
   loadRules()
 })
 
+watch(
+  () => route.query.product_id,
+  () => {
+    if (!products.value.length) return
+    syncProductFromQuery()
+  }
+)
+
 onMounted(loadCatalogs)
 
 onBeforeUnmount(() => {
@@ -605,10 +746,65 @@ onBeforeUnmount(() => {
 
     <section v-if="selectedProductId" class="ui-card card-hover space-y-4">
       <h3 class="ui-heading">Precio Por Presentación</h3>
+      <div v-if="detectedPresentationUnits.length" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-700">Presentaciones detectadas automáticamente</p>
+            <p class="text-xs text-slate-500">Solo asigna el precio de venta a las presentaciones que ya existen en el producto.</p>
+          </div>
+          <span class="ui-meta-chip">{{ detectedPresentationUnits.length }} presentación(es)</span>
+        </div>
+
+        <div class="ui-table-wrap">
+          <table class="ui-table">
+            <thead>
+              <tr>
+                <th>Unidad</th>
+                <th>Equivale</th>
+                <th>Precio venta</th>
+                <th>Activo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in autoPresentationRows" :key="row.unit_name">
+                <td class="font-semibold text-slate-800">{{ unitLabel(row.unit_name) }}</td>
+                <td class="text-slate-500">1 {{ unitLabel(row.unit_name) }} = {{ Number(row.factor_to_base || 0) }} {{ selectedProduct?.unit || 'unidad' }}</td>
+                <td>
+                  <input
+                    v-model.number="row.price_uom"
+                    class="ui-input w-32"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Precio"
+                  />
+                </td>
+                <td>
+                  <input v-model="row.active" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+                </td>
+                <td class="flex gap-2">
+                  <button class="ui-btn-secondary px-3 py-2" :disabled="saving" @click="saveAutoPresentationRow(row)">
+                    {{ row.id ? 'Guardar' : 'Crear precio' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div v-else class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+        Este producto no tiene presentaciones adicionales configuradas. Primero agrégalas en el catálogo del producto y luego aquí podrás asignar sus precios.
+      </div>
+
+      <div class="border-t border-slate-100 pt-4">
+        <p class="mb-3 text-sm font-semibold text-slate-700">Reglas adicionales o avanzadas</p>
+        <p class="mb-4 text-xs text-slate-500">Si necesitas reglas por cliente o crear precios para otra unidad manualmente, puedes seguir usando esta tabla.</p>
+      </div>
       <div class="grid gap-3 lg:grid-cols-[1fr_1fr_180px_130px_auto]">
         <select v-model="newPresentation.unit_name" class="ui-select">
           <option value="">Unidad</option>
-          <option v-for="unit in units" :key="unit.code" :value="unit.code">{{ unit.label }}</option>
+          <option v-for="unit in availablePresentationUnits" :key="unit.code" :value="unit.code">{{ unit.label }}</option>
         </select>
         <select v-model="newPresentation.customer_group" class="ui-select">
           <option value="">Todos los clientes</option>
@@ -632,10 +828,10 @@ onBeforeUnmount(() => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="rule in presentationRules" :key="rule.id">
+            <tr v-for="rule in advancedPresentationRules" :key="rule.id">
               <td>
                 <select v-model="rule.unit_name" class="ui-select w-44">
-                  <option v-for="unit in units" :key="unit.code" :value="unit.code">{{ unit.label }}</option>
+                  <option v-for="unit in availablePresentationUnits" :key="unit.code" :value="unit.code">{{ unit.label }}</option>
                 </select>
               </td>
               <td>

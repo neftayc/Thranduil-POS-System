@@ -1,8 +1,42 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdminClient } from '../../utils/supabase'
+import { resolveSchoolBrandPricing } from '../../utils/schoolPricing'
 
 type VariantType = 'default' | 'economic' | 'premium'
 const MISSING_ITEMS_TOLERANCE_PCT = 0.2
+
+const normalizeId = (value: unknown) => String(value || '').trim()
+const toNumber = (value: unknown) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const hasFifoPending = (product: any) => {
+  const fifoQty = toNumber(product?.fifo_next_qty)
+  const stock = toNumber(product?.stock_on_hand)
+  if (fifoQty <= 0 || stock <= 0) return false
+  return fifoQty < stock - 0.0005
+}
+
+const resolveFifoUnitCost = (product: any) => {
+  if (!product) return 0
+
+  if (!hasFifoPending(product)) {
+    const lastCost = toNumber(product?.last_purchase_cost)
+    if (lastCost > 0) return lastCost
+  }
+
+  const nextCost = toNumber(product?.fifo_next_cost)
+  if (nextCost > 0) return nextCost
+
+  const stockQty = toNumber(product?.fifo_stock_qty)
+  if (stockQty > 0) {
+    const stockValue = toNumber(product?.fifo_stock_value)
+    if (stockValue > 0) return stockValue / stockQty
+  }
+
+  return Math.max(0, toNumber(product?.avg_cost))
+}
 
 const calculateCompletableSetsWithTolerance = (
   setsPerItem: number[],
@@ -33,8 +67,8 @@ export default defineEventHandler(async (event) => {
       items:school_list_items(
         id, item_description, qty, sort_order, notes,
         brands:school_list_item_brands(
-          id, brand, is_default,
-          product:products(id, sku, name, sale_price, stock_on_hand, unit)
+          id, brand, is_default, product_id,
+          pricing_rule_id, pricing_unit_name, pricing_label, pricing_price_uom, pricing_factor_to_base
         )
       )
     `)
@@ -43,7 +77,37 @@ export default defineEventHandler(async (event) => {
 
   if (error || !listData) throw createError({ statusCode: 404, statusMessage: 'Lista no encontrada' })
 
+  const productIds = Array.from(
+    new Set(
+      (listData.items || []).flatMap((item: any) =>
+        (item.brands || [])
+          .map((brand: any) => normalizeId(brand?.product_id))
+          .filter((productId: string) => Boolean(productId))
+      )
+    )
+  )
+
+  const productById = new Map<string, any>()
+  if (productIds.length) {
+    const { data: productRows, error: productError } = await supabase
+      .from('product_catalog')
+      .select('id, sku, name, sale_price, stock_on_hand, unit, avg_cost, last_purchase_cost, fifo_stock_qty, fifo_stock_value, fifo_next_cost, fifo_next_qty')
+      .in('id', productIds)
+
+    if (productError) {
+      throw createError({ statusCode: 500, statusMessage: productError.message })
+    }
+
+    for (const row of productRows || []) {
+      const productId = normalizeId((row as any)?.id)
+      if (!productId) continue
+      productById.set(productId, row)
+    }
+  }
+
   let total_price = { default: 0, economic: 0, premium: 0 }
+  let total_cost = { default: 0, economic: 0, premium: 0 }
+  let total_profit = { default: 0, economic: 0, premium: 0 }
   let completable_sets_arr = { default: [] as number[], economic: [] as number[], premium: [] as number[] }
   let items_with_product = { default: 0, economic: 0, premium: 0 }
   let items_with_stock = { default: 0, economic: 0, premium: 0 }
@@ -51,31 +115,36 @@ export default defineEventHandler(async (event) => {
 
   const items = listData.items?.sort((a: any, b: any) => a.sort_order - b.sort_order).map((item: any) => {
     const qty_needed = item.qty || 1
+    const brands = (item.brands || []).map((brand: any) => ({
+      ...brand,
+      product: productById.get(normalizeId(brand?.product_id)) || null
+    }))
 
-    // Determine the products for each variant
-    const defaultBrand = item.brands?.find((b: any) => b.is_default) || item.brands?.[0]
-    
-    // Find min and max priced brands
+    const defaultBrand = brands.find((b: any) => b.is_default) || brands[0]
     let minPriceBrand = defaultBrand
     let maxPriceBrand = defaultBrand
-    
-    if (item.brands && item.brands.length > 0) {
-      item.brands.forEach((b: any) => {
-        if (!b.product || !b.product.sale_price) return
-        
-        if (!minPriceBrand?.product?.sale_price || b.product.sale_price < minPriceBrand.product.sale_price) {
+
+    if (brands.length > 0) {
+      brands.forEach((b: any) => {
+        if (!b.product) return
+
+        const currentPricing = resolveSchoolBrandPricing(b)
+        const minPricing = minPriceBrand ? resolveSchoolBrandPricing(minPriceBrand) : null
+        const maxPricing = maxPriceBrand ? resolveSchoolBrandPricing(maxPriceBrand) : null
+
+        if (!minPricing || currentPricing.price_base < minPricing.price_base) {
           minPriceBrand = b
         }
-        if (!maxPriceBrand?.product?.sale_price || b.product.sale_price > maxPriceBrand.product.sale_price) {
+        if (!maxPricing || currentPricing.price_base > maxPricing.price_base) {
           maxPriceBrand = b
         }
       })
     }
 
-    const variants = {
-      default: defaultBrand?.product,
-      economic: minPriceBrand?.product,
-      premium: maxPriceBrand?.product
+    const variantBrands = {
+      default: defaultBrand || null,
+      economic: minPriceBrand || null,
+      premium: maxPriceBrand || null
     }
 
     const brandNames = {
@@ -85,19 +154,33 @@ export default defineEventHandler(async (event) => {
     }
 
     const item_subtotals = { default: 0, economic: 0, premium: 0 }
+    const item_cost_totals = { default: 0, economic: 0, premium: 0 }
+    const item_profit_totals = { default: 0, economic: 0, premium: 0 }
     const match_statuses = { default: 'no_match', economic: 'no_match', premium: 'no_match' }
+    const item_qty_uom = { default: 0, economic: 0, premium: 0 }
+    const item_factor_to_base = { default: 1, economic: 1, premium: 1 }
+    const item_unit_name = { default: '', economic: '', premium: '' }
 
-    // Process each variant
     ;(['default', 'economic', 'premium'] as VariantType[]).forEach(v => {
-      const product = variants[v]
-      
+      const brand = variantBrands[v]
+      const product = brand?.product
+
       if (product) {
         items_with_product[v]++
-        const price = product.sale_price || 0
+        const pricing = resolveSchoolBrandPricing(brand)
+        const price = pricing.price_uom
+        const fifoUnitCost = resolveFifoUnitCost(product)
         const stock = product.stock_on_hand || 0
-        
-        item_subtotals[v] = price * qty_needed
+
+        item_qty_uom[v] = pricing.qty_uom_from_base(qty_needed)
+        item_factor_to_base[v] = pricing.factor_to_base
+        item_unit_name[v] = pricing.unit_name
+        item_subtotals[v] = pricing.subtotal_from_base(qty_needed)
+        item_cost_totals[v] = fifoUnitCost * qty_needed
+        item_profit_totals[v] = item_subtotals[v] - item_cost_totals[v]
         total_price[v] += item_subtotals[v]
+        total_cost[v] += item_cost_totals[v]
+        total_profit[v] += item_profit_totals[v]
 
         if (stock >= qty_needed) items_with_stock[v]++
         
@@ -117,16 +200,28 @@ export default defineEventHandler(async (event) => {
     })
 
     const buildLinkedProduct = (v: VariantType) => {
-      const product = variants[v]
-      if (!product) return null
+      const brand = variantBrands[v]
+      const product = brand?.product
+      if (!product || !brand) return null
+      const pricing = resolveSchoolBrandPricing(brand)
       return {
         id: product.id,
+        product_id: product.id,
+        brand_id: brand.id,
         sku: product.sku,
         name: product.name,
         brand: brandNames[v],
-        sale_price: product.sale_price,
+        avg_cost: product.avg_cost,
+        fifo_unit_cost: resolveFifoUnitCost(product),
+        last_purchase_cost: product.last_purchase_cost,
+        fifo_next_cost: product.fifo_next_cost,
+        sale_price: pricing.price_uom,
         stock_on_hand: product.stock_on_hand,
-        unit: product.unit
+        unit: pricing.unit_name,
+        base_unit: product.unit,
+        factor_to_base: pricing.factor_to_base,
+        pricing_label: pricing.label,
+        pricing_rule_id: pricing.rule_id,
       }
     }
 
@@ -138,16 +233,31 @@ export default defineEventHandler(async (event) => {
       variants: {
         default: {
             linked_product: buildLinkedProduct('default'),
+            qty_uom: item_qty_uom.default,
+            factor_to_base: item_factor_to_base.default,
+            unit_name: item_unit_name.default,
+            cost_total: item_cost_totals.default,
+            profit_total: item_profit_totals.default,
             subtotal: item_subtotals.default,
             match_status: match_statuses.default
         },
         economic: {
             linked_product: buildLinkedProduct('economic'),
+            qty_uom: item_qty_uom.economic,
+            factor_to_base: item_factor_to_base.economic,
+            unit_name: item_unit_name.economic,
+            cost_total: item_cost_totals.economic,
+            profit_total: item_profit_totals.economic,
             subtotal: item_subtotals.economic,
             match_status: match_statuses.economic
         },
         premium: {
             linked_product: buildLinkedProduct('premium'),
+            qty_uom: item_qty_uom.premium,
+            factor_to_base: item_factor_to_base.premium,
+            unit_name: item_unit_name.premium,
+            cost_total: item_cost_totals.premium,
+            profit_total: item_profit_totals.premium,
             subtotal: item_subtotals.premium,
             match_status: match_statuses.premium
         }
@@ -172,6 +282,8 @@ export default defineEventHandler(async (event) => {
   const metrics = {
     default: {
       total_price: total_price.default,
+      total_cost: total_cost.default,
+      total_profit: total_profit.default,
       completable_sets: defaultCompletableSets,
       realizable_value: defaultCompletableSets * total_price.default,
       coverage_pct: total_items > 0 ? (items_with_product.default / total_items) * 100 : 0,
@@ -179,6 +291,8 @@ export default defineEventHandler(async (event) => {
     },
     economic: {
       total_price: total_price.economic,
+      total_cost: total_cost.economic,
+      total_profit: total_profit.economic,
       completable_sets: economicCompletableSets,
       realizable_value: economicCompletableSets * total_price.economic,
       coverage_pct: total_items > 0 ? (items_with_product.economic / total_items) * 100 : 0,
@@ -186,6 +300,8 @@ export default defineEventHandler(async (event) => {
     },
     premium: {
       total_price: total_price.premium,
+      total_cost: total_cost.premium,
+      total_profit: total_profit.premium,
       completable_sets: premiumCompletableSets,
       realizable_value: premiumCompletableSets * total_price.premium,
       coverage_pct: total_items > 0 ? (items_with_product.premium / total_items) * 100 : 0,

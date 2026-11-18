@@ -6,6 +6,7 @@ import { getSupabaseUserClient } from '../../../utils/supabase'
 
 export const makeSupabaseProductsRepository = (accessToken: string): ProductsRepository => {
   const supabase = getSupabaseUserClient(accessToken)
+  const PRODUCT_QUERY_BATCH_SIZE = 150
   const normalizeSku = (value: unknown) =>
     String(value || '')
       .trim()
@@ -48,6 +49,42 @@ export const makeSupabaseProductsRepository = (accessToken: string): ProductsRep
 
     // Último fallback improbable; deja traza SKU igualmente único por timestamp.
     return normalizeSku(`SKU-${skuBaseFromName(name)}-${Date.now().toString(36).toUpperCase()}`)
+  }
+
+  const splitIntoBatches = <T>(items: T[], size: number) => {
+    const batches: T[][] = []
+    for (let index = 0; index < items.length; index += size) {
+      batches.push(items.slice(index, index + size))
+    }
+    return batches
+  }
+
+  const fetchProductSupportRows = async (productIds: string[]) => {
+    const conversions: any[] = []
+    const purchases: any[] = []
+
+    // Avoid oversized PostgREST URLs when the catalog grows.
+    for (const batch of splitIntoBatches(productIds, PRODUCT_QUERY_BATCH_SIZE)) {
+      const [conversionsRes, purchasesRes] = await Promise.all([
+        supabase
+          .from('product_unit_conversions')
+          .select('product_id, unit_name, factor_to_base')
+          .in('product_id', batch)
+          .eq('is_active', true),
+        supabase
+          .from('purchase_items')
+          .select('id, product_id, unit_name, qty_uom, cost_unit_uom, total_cost, created_at, purchases (invoice_no, purchase_date, created_at)')
+          .in('product_id', batch)
+      ])
+
+      if (conversionsRes.error) throw createError({ statusCode: 500, statusMessage: conversionsRes.error.message })
+      if (purchasesRes.error) throw createError({ statusCode: 500, statusMessage: purchasesRes.error.message })
+
+      if (Array.isArray(conversionsRes.data)) conversions.push(...conversionsRes.data)
+      if (Array.isArray(purchasesRes.data)) purchases.push(...purchasesRes.data)
+    }
+
+    return { conversions, purchases }
   }
 
   return {
@@ -96,23 +133,10 @@ export const makeSupabaseProductsRepository = (accessToken: string): ProductsRep
       }
 
       if (productIds.length) {
-        const [conversionsRes, purchasesRes] = await Promise.all([
-          supabase
-            .from('product_unit_conversions')
-            .select('product_id, unit_name, factor_to_base')
-            .in('product_id', productIds)
-            .eq('is_active', true),
-          supabase
-            .from('purchase_items')
-            .select('id, product_id, unit_name, qty_uom, cost_unit_uom, total_cost, created_at, purchases (invoice_no, purchase_date, created_at)')
-            .in('product_id', productIds)
-        ])
-
-        if (conversionsRes.error) throw createError({ statusCode: 500, statusMessage: conversionsRes.error.message })
-        if (purchasesRes.error) throw createError({ statusCode: 500, statusMessage: purchasesRes.error.message })
+        const { conversions, purchases } = await fetchProductSupportRows(productIds)
 
         const factorByProductAndUnit = new Map<string, number>()
-        for (const row of conversionsRes.data || []) {
+        for (const row of conversions) {
           const productId = String((row as any)?.product_id || '').trim()
           const unitCode = resolveUom((row as any)?.unit_name)
           const factor = Number((row as any)?.factor_to_base || 0)
@@ -137,7 +161,7 @@ export const makeSupabaseProductsRepository = (accessToken: string): ProductsRep
           if (normalized.includes('import-hoja1-empresa-ayrampo-001')) return 1
           return 50
         }
-        for (const row of purchasesRes.data || []) {
+        for (const row of purchases) {
           const productId = String((row as any)?.product_id || '').trim()
           if (!productId) continue
 

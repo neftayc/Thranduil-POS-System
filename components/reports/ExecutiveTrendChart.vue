@@ -121,7 +121,7 @@ const labelStep = computed(() => {
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <section class="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-sm">
     <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h3 class="text-lg font-bold text-slate-800">{{ title }}</h3>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed } from "vue";
 
 type CartItem = {
   product_id: string;
@@ -36,7 +36,18 @@ type SaleSubmitResult = {
   error: string | null;
 };
 
+type ReceiptData = {
+  saleId: string | null;
+  holdName: string;
+  paidAt: string;
+  paymentMethod: string;
+  customerName: string;
+  total: number;
+  items: CartItem[];
+};
+
 type SalesTab = "pos" | "checkout" | "history" | "reports";
+type PosLayoutMode = "split" | "catalog";
 type ProductFilterKey =
   | "todo"
   | "cuadernos"
@@ -59,11 +70,14 @@ const query = ref("");
 const activeProductFilter = ref<ProductFilterKey>("todo");
 const cart = ref<CartItem[]>([]);
 const customerId = ref<string | null>(null);
+const customerQuickName = ref("");
 const paymentMethod = ref("efectivo");
 const activeTab = ref<SalesTab>("pos");
 const searchInputRef = ref<HTMLInputElement | null>(null);
 const productListRef = ref<HTMLElement | null>(null);
 const activeProductIndex = ref(0);
+const posLayoutMode = ref<PosLayoutMode>("split");
+const showTicketModal = ref(false);
 const heldSales = ref<HeldSale[]>([]);
 const holdName = ref("");
 const selectedHeldSaleId = ref<string | null>(null);
@@ -72,16 +86,7 @@ const checkoutMessage = ref("");
 const checkoutLoading = ref(false);
 const ordersStorageMode = ref<"db" | "local">("db");
 const ordersFallbackWarned = ref(false);
-const editingPriceIndex = ref<number | null>(null);
-const latestReceipt = ref<{
-  saleId: string | null;
-  holdName: string;
-  paidAt: string;
-  paymentMethod: string;
-  customerName: string;
-  total: number;
-  items: CartItem[];
-} | null>(null);
+const latestReceipt = ref<ReceiptData | null>(null);
 const message = ref("");
 const loading = ref(false);
 const pricingLoading = ref(false);
@@ -195,6 +200,17 @@ const cartItemsCount = computed(() =>
     0,
   ),
 );
+const currentTicketCode = computed(
+  () => `#ORD-${String(Date.now()).slice(-4)}`,
+);
+const productCartCountMap = computed(() => {
+  const map: Record<string, number> = {};
+  for (const item of cart.value) {
+    const qty = Math.max(1, Math.trunc(toNumber(item.qty, 1)));
+    map[item.product_id] = (map[item.product_id] || 0) + qty;
+  }
+  return map;
+});
 const defaultHoldSaleName = computed(
   () => `En espera ${heldSales.value.length + 1}`,
 );
@@ -247,6 +263,7 @@ const defaultCustomerGroups = () => [
 
 const HOLD_STORAGE_KEY = "papeleria_pos_hold_sales_v1";
 const DRAFT_STORAGE_KEY = "papeleria_pos_draft_v1";
+const POS_LAYOUT_STORAGE_KEY = "papeleria_pos_layout_v2";
 
 const isOrdersBackendMissing = (error: any) => {
   const text = String(
@@ -272,6 +289,13 @@ const round2 = (value: any) => Number(toNumber(value, 0).toFixed(2));
 const newLocalId = () =>
   `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 const nowIso = () => new Date().toISOString();
+const escapeHtml = (value: any) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 
 const heldSaleTotal = (sale: HeldSale) =>
   sale.items.reduce(
@@ -327,6 +351,124 @@ const customerNameById = (value: string | null) => {
     customers.value.find((customer) => customer.id === value)?.name || "Cliente"
   );
 };
+const normalizeCustomerName = (value: string) =>
+  String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+const findCustomerByName = (value: string) => {
+  const normalized = normalizeCustomerName(value);
+  if (!normalized) return null;
+  return (
+    customers.value.find(
+      (customer) => normalizeCustomerName(String(customer?.name || "")) === normalized,
+    ) || null
+  );
+};
+const setSelectedCustomer = (value: string | null) => {
+  const id = String(value || "").trim();
+  customerId.value =
+    id && customers.value.some((customer) => customer.id === id) ? id : null;
+  if (customerId.value) {
+    customerQuickName.value = "";
+  }
+};
+const setCustomerQuickName = (value: string) => {
+  customerQuickName.value = String(value || "");
+  if (customerQuickName.value.trim()) {
+    customerId.value = null;
+  }
+};
+const setPaymentMethod = (value: string) => {
+  const code = normalizePaymentCode(value);
+  paymentMethod.value = paymentMethods.value.some(
+    (method) => method.code === code,
+  )
+    ? code
+    : paymentMethods.value[0]?.code || "efectivo";
+};
+const sortedCustomers = computed(() =>
+  [...customers.value].sort((a, b) =>
+    String(a?.name || "").localeCompare(String(b?.name || ""), "es"),
+  ),
+);
+const selectedCustomerModel = computed({
+  get: () => customerId.value || "",
+  set: (value: string) => setSelectedCustomer(String(value || "").trim() || null),
+});
+const customerQuickNameModel = computed({
+  get: () => customerQuickName.value,
+  set: (value: string) => setCustomerQuickName(String(value || "")),
+});
+const paymentMethodModel = computed({
+  get: () => paymentMethod.value,
+  set: (value: string) => setPaymentMethod(String(value || "")),
+});
+const syncCustomerIntoCatalog = (customer: any) => {
+  if (!customer?.id) return;
+  const next = [...customers.value];
+  const index = next.findIndex((item) => item.id === customer.id);
+  if (index >= 0) {
+    next[index] = customer;
+  } else {
+    next.push(customer);
+  }
+  next.sort((a, b) =>
+    String(a?.name || "").localeCompare(String(b?.name || ""), "es"),
+  );
+  customers.value = next;
+};
+const resolveSaleCustomer = async () => {
+  if (customerId.value) {
+    return {
+      customerId: customerId.value,
+      customerName: customerNameById(customerId.value),
+    };
+  }
+
+  const typedName = String(customerQuickName.value || "").trim();
+  if (!typedName) {
+    return {
+      customerId: null,
+      customerName: "Consumidor Final",
+    };
+  }
+
+  const existing = findCustomerByName(typedName);
+  if (existing?.id) {
+    setSelectedCustomer(String(existing.id));
+    return {
+      customerId: String(existing.id),
+      customerName: String(existing.name || typedName),
+    };
+  }
+
+  const res = await $fetch<{ ok: boolean; customer: any | null }>(
+    "/api/customers/save",
+    {
+      method: "POST",
+      body: {
+        name: typedName,
+        customer_group: "minorista",
+      },
+    },
+  );
+
+  const savedCustomer = res?.customer || null;
+  const savedId = savedCustomer?.id ? String(savedCustomer.id) : "";
+  if (!savedId) {
+    throw new Error("No se pudo guardar el cliente nuevo.");
+  }
+
+  syncCustomerIntoCatalog(savedCustomer);
+  setSelectedCustomer(savedId);
+
+  return {
+    customerId: savedId,
+    customerName: String(savedCustomer?.name || typedName),
+  };
+};
 
 const selectedHeldSale = computed(() => {
   if (!selectedHeldSaleId.value) return null;
@@ -360,9 +502,352 @@ const formatUnitLabel = (value: string) => {
 };
 
 const formatOrderMoney = (value: any) => `S/ ${toNumber(value, 0).toFixed(2)}`;
+const formatReceiptQty = (value: any) => {
+  const qty = toNumber(value, 0);
+  return Number.isInteger(qty) ? String(qty) : qty.toFixed(2);
+};
+const formatReceiptDateTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || "");
+  return new Intl.DateTimeFormat("es-PE", {
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+const receiptDocumentTitle = (receipt: ReceiptData) => {
+  const stamp = receipt.saleId
+    ? String(receipt.saleId).replace(/[^a-zA-Z0-9_-]/g, "").slice(-12)
+    : new Date(receipt.paidAt).toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  return `boleta-venta-${stamp || Date.now()}.pdf`;
+};
+let activeReceiptPrintFrame: HTMLIFrameElement | null = null;
+let receiptPrintCleanupTimer: number | null = null;
+
+const cleanupReceiptPrintFrame = () => {
+  if (!process.client) return;
+  if (receiptPrintCleanupTimer !== null) {
+    window.clearTimeout(receiptPrintCleanupTimer);
+    receiptPrintCleanupTimer = null;
+  }
+  activeReceiptPrintFrame?.remove();
+  activeReceiptPrintFrame = null;
+};
+
+const buildReceiptHtml = (receipt: ReceiptData) => {
+  const saleReference = receipt.saleId
+    ? `#${String(receipt.saleId).slice(-8).toUpperCase()}`
+    : "Generada en caja";
+  const rows = receipt.items
+    .map((item, index) => {
+      const sku = String(item.sku || "").trim();
+      return `
+        <tr>
+          <td>${escapeHtml(index + 1)}</td>
+          <td>
+            <strong>${escapeHtml(item.name)}</strong>
+            ${
+              sku
+                ? `<div class="item-note">SKU: ${escapeHtml(sku)}</div>`
+                : ""
+            }
+            <div class="item-note">
+              ${escapeHtml(formatReceiptQty(item.qty))} x ${escapeHtml(formatUnitLabel(item.unit_name))}
+            </div>
+          </td>
+          <td>${escapeHtml(formatOrderMoney(item.price_unit))}</td>
+          <td>${escapeHtml(formatOrderMoney(toNumber(item.qty, 0) * toNumber(item.price_unit, 0)))}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `
+    <!doctype html>
+    <html lang="es">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(receiptDocumentTitle(receipt))}</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 12mm;
+          }
+          * {
+            box-sizing: border-box;
+          }
+          body {
+            margin: 0;
+            background: #f8fafc;
+            color: #0f172a;
+            font-family: Arial, sans-serif;
+          }
+          .sheet {
+            width: 100%;
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 24px;
+            background: #ffffff;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 18px;
+            border-bottom: 2px solid #0f172a;
+          }
+          .eyebrow {
+            margin: 0 0 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #64748b;
+          }
+          h1 {
+            margin: 0;
+            font-size: 28px;
+            line-height: 1.1;
+          }
+          .subtitle {
+            margin: 8px 0 0;
+            color: #475569;
+            font-size: 13px;
+          }
+          .status {
+            align-self: flex-start;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+          }
+          .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin: 18px 0;
+          }
+          .meta-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 12px;
+            background: #f8fafc;
+          }
+          .meta-label {
+            display: block;
+            margin-bottom: 4px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+          .meta-value {
+            display: block;
+            font-size: 16px;
+            font-weight: 700;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+          }
+          th, td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+            vertical-align: top;
+            font-size: 12px;
+          }
+          th {
+            color: #475569;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+          .item-note {
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 11px;
+          }
+          .summary {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+          }
+          .summary-card {
+            min-width: 240px;
+            border-radius: 14px;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 16px 18px;
+          }
+          .summary-label {
+            display: block;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.75);
+          }
+          .summary-total {
+            display: block;
+            margin-top: 6px;
+            font-size: 30px;
+            font-weight: 800;
+          }
+          .footer {
+            margin-top: 22px;
+            padding-top: 14px;
+            border-top: 1px dashed #cbd5e1;
+            color: #64748b;
+            font-size: 12px;
+            text-align: center;
+          }
+          @media print {
+            body {
+              background: #ffffff;
+            }
+            .sheet {
+              max-width: none;
+              padding: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <main class="sheet">
+          <header class="header">
+            <div>
+              <p class="eyebrow">THRANDUIL</p>
+              <h1>Boleta de Venta</h1>
+              <p class="subtitle">Documento simple generado desde el punto de venta.</p>
+            </div>
+            <div class="status">Pagado</div>
+          </header>
+
+          <section class="meta-grid">
+            <article class="meta-card">
+              <span class="meta-label">Venta</span>
+              <span class="meta-value">${escapeHtml(saleReference)}</span>
+            </article>
+            <article class="meta-card">
+              <span class="meta-label">Fecha</span>
+              <span class="meta-value">${escapeHtml(formatReceiptDateTime(receipt.paidAt))}</span>
+            </article>
+            <article class="meta-card">
+              <span class="meta-label">Cliente</span>
+              <span class="meta-value">${escapeHtml(receipt.customerName || "Consumidor Final")}</span>
+            </article>
+            <article class="meta-card">
+              <span class="meta-label">Pago</span>
+              <span class="meta-value">${escapeHtml(paymentLabel(receipt.paymentMethod))}</span>
+            </article>
+          </section>
+
+          <section>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Producto</th>
+                  <th>P. unit</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </section>
+
+          <section class="summary">
+            <div class="summary-card">
+              <span class="summary-label">Total cobrado</span>
+              <span class="summary-total">${escapeHtml(formatOrderMoney(receipt.total))}</span>
+              <span class="summary-label">Origen: ${escapeHtml(receipt.holdName || "Venta inmediata")}</span>
+            </div>
+          </section>
+
+          <footer class="footer">
+            Gracias por su compra.
+          </footer>
+        </main>
+      </body>
+    </html>
+  `;
+};
+
+const printReceiptPdf = (receipt: ReceiptData) => {
+  if (!process.client) return;
+
+  cleanupReceiptPrintFrame();
+
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.position = "fixed";
+  frame.style.right = "0";
+  frame.style.bottom = "0";
+  frame.style.width = "0";
+  frame.style.height = "0";
+  frame.style.border = "0";
+  activeReceiptPrintFrame = frame;
+  document.body.appendChild(frame);
+
+  const doc = frame.contentDocument || frame.contentWindow?.document;
+  const win = frame.contentWindow;
+  if (!doc || !win) {
+    cleanupReceiptPrintFrame();
+    return;
+  }
+
+  let hasPrinted = false;
+  const triggerPrint = () => {
+    if (hasPrinted || activeReceiptPrintFrame !== frame) return;
+    hasPrinted = true;
+    win.onafterprint = () => cleanupReceiptPrintFrame();
+    win.focus();
+    win.print();
+    receiptPrintCleanupTimer = window.setTimeout(() => {
+      cleanupReceiptPrintFrame();
+    }, 2000);
+  };
+
+  frame.onload = () => {
+    window.setTimeout(triggerPrint, 120);
+  };
+
+  doc.open();
+  doc.write(buildReceiptHtml(receipt));
+  doc.close();
+
+  receiptPrintCleanupTimer = window.setTimeout(triggerPrint, 320);
+};
+
+const registerLatestReceipt = (
+  receipt: ReceiptData,
+  autoPrint = true,
+) => {
+  latestReceipt.value = receipt;
+  if (autoPrint) {
+    printReceiptPdf(receipt);
+  }
+};
 
 const getProductById = (productId: string) =>
   products.value.find((item) => item.id === productId);
+
+const cartItemBrand = (item: CartItem) =>
+  String(getProductById(item.product_id)?.brand || "").trim();
+const productCartCount = (productId: string) =>
+  productCartCountMap.value[productId] || 0;
+const productIsSelected = (productId: string) => productCartCount(productId) > 0;
 
 const getUomOptions = (productId: string) => productUoms.value[productId] || [];
 
@@ -416,6 +901,13 @@ const normalizeQtyByStock = (
   }
 
   return true;
+};
+
+const resetManualPricing = (item: CartItem) => {
+  item.manual_discount_pct = 0;
+  item.manual_discount_amount = 0;
+  item.manual_discount_reason = "";
+  item.manual_price_override = null;
 };
 
 const recomputeLineFinalPrice = (item: CartItem, silent = false) => {
@@ -699,6 +1191,19 @@ const loadHeldSales = async () => {
   }
 };
 
+const savePosLayoutToStorage = () => {
+  if (!process.client) return;
+  localStorage.setItem(POS_LAYOUT_STORAGE_KEY, posLayoutMode.value);
+};
+
+const restorePosLayoutFromStorage = () => {
+  if (!process.client) return;
+  const stored = localStorage.getItem(POS_LAYOUT_STORAGE_KEY);
+  if (stored === "split" || stored === "catalog") {
+    posLayoutMode.value = stored;
+  }
+};
+
 const saveDraftToStorage = () => {
   if (!process.client) return;
   if (!cart.value.length) {
@@ -708,6 +1213,7 @@ const saveDraftToStorage = () => {
 
   const payload = {
     customer_id: customerId.value,
+    customer_name: String(customerQuickName.value || "").trim() || null,
     payment_method: paymentMethod.value,
     items: cloneCart(cart.value),
   };
@@ -723,11 +1229,15 @@ const restoreDraftFromStorage = () => {
     if (!Array.isArray(parsed?.items) || !parsed.items.length) return;
 
     cart.value = parsed.items.map((item: any) => normalizeCartItem(item));
-    customerId.value =
+    if (
       parsed?.customer_id &&
       customers.value.some((customer) => customer.id === parsed.customer_id)
-        ? parsed.customer_id
-        : null;
+    ) {
+      setSelectedCustomer(parsed.customer_id);
+    } else {
+      customerId.value = null;
+      customerQuickName.value = String(parsed?.customer_name || "").trim();
+    }
     const paymentCode = normalizePaymentCode(
       parsed?.payment_method || "efectivo",
     );
@@ -744,6 +1254,7 @@ const restoreDraftFromStorage = () => {
 const resetCurrentSale = (notify = true) => {
   cart.value = [];
   customerId.value = null;
+  customerQuickName.value = "";
   paymentMethod.value = paymentMethods.value[0]?.code || "efectivo";
   if (process.client) {
     localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -792,6 +1303,16 @@ const saveCurrentSaleAsHold = async () => {
   }
 
   await refreshCartPricing(true);
+  let resolvedCustomer: Awaited<ReturnType<typeof resolveSaleCustomer>>;
+  try {
+    resolvedCustomer = await resolveSaleCustomer();
+  } catch (error: any) {
+    message.value =
+      error?.data?.statusMessage ||
+      error?.message ||
+      "No se pudo preparar el cliente para el pedido.";
+    return;
+  }
 
   const name = String(holdName.value || "").trim() || defaultHoldSaleName.value;
   const payloadItems = buildOrderPayloadItems(cart.value);
@@ -806,7 +1327,7 @@ const saveCurrentSaleAsHold = async () => {
       await $fetch("/api/sales/hold", {
         method: "POST",
         body: {
-          customer_id: customerId.value,
+          customer_id: resolvedCustomer.customerId,
           payment_method: paymentMethod.value,
           items: payloadItems,
           notes: name,
@@ -842,11 +1363,15 @@ const loadHeldSale = async (holdId: string) => {
   }
 
   cart.value = cloneCart(selected.items);
-  customerId.value =
+  if (
     selected.customer_id &&
     customers.value.some((customer) => customer.id === selected.customer_id)
-      ? selected.customer_id
-      : null;
+  ) {
+    setSelectedCustomer(selected.customer_id);
+  } else {
+    customerId.value = null;
+    customerQuickName.value = "";
+  }
   paymentMethod.value = paymentMethods.value.some(
     (method) => method.code === selected.payment_method,
   )
@@ -913,7 +1438,7 @@ const selectHeldSale = (holdId: string) => {
 
 const printLatestReceipt = () => {
   if (!process.client || !latestReceipt.value) return;
-  window.print();
+  printReceiptPdf(latestReceipt.value);
 };
 
 const incrementItemQty = async (item: CartItem, index: number) => {
@@ -931,29 +1456,37 @@ const decrementItemQty = async (item: CartItem, index: number) => {
   await onCartQtyChange(item, index);
 };
 
-const startEditingPrice = async (index: number) => {
-  if (!canUseManualDiscount.value) return;
-  editingPriceIndex.value = index;
-  await nextTick();
-  if (!process.client) return;
-  const input = document.getElementById(
-    `price-input-${index}`,
-  ) as HTMLInputElement | null;
-  input?.focus();
-  input?.select();
-};
-
-const stopEditingPrice = (item: CartItem) => {
-  onManualUnitPriceChange(item);
-  editingPriceIndex.value = null;
-};
-
-const focusProductSearch = () => {
+const focusProductSearch = (selectText = true) => {
   if (!process.client) return;
   requestAnimationFrame(() => {
-    searchInputRef.value?.focus();
-    searchInputRef.value?.select();
+    const input = searchInputRef.value;
+    if (!input) return;
+    input.focus();
+    if (selectText) {
+      input.select();
+      return;
+    }
+    const length = input.value.length;
+    input.setSelectionRange(length, length);
   });
+};
+
+const setPosLayout = (mode: PosLayoutMode) => {
+  posLayoutMode.value = mode;
+  if (mode === "split") {
+    showTicketModal.value = false;
+  }
+  savePosLayoutToStorage();
+  focusProductSearch();
+};
+
+const openTicketModal = () => {
+  showTicketModal.value = true;
+};
+
+const closeTicketModal = () => {
+  showTicketModal.value = false;
+  focusProductSearch();
 };
 
 const scrollActiveProductIntoView = () => {
@@ -1032,6 +1565,11 @@ const handleSearchKeydown = (event: KeyboardEvent) => {
 
 const handlePosHotkeys = (event: KeyboardEvent) => {
   if (activeTab.value !== "pos") return;
+  if (showTicketModal.value && event.key === "Escape") {
+    event.preventDefault();
+    closeTicketModal();
+    return;
+  }
   if (event.key === "F2") {
     event.preventDefault();
     focusProductSearch();
@@ -1310,13 +1848,15 @@ const defaultProducts = computed(() => {
 const visibleProducts = computed(() => {
   const term = query.value.trim();
   if (term) return filteredProducts.value;
-  return defaultProducts.value;
+  if (posLayoutMode.value === "catalog") return defaultProducts.value;
+  return [];
 });
 
 const hasProductSearch = computed(() => query.value.trim().length > 0);
 
 const addToCart = (product: any) => {
   message.value = "";
+  const preserveSearchState = posLayoutMode.value === "catalog";
   const unitName = normalizeUnitName(product.unit || "unidad");
   const existingIndex = cart.value.findIndex(
     (item) => item.product_id === product.id && item.unit_name === unitName,
@@ -1324,9 +1864,11 @@ const addToCart = (product: any) => {
 
   if (existingIndex >= 0) {
     cart.value[existingIndex].qty += 1;
-    query.value = "";
+    if (!preserveSearchState) {
+      query.value = "";
+    }
     void onCartQtyChange(cart.value[existingIndex], existingIndex);
-    focusProductSearch();
+    focusProductSearch(!preserveSearchState);
     return;
   }
 
@@ -1354,9 +1896,20 @@ const addToCart = (product: any) => {
   };
 
   cart.value.push(item);
-  query.value = "";
+  if (!preserveSearchState) {
+    query.value = "";
+  }
   void resolveItemPricing(item, cart.value.length - 1, true);
-  focusProductSearch();
+  focusProductSearch(!preserveSearchState);
+};
+
+const removeProductSelection = (productId: string) => {
+  const previousLength = cart.value.length;
+  cart.value = cart.value.filter((item) => item.product_id !== productId);
+  if (cart.value.length !== previousLength) {
+    message.value = "Producto retirado del ticket.";
+  }
+  focusProductSearch(posLayoutMode.value !== "catalog");
 };
 
 const removeFromCart = (index: number) => {
@@ -1392,19 +1945,9 @@ const onCartUnitChange = async (item: CartItem, index: number) => {
     return;
   }
 
+  resetManualPricing(item);
   item.factor_to_base = getFactor(item.product_id, item.unit_name);
   await onCartQtyChange(item, index);
-};
-
-const onManualDiscountChange = (item: CartItem) => {
-  if (!canUseManualDiscount.value) return;
-  item.manual_price_override = null;
-  item.manual_discount_pct = Math.max(0, toNumber(item.manual_discount_pct, 0));
-  item.manual_discount_amount = Math.max(
-    0,
-    toNumber(item.manual_discount_amount, 0),
-  );
-  recomputeLineFinalPrice(item, false);
 };
 
 const onManualUnitPriceChange = (item: CartItem) => {
@@ -1430,7 +1973,9 @@ const total = computed(() =>
   ),
 );
 
-const submitSale = async (): Promise<SaleSubmitResult> => {
+const submitSale = async (
+  options: { holdName?: string; autoPrint?: boolean } = {},
+): Promise<SaleSubmitResult> => {
   message.value = "";
   loading.value = true;
   try {
@@ -1490,13 +2035,14 @@ const submitSale = async (): Promise<SaleSubmitResult> => {
       manual_discount_reason:
         String(item.manual_discount_reason || "").trim() || null,
     }));
+    const resolvedCustomer = await resolveSaleCustomer();
 
     const res = await $fetch<{ saleId: string | null }>(
       "/api/sales/create-sale",
       {
         method: "POST",
         body: {
-          customer_id: customerId.value,
+          customer_id: resolvedCustomer.customerId,
           payment_method: paymentMethod.value,
           items: cleaned,
         },
@@ -1504,24 +2050,33 @@ const submitSale = async (): Promise<SaleSubmitResult> => {
     );
 
     const saleId = res?.saleId ? String(res.saleId) : null;
-    latestReceipt.value = {
+    const receipt: ReceiptData = {
       saleId,
-      holdName: "Venta inmediata",
+      holdName: String(options.holdName || "Venta inmediata"),
       paidAt: nowIso(),
       paymentMethod: paymentMethod.value,
-      customerName: customerNameById(customerId.value),
+      customerName: resolvedCustomer.customerName,
       total: round2(total.value),
       items: cloneCart(activeItems),
     };
 
-    message.value = "Venta registrada correctamente.";
+    message.value = "Venta registrada. Boleta lista para imprimir.";
     cart.value = [];
     customerId.value = null;
+    customerQuickName.value = "";
     paymentMethod.value = paymentMethods.value[0]?.code || "efectivo";
     if (process.client) {
       localStorage.removeItem(DRAFT_STORAGE_KEY);
     }
-    await loadData();
+    registerLatestReceipt(receipt, options.autoPrint !== false);
+    try {
+      await loadData();
+    } catch (refreshError: any) {
+      message.value =
+        refreshError?.data?.statusMessage ||
+        refreshError?.message ||
+        "La venta se registró, pero no se pudo refrescar la pantalla.";
+    }
     focusProductSearch();
     return { ok: true, saleId, error: null };
   } catch (err: any) {
@@ -1609,7 +2164,7 @@ const chargeSelectedHeldSale = async () => {
         },
       );
 
-      latestReceipt.value = {
+      registerLatestReceipt({
         saleId: res?.saleId ? String(res.saleId) : null,
         holdName: selected.name,
         paidAt: nowIso(),
@@ -1617,31 +2172,44 @@ const chargeSelectedHeldSale = async () => {
         customerName: customerNameById(selected.customer_id),
         total: round2(heldSaleTotal(selected)),
         items: cloneCart(selected.items),
-      };
+      });
 
-      await loadData();
-      checkoutMessage.value = "Cobro registrado y recibo generado.";
+      try {
+        await loadData();
+        checkoutMessage.value = "Cobro registrado. Boleta lista para imprimir.";
+      } catch (refreshError: any) {
+        checkoutMessage.value =
+          refreshError?.data?.statusMessage ||
+          refreshError?.message ||
+          "El cobro se registró, pero no se pudo refrescar la pantalla.";
+      }
       return;
     }
 
     const backupCart = cloneCart(cart.value);
     const backupCustomerId = customerId.value;
+    const backupCustomerQuickName = customerQuickName.value;
     const backupPaymentMethod = paymentMethod.value;
     const backupMessage = message.value;
 
     cart.value = cloneCart(selected.items);
-    customerId.value =
+    if (
       selected.customer_id &&
       customers.value.some((customer) => customer.id === selected.customer_id)
-        ? selected.customer_id
-        : null;
+    ) {
+      setSelectedCustomer(selected.customer_id);
+    } else {
+      customerId.value = null;
+      customerQuickName.value = "";
+    }
     paymentMethod.value = paymentCode;
 
-    const result = await submitSale();
+    const result = await submitSale({ holdName: selected.name });
     const saleError = result.error || message.value;
 
     cart.value = backupCart;
     customerId.value = backupCustomerId;
+    customerQuickName.value = backupCustomerQuickName;
     paymentMethod.value = backupPaymentMethod;
     message.value = backupMessage;
     saveDraftToStorage();
@@ -1651,20 +2219,10 @@ const chargeSelectedHeldSale = async () => {
       return;
     }
 
-    latestReceipt.value = {
-      saleId: result.saleId,
-      holdName: selected.name,
-      paidAt: nowIso(),
-      paymentMethod: paymentCode,
-      customerName: customerNameById(selected.customer_id),
-      total: round2(heldSaleTotal(selected)),
-      items: cloneCart(selected.items),
-    };
-
     heldSales.value = heldSales.value.filter((sale) => sale.id !== selected.id);
     saveHeldSalesToStorage();
     syncHeldSaleSelection();
-    checkoutMessage.value = "Cobro registrado y recibo generado.";
+    checkoutMessage.value = "Cobro registrado. Boleta lista para imprimir.";
   } catch (error: any) {
     if (selected.source === "db" && isOrdersBackendMissing(error)) {
       ordersStorageMode.value = "local";
@@ -1727,7 +2285,7 @@ watch(visibleProducts, (list) => {
 });
 
 watch(
-  [cart, customerId, paymentMethod],
+  [cart, customerId, customerQuickName, paymentMethod],
   () => {
     saveDraftToStorage();
   },
@@ -1755,12 +2313,16 @@ watch(activeTab, (tab) => {
   if (tab === "pos") {
     focusProductSearch();
   }
+  if (tab !== "pos") {
+    showTicketModal.value = false;
+  }
   if (tab !== "history" && showDetails.value) {
     closeDetails();
   }
 });
 
 onMounted(async () => {
+  restorePosLayoutFromStorage();
   await loadData();
   activeTab.value = parseRouteTab(route.query.view);
   if (activeTab.value === "pos") {
@@ -1780,11 +2342,301 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
-    <div
-      v-if="activeTab === 'pos'"
-      class="grid min-h-0 flex-1 grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_420px]"
-    >
-      <section class="flex min-h-0 flex-col gap-5">
+    <div v-if="activeTab === 'pos'" class="flex min-h-0 flex-1 flex-col gap-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div
+          class="inline-flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm"
+        >
+          <button
+            class="rounded-xl px-4 py-2 text-sm font-bold transition-all"
+            :class="
+              posLayoutMode === 'split'
+                ? 'bg-slate-900 text-white shadow'
+                : 'text-slate-500 hover:bg-slate-50'
+            "
+            @click="setPosLayout('split')"
+          >
+            Diseño 1
+          </button>
+          <button
+            class="rounded-xl px-4 py-2 text-sm font-bold transition-all"
+            :class="
+              posLayoutMode === 'catalog'
+                ? 'bg-slate-900 text-white shadow'
+                : 'text-slate-500 hover:bg-slate-50'
+            "
+            @click="setPosLayout('catalog')"
+          >
+            Diseño 2
+          </button>
+        </div>
+
+        <button
+          v-if="posLayoutMode === 'catalog'"
+          class="inline-flex items-center gap-3 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:bg-indigo-700"
+          @click="openTicketModal"
+        >
+          <span>Ver ticket</span>
+          <span
+            class="inline-flex min-w-7 items-center justify-center rounded-full bg-white/20 px-2 py-1 text-xs"
+          >
+            {{ cartItemsCount }}
+          </span>
+          <span class="text-xs font-semibold text-indigo-100">
+            {{ formatOrderMoney(total) }}
+          </span>
+        </button>
+      </div>
+
+      <section
+        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      >
+        <div
+          class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)_14rem]"
+        >
+          <label class="block">
+            <span
+              class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+            >
+              Cliente registrado
+            </span>
+            <select
+              v-model="selectedCustomerModel"
+              class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:outline-none"
+            >
+              <option value="">Consumidor Final</option>
+              <option
+                v-for="customer in sortedCustomers"
+                :key="customer.id"
+                :value="customer.id"
+              >
+                {{ customer.name }}{{ customer.phone ? ` · ${customer.phone}` : "" }}
+              </option>
+            </select>
+          </label>
+
+          <label class="block">
+            <span
+              class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+            >
+              O escribe el nombre
+            </span>
+            <input
+              v-model.trim="customerQuickNameModel"
+              type="text"
+              class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:outline-none"
+              placeholder="Ej. Juan Perez"
+            />
+          </label>
+
+          <label class="block">
+            <span
+              class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+            >
+              Metodo de pago
+            </span>
+            <select
+              v-model="paymentMethodModel"
+              class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:outline-none"
+            >
+              <option
+                v-for="method in paymentMethods"
+                :key="method.code"
+                :value="method.code"
+              >
+                {{ method.label }}
+              </option>
+            </select>
+          </label>
+        </div>
+        <p class="mt-3 text-[11px] text-slate-400">
+          Si escribes un nombre nuevo, se guardará automáticamente al cobrar.
+        </p>
+      </section>
+
+      <div
+        v-if="posLayoutMode === 'split'"
+        class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2"
+      >
+        <section class="flex min-h-0 min-w-0 flex-col gap-3">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="relative">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                ref="searchInputRef"
+                v-model="query"
+                class="h-14 w-full rounded-xl border border-gray-200 bg-white pl-12 pr-12 text-lg font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15"
+                type="text"
+                autocomplete="off"
+                placeholder="Buscar producto por nombre, SKU o marca..."
+                @keydown="handleSearchKeydown"
+              />
+              <button
+                v-if="query"
+                class="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-700"
+                @click="
+                  query = '';
+                  focusProductSearch();
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+            <div class="mt-3 flex items-center justify-between gap-3">
+              <p class="text-xs font-medium text-slate-400">
+                Autocomplete por nombre, SKU o marca.
+              </p>
+              <span
+                v-if="hasProductSearch"
+                class="text-xs font-semibold text-slate-400"
+              >
+                {{ visibleProducts.length }} sugerencias
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+          >
+            <div
+              v-if="hasProductSearch"
+              class="flex items-center justify-between border-b border-slate-100 px-4 py-3"
+            >
+              <p class="text-sm font-bold text-slate-800">Sugerencias</p>
+              <span class="text-xs font-medium text-slate-400">
+                `Enter` agrega
+              </span>
+            </div>
+
+            <div ref="productListRef" class="flex-1 overflow-y-auto p-3">
+              <div
+                v-if="!hasProductSearch"
+                class="flex h-full min-h-[180px] items-center justify-center text-center"
+              >
+                <p class="text-sm font-medium text-slate-400">
+                  Escribe para ver sugerencias.
+                </p>
+              </div>
+
+              <div v-else-if="visibleProducts.length" class="space-y-2">
+                <button
+                  v-for="(product, idx) in visibleProducts"
+                  :key="product.id"
+                  type="button"
+                  class="relative flex w-full items-center justify-between gap-4 rounded-2xl border px-4 py-4 text-left transition-all"
+                  :class="
+                    Number(product.stock_on_hand || 0) <= 0
+                      ? 'cursor-not-allowed border-gray-200 bg-slate-50 opacity-60'
+                      : productIsSelected(product.id)
+                        ? 'border-emerald-200 bg-emerald-50 ring-1 ring-emerald-300'
+                        : 'border-gray-100 bg-white hover:border-slate-200 hover:bg-slate-50'
+                  "
+                  :data-pos-product="idx"
+                  :disabled="Number(product.stock_on_hand || 0) <= 0"
+                  @click="addToCart(product)"
+                >
+                  <span
+                    v-if="productCartCount(product.id)"
+                    class="absolute left-3 top-3 inline-flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-black text-white shadow-sm"
+                  >
+                    {{ productCartCount(product.id) }}
+                  </span>
+
+                  <div class="min-w-0">
+                    <div
+                      class="flex items-center gap-2"
+                      :class="productCartCount(product.id) ? 'pl-9' : ''"
+                    >
+                      <p class="truncate text-sm font-bold text-slate-800">
+                        {{ product.name }}
+                      </p>
+                    </div>
+                    <p class="mt-1 truncate text-xs text-slate-400">
+                      {{ product.brand || "Sin marca" }}
+                    </p>
+                    <p class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Stock: {{ Number(product.stock_on_hand || 0).toFixed(0) }}
+                    </p>
+                  </div>
+
+                  <div class="shrink-0 text-right">
+                    <p class="text-lg font-black text-indigo-600">
+                      {{ formatOrderMoney(product.sale_price) }}
+                    </p>
+                    <p
+                      v-if="productCartCount(product.id)"
+                      class="mt-1 text-[11px] font-medium text-slate-400"
+                    >
+                      {{ productCartCount(product.id) }} en ticket
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              <div
+                v-else
+                class="flex h-full min-h-[180px] items-center justify-center text-center"
+              >
+                <p class="text-sm font-medium text-slate-400">
+                  No encontramos coincidencias para esa búsqueda.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <SalesPosTicketPanel
+          :cart="cart"
+          :total="total"
+          :ticket-code="currentTicketCode"
+          :message="message"
+          :message-is-error="messageIsError"
+          :loading="loading"
+          :can-use-manual-discount="canUseManualDiscount"
+          :cart-item-brand="cartItemBrand"
+          :get-uom-options="getUomOptions"
+          :format-unit-label="formatUnitLabel"
+          :pricing-source-label="pricingSourceLabel"
+          :format-order-money="formatOrderMoney"
+          :decrement-item-qty="decrementItemQty"
+          :increment-item-qty="incrementItemQty"
+          :on-cart-qty-change="onCartQtyChange"
+          :on-cart-unit-change="onCartUnitChange"
+          :on-manual-unit-price-change="onManualUnitPriceChange"
+          :remove-from-cart="removeFromCart"
+          :submit-sale="submitSale"
+          class="lg:max-h-full"
+        />
+      </div>
+
+      <section v-else class="flex min-h-0 flex-1 min-w-0 flex-col gap-4">
         <div class="flex flex-wrap items-center gap-2">
           <button
             v-for="filter in productFilterOptions"
@@ -1802,7 +2654,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-          class="w-full max-w-4xl rounded-2xl border bg-white/95 p-4 shadow-sm backdrop-blur-sm transition-all"
+          class="w-full rounded-2xl border bg-white/95 p-4 shadow-sm backdrop-blur-sm transition-all"
           :class="
             hasProductSearch
               ? 'border-indigo-200 shadow-lg shadow-indigo-500/10'
@@ -1862,37 +2714,62 @@ onBeforeUnmount(() => {
 
         <div
           ref="productListRef"
-          class="grid min-h-0 flex-1 auto-rows-max content-start grid-cols-2 gap-4 overflow-y-auto pr-2 md:grid-cols-3 xl:grid-cols-4"
+          class="grid min-h-0 flex-1 auto-rows-max content-start grid-cols-2 gap-4 overflow-y-auto pr-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
         >
           <button
             v-for="(product, idx) in visibleProducts"
             :key="product.id"
             type="button"
-            class="group self-start rounded-2xl border bg-white p-4 text-left shadow-sm transition-all"
+            class="relative self-start rounded-2xl border bg-white p-4 text-left shadow-sm transition-[border-color,box-shadow,background-color]"
             :class="
               Number(product.stock_on_hand || 0) <= 0
                 ? 'cursor-not-allowed border-gray-200 opacity-60'
-                : idx === activeProductIndex
-                  ? 'border-indigo-200 ring-2 ring-indigo-500/20 hover:-translate-y-1 hover:shadow-lg'
-                  : 'border-gray-100 hover:-translate-y-1 hover:border-indigo-100 hover:shadow-lg'
+                : productIsSelected(product.id)
+                  ? 'border-emerald-300 bg-emerald-50/60 ring-1 ring-emerald-300 shadow-md shadow-emerald-500/10'
+                  : 'border-gray-100 hover:border-indigo-100 hover:bg-slate-50 hover:shadow-md'
             "
             :data-pos-product="idx"
             :disabled="Number(product.stock_on_hand || 0) <= 0"
             @click="addToCart(product)"
           >
+            <span
+              v-if="productIsSelected(product.id)"
+              class="absolute left-3 top-3 z-20 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700"
+            >
+              Seleccionado
+            </span>
+            <span
+              v-if="productCartCount(product.id)"
+              class="absolute right-3 top-3 z-20 inline-flex min-w-8 items-center justify-center rounded-full bg-emerald-600 px-2 py-1 text-xs font-black text-white shadow-lg"
+            >
+              {{ productCartCount(product.id) }}
+            </span>
+
             <div
-              class="mb-3 flex h-24 items-center justify-center rounded-xl bg-slate-100 text-3xl transition-transform group-hover:scale-105"
+              class="mb-3 flex h-24 items-center justify-center rounded-xl bg-slate-100 text-3xl"
             >
               {{ ["📒", "🎒", "✏️", "🎨", "✂️", "🖊️", "📏", "🧴"][idx % 8] }}
             </div>
-            <p
-              class="line-clamp-2 min-h-[48px] text-sm font-bold text-slate-800"
-            >
+            <p class="line-clamp-2 min-h-[48px] text-sm font-bold text-slate-800">
               {{ product.name }}
+            </p>
+            <p class="mt-1 truncate text-xs text-slate-400">
+              {{ product.brand || "Sin marca" }}
+            </p>
+            <p class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Stock actual: {{ Number(product.stock_on_hand || 0).toFixed(0) }}
             </p>
             <p class="mt-1 text-3xl leading-none text-indigo-600">
               {{ formatOrderMoney(product.sale_price) }}
             </p>
+            <button
+              v-if="productIsSelected(product.id)"
+              type="button"
+              class="mt-3 inline-flex rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-rose-600 transition-all hover:bg-rose-100"
+              @click.stop="removeProductSelection(product.id)"
+            >
+              Quitar
+            </button>
           </button>
 
           <div
@@ -1903,137 +2780,6 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </section>
-
-      <aside
-        class="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-lg lg:max-h-full"
-      >
-        <div class="border-b border-gray-100 bg-white p-6">
-          <h3 class="text-lg font-bold text-slate-800">Ticket Actual</h3>
-          <p
-            class="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400"
-          >
-            #ORD-{{ String(Date.now()).slice(-4) }}
-          </p>
-        </div>
-
-        <div class="flex-1 space-y-3 overflow-y-auto p-4">
-          <article
-            v-for="(item, index) in cart"
-            :key="`${item.product_id}-${item.unit_name}-${index}`"
-            class="flex items-center justify-between gap-3 rounded-xl border border-transparent p-3 transition-all hover:border-gray-100 hover:bg-slate-50"
-          >
-            <div class="flex min-w-0 items-center gap-3">
-              <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-lg text-indigo-600"
-              >
-                {{
-                  ["📒", "🎒", "✏️", "🎨", "✂️", "🖊️", "📏", "🧴"][index % 8]
-                }}
-              </div>
-              <div class="min-w-0">
-                <p class="truncate text-sm font-bold text-slate-800">
-                  {{ item.name }}
-                </p>
-                <p class="text-xs text-slate-500">
-                  x{{ Number(item.qty).toFixed(0) }} unidades
-                </p>
-                <div class="mt-1 flex items-center gap-1">
-                  <button
-                    class="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 text-xs font-bold text-slate-500 hover:bg-slate-200"
-                    @click="decrementItemQty(item, index)"
-                  >
-                    -
-                  </button>
-                  <input
-                    v-model.number="item.qty"
-                    type="number"
-                    class="w-10 rounded border border-gray-200 bg-white px-1 py-0.5 text-center text-xs font-semibold text-slate-700 focus:border-indigo-500 focus:outline-none"
-                    @change="onCartQtyChange(item, index)"
-                  />
-                  <button
-                    class="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 text-xs font-bold text-slate-500 hover:bg-slate-200"
-                    @click="incrementItemQty(item, index)"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="text-right">
-              <p
-                class="cursor-pointer text-sm font-bold text-slate-900"
-                title="Doble click para editar precio"
-                @dblclick="startEditingPrice(index)"
-              >
-                {{
-                  formatOrderMoney(
-                    Number(item.qty || 0) * Number(item.price_unit || 0),
-                  )
-                }}
-              </p>
-              <input
-                v-if="editingPriceIndex === index"
-                :id="`price-input-${index}`"
-                v-model.number="item.price_unit"
-                type="number"
-                step="0.01"
-                class="mt-1 w-24 rounded border border-emerald-300 bg-white px-2 py-1 text-right text-xs font-bold text-emerald-600 focus:border-emerald-500 focus:outline-none"
-                @blur="stopEditingPrice(item)"
-                @keydown.enter="stopEditingPrice(item)"
-              />
-              <button
-                class="mt-1 block w-full text-right text-xs text-rose-500 hover:text-rose-600"
-                @click="removeFromCart(index)"
-              >
-                Quitar
-              </button>
-            </div>
-          </article>
-
-          <div
-            v-if="!cart.length"
-            class="flex h-full min-h-[220px] items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-slate-50 text-center text-sm text-slate-500"
-          >
-            Agrega productos para iniciar la venta.
-          </div>
-        </div>
-
-        <footer class="space-y-4 border-t border-gray-100 bg-slate-50 p-6">
-          <div
-            class="flex items-center justify-between text-sm font-bold text-slate-500"
-          >
-            <span>Subtotal</span>
-            <span>{{ formatOrderMoney(total) }}</span>
-          </div>
-          <div
-            class="flex items-center justify-between text-[2rem] font-black text-slate-900"
-          >
-            <span>Total</span>
-            <span>{{ formatOrderMoney(total) }}</span>
-          </div>
-
-          <div
-            v-if="message"
-            class="rounded-xl border px-3 py-2 text-sm font-medium"
-            :class="
-              messageIsError
-                ? 'border-rose-200 bg-rose-50 text-rose-600'
-                : 'border-emerald-200 bg-emerald-50 text-emerald-600'
-            "
-          >
-            {{ message }}
-          </div>
-
-          <button
-            class="w-full rounded-xl bg-indigo-600 px-4 py-4 text-xl font-bold text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-            :disabled="!cart.length || loading"
-            @click="submitSale"
-          >
-            {{ loading ? "Procesando..." : "Cobrar" }}
-          </button>
-        </footer>
-      </aside>
     </div>
 
     <div
@@ -2508,6 +3254,66 @@ onBeforeUnmount(() => {
         </div>
       </section>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="showTicketModal"
+        class="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-4"
+      >
+        <button
+          class="absolute inset-0 bg-slate-900/55 backdrop-blur-md"
+          aria-label="Cerrar ticket"
+          @click="closeTicketModal"
+        ></button>
+
+        <div
+          class="relative flex h-[min(92vh,920px)] w-full max-w-[760px] flex-col"
+        >
+          <button
+            class="absolute right-4 top-4 z-10 rounded-lg bg-white/90 p-2 text-slate-400 shadow transition-colors hover:bg-white hover:text-slate-800"
+            @click="closeTicketModal"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+
+          <SalesPosTicketPanel
+            :cart="cart"
+            :total="total"
+            :ticket-code="currentTicketCode"
+            :message="message"
+            :message-is-error="messageIsError"
+            :loading="loading"
+            :can-use-manual-discount="canUseManualDiscount"
+            :cart-item-brand="cartItemBrand"
+            :get-uom-options="getUomOptions"
+            :format-unit-label="formatUnitLabel"
+            :pricing-source-label="pricingSourceLabel"
+            :format-order-money="formatOrderMoney"
+            :decrement-item-qty="decrementItemQty"
+            :increment-item-qty="incrementItemQty"
+            :on-cart-qty-change="onCartQtyChange"
+            :on-cart-unit-change="onCartUnitChange"
+            :on-manual-unit-price-change="onManualUnitPriceChange"
+            :remove-from-cart="removeFromCart"
+            :submit-sale="submitSale"
+            class="h-full"
+          />
+        </div>
+      </div>
+    </Teleport>
 
     <Teleport to="body">
       <div

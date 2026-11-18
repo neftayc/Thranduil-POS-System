@@ -43,12 +43,13 @@ export const makeSupabaseCustomersRepository = (accessToken: string): CustomersR
         customer_group: input?.customer_group ? String(input.customer_group).trim() : 'minorista'
       }
 
-      const query = id ? supabase.from('customers').update(payload).eq('id', id) : supabase.from('customers').insert(payload)
-      const { error } = await query
+      const query = id
+        ? supabase.from('customers').update(payload).eq('id', id).select('*').single()
+        : supabase.from('customers').insert(payload).select('*').single()
+      const { data, error } = await query
       if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
-      return { ok: true as const }
+      return { ok: true as const, customer: data || null }
     }
   }
 }
-

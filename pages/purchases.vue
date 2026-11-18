@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { matchesTokensAndFuzzy } from "~/utils/productSearch";
+
 const suppliers = ref<any[]>([]);
 const products = ref<any[]>([]);
 const uomCatalog = ref<Array<{ code: string; label: string }>>([]);
@@ -7,10 +9,28 @@ const history = ref<any[]>([]);
 const message = ref("");
 const loading = ref(false);
 const showRegisterModal = ref(false);
+const activeProductSearchIndex = ref<number | null>(null);
+const MAX_PRODUCT_SUGGESTIONS = 8;
+const productSearchInputRefs = ref<Record<number, HTMLInputElement | null>>({});
+const productSearchDropdownPosition = ref({
+  top: 0,
+  left: 0,
+  width: 320,
+  maxHeight: 288,
+});
 
 const supplierId = ref<string | null>(null);
 const invoiceNo = ref("");
-const makeLine = () => ({ product_id: "", qty: 1, unit_name: "", factor_to_base: 1, cost_unit: 0 });
+const makeLine = () => ({
+  product_id: "",
+  product_search: "",
+  qty: 1,
+  unit_name: "",
+  factor_to_base: 1,
+  cost_unit: 0,
+  line_total: 0,
+  manual_total: false,
+});
 const items = ref<any[]>([makeLine()]);
 
 // Modal state
@@ -42,24 +62,24 @@ const loadData = async () => {
 
     const uomData = Array.isArray(data.conversions) ? data.conversions : [];
 
-  const map: Record<string, Array<{ unit_name: string; factor_to_base: number }>> = {};
-  for (const product of products.value) {
-    map[product.id] = [
-      { unit_name: String(product.unit || "unidad").toLowerCase(), factor_to_base: 1 },
-    ];
-  }
+    const map: Record<string, Array<{ unit_name: string; factor_to_base: number }>> = {};
+    for (const product of products.value) {
+      map[product.id] = [
+        { unit_name: String(product.unit || "unidad").toLowerCase(), factor_to_base: 1 },
+      ];
+    }
 
-  for (const row of uomData || []) {
-    const productId = row.product_id;
-    const unitName = String(row.unit_name || "").toLowerCase().trim();
-    const factor = Number(row.factor_to_base || 0);
-    if (!productId || !unitName || factor <= 0) continue;
-    if (!map[productId]) map[productId] = [];
-    if (map[productId].some((opt) => opt.unit_name === unitName)) continue;
-    map[productId].push({ unit_name: unitName, factor_to_base: factor });
-  }
+    for (const row of uomData || []) {
+      const productId = row.product_id;
+      const unitName = String(row.unit_name || "").toLowerCase().trim();
+      const factor = Number(row.factor_to_base || 0);
+      if (!productId || !unitName || factor <= 0) continue;
+      if (!map[productId]) map[productId] = [];
+      if (map[productId].some((opt) => opt.unit_name === unitName)) continue;
+      map[productId].push({ unit_name: unitName, factor_to_base: factor });
+    }
 
-  productUoms.value = map;
+    productUoms.value = map;
 
     history.value = data.history || [];
   } catch (err: any) {
@@ -68,10 +88,12 @@ const loadData = async () => {
 };
 
 const addLine = () => {
+  activeProductSearchIndex.value = null;
   items.value.push(makeLine());
 };
 
 const removeLine = (index: number) => {
+  activeProductSearchIndex.value = null;
   items.value.splice(index, 1);
   if (!items.value.length) addLine();
 };
@@ -79,7 +101,185 @@ const removeLine = (index: number) => {
 const getProduct = (productId: string) =>
   products.value.find((p) => p.id === productId);
 
+const normalizeText = (value: any) =>
+  String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
 const normalizeUnitName = (value: string) => String(value || "").toLowerCase().trim();
+
+const formatProductSearchLabel = (product: any) => {
+  const name = String(product?.name || "").trim();
+  const brand = String(product?.brand || "").trim();
+  if (!brand) return name;
+
+  const normalizedName = normalizeText(name);
+  const normalizedBrand = normalizeText(brand);
+  if (normalizedBrand && normalizedName.includes(normalizedBrand)) return name;
+
+  return `${name} · ${brand}`;
+};
+
+const formatProductSearchMeta = (product: any) => {
+  const brand = String(product?.brand || "").trim();
+  return brand;
+};
+
+const scoreProductOption = (product: any, term: string) => {
+  const normalizedTerm = normalizeText(term);
+  if (!normalizedTerm) return 1;
+
+  const name = normalizeText(product?.name || "");
+  const brand = normalizeText(product?.brand || "");
+  const sku = normalizeText(product?.sku || "");
+  const label = normalizeText(formatProductSearchLabel(product));
+  const haystack = `${name} ${brand} ${sku}`.trim();
+
+  if (!haystack) return 0;
+
+  let score = 0;
+  if (sku === normalizedTerm) score += 1500;
+  if (name === normalizedTerm || label === normalizedTerm) score += 1200;
+  if (name.startsWith(normalizedTerm)) score += 900;
+  if (brand.startsWith(normalizedTerm)) score += 700;
+  if (sku.startsWith(normalizedTerm)) score += 650;
+  if (label.includes(normalizedTerm)) score += 450;
+  if (brand.includes(normalizedTerm)) score += 300;
+  if (sku.includes(normalizedTerm)) score += 260;
+
+  const tokens = normalizedTerm.split(/\s+/).filter((token) => token.length > 0);
+  if (tokens.length && tokens.every((token) => haystack.includes(token))) {
+    score += 180 + tokens.length * 25;
+  }
+
+  if (matchesTokensAndFuzzy(normalizedTerm, haystack)) score += 140;
+  return score;
+};
+
+const getProductSuggestions = (item: any) => {
+  const term = String(item?.product_search || "").trim();
+
+  return products.value
+    .map((product) => ({ product, score: scoreProductOption(product, term) }))
+    .filter((row) => (term ? row.score > 0 : true))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return String(a.product?.name || "").localeCompare(String(b.product?.name || ""), "es");
+    })
+    .slice(0, MAX_PRODUCT_SUGGESTIONS)
+    .map((row) => row.product);
+};
+
+const activeProductSearchItem = computed(() => {
+  if (activeProductSearchIndex.value === null) return null;
+  return items.value[activeProductSearchIndex.value] || null;
+});
+
+const activeProductSuggestions = computed(() => {
+  if (!activeProductSearchItem.value) return [];
+  return getProductSuggestions(activeProductSearchItem.value);
+});
+
+const activeProductSearchStyle = computed(() => ({
+  top: `${productSearchDropdownPosition.value.top}px`,
+  left: `${productSearchDropdownPosition.value.left}px`,
+  width: `${productSearchDropdownPosition.value.width}px`,
+  maxHeight: `${productSearchDropdownPosition.value.maxHeight}px`,
+}));
+
+const syncProductSearchLabel = (item: any) => {
+  const product = getProduct(item.product_id);
+  item.product_search = product ? formatProductSearchLabel(product) : "";
+};
+
+const setProductSearchInputRef = (element: Element | null, index: number) => {
+  if (element instanceof HTMLInputElement) {
+    productSearchInputRefs.value[index] = element;
+    return;
+  }
+
+  delete productSearchInputRefs.value[index];
+};
+
+const updateProductSearchDropdownPosition = (index = activeProductSearchIndex.value) => {
+  if (typeof window === "undefined" || index === null) return;
+
+  const input = productSearchInputRefs.value[index];
+  if (!input) return;
+
+  const rect = input.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const sideMargin = 16;
+  const width = Math.min(rect.width, Math.max(220, viewportWidth - sideMargin * 2));
+  let left = Math.max(sideMargin, rect.left);
+
+  if (left + width > viewportWidth - sideMargin) {
+    left = Math.max(sideMargin, viewportWidth - sideMargin - width);
+  }
+
+  productSearchDropdownPosition.value = {
+    top: Math.round(rect.bottom + 8),
+    left: Math.round(left),
+    width: Math.round(width),
+    maxHeight: Math.max(180, Math.round(viewportHeight - rect.bottom - 24)),
+  };
+};
+
+const handleProductSearchViewportChange = () => {
+  updateProductSearchDropdownPosition();
+};
+
+const openProductSearch = (item: any, index: number, event?: FocusEvent) => {
+  activeProductSearchIndex.value = index;
+  syncProductSearchLabel(item);
+  nextTick(() => updateProductSearchDropdownPosition(index));
+
+  const input = event?.target as HTMLInputElement | null;
+  if (input && typeof window !== "undefined") {
+    window.setTimeout(() => input.select(), 0);
+  }
+};
+
+const onProductSearchInput = (index: number) => {
+  activeProductSearchIndex.value = index;
+  message.value = "";
+  nextTick(() => updateProductSearchDropdownPosition(index));
+};
+
+const closeProductSearch = (item: any, index: number) => {
+  if (typeof window === "undefined") {
+    syncProductSearchLabel(item);
+    activeProductSearchIndex.value = null;
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (activeProductSearchIndex.value !== index) return;
+    syncProductSearchLabel(item);
+    activeProductSearchIndex.value = null;
+  }, 120);
+};
+
+const selectProductSuggestion = (item: any, product: any) => {
+  item.product_id = String(product?.id || "");
+  item.product_search = formatProductSearchLabel(product);
+  onSelectProduct(item);
+  activeProductSearchIndex.value = null;
+};
+
+const clearProductSelection = (item: any) => {
+  item.product_id = "";
+  item.product_search = "";
+  item.unit_name = "";
+  item.factor_to_base = 1;
+  item.cost_unit = 0;
+  item.line_total = 0;
+  item.manual_total = false;
+  message.value = "";
+};
 
 const getUnitLabel = (unitName: string) => {
   const code = normalizeUnitName(unitName);
@@ -131,6 +331,8 @@ const onSelectProduct = (item: any) => {
   const product = getProduct(item.product_id);
   if (!product) return;
 
+  item.product_search = formatProductSearchLabel(product);
+
   const options = getUomOptions(product.id);
   const selected = normalizeUnitName(item.unit_name);
   const exists = options.some((opt) => opt.unit_name === selected);
@@ -146,10 +348,9 @@ const onSelectProduct = (item: any) => {
     message.value = "";
   }
 
-  if (Number(item.cost_unit || 0) === 0) {
-    const factor = Number(item.factor_to_base || 1);
-    item.cost_unit = Number((Number(product.avg_cost || 0) * factor).toFixed(4));
-  }
+  item.cost_unit = Number(Number(product.avg_cost || 0).toFixed(4));
+  item.manual_total = false;
+  syncLineEstimatedTotal(item);
 };
 
 const onChangeUnit = (item: any) => {
@@ -166,6 +367,7 @@ const onChangeUnit = (item: any) => {
 
   item.factor_to_base = nextFactor;
   message.value = "";
+  syncLineEstimatedTotal(item);
 };
 
 const formatUnitLabel = (value: string) => {
@@ -175,6 +377,41 @@ const formatUnitLabel = (value: string) => {
 const toNumber = (value: any) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const roundMoney = (value: number) => Number(value.toFixed(2));
+const roundUnitCost = (value: number) => Number(value.toFixed(4));
+const getLineFactor = (item: any) => Math.max(toNumber(item?.factor_to_base), 0);
+const getLineBaseQty = (item: any) => toNumber(item?.qty) * getLineFactor(item);
+const getLineEstimatedTotal = (item: any) =>
+  roundMoney(getLineBaseQty(item) * toNumber(item?.cost_unit));
+const syncLineEstimatedTotal = (item: any) => {
+  if (item?.manual_total) return;
+  item.line_total = getLineEstimatedTotal(item);
+};
+const getLineTotal = (item: any) => roundMoney(Math.max(toNumber(item?.line_total), 0));
+const getLineUnitCost = (item: any) => {
+  const baseQty = getLineBaseQty(item);
+  if (baseQty <= 0) return 0;
+  return roundUnitCost(getLineTotal(item) / baseQty);
+};
+const formatLineUnitCost = (item: any) => {
+  const value = getLineUnitCost(item);
+  return value > 0 ? String(Number(value.toFixed(4))) : "0";
+};
+const getLineCostPerSelectedUnit = (item: any) => {
+  const qty = toNumber(item?.qty);
+  if (qty <= 0) return 0;
+  return roundUnitCost(getLineTotal(item) / qty);
+};
+const onLineQtyInput = (item: any) => {
+  message.value = "";
+  syncLineEstimatedTotal(item);
+};
+const onLineTotalInput = (item: any) => {
+  item.manual_total = true;
+  item.line_total = roundMoney(Math.max(toNumber(item?.line_total), 0));
+  message.value = "";
 };
 
 const getHistoryQty = (item: any) => {
@@ -212,13 +449,6 @@ const formatHistoryCost = (item: any) => {
   return getHistoryUnitCost(item).toFixed(2);
 };
 
-const normalizeSearchText = (value: any) =>
-  String(value || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-
 const detailRows = computed(() =>
   editingDetails.value
     ? detailDraftItems.value
@@ -228,12 +458,12 @@ const detailRows = computed(() =>
 );
 
 const detailFilteredRows = computed(() => {
-  const term = normalizeSearchText(detailSearch.value);
+  const term = normalizeText(detailSearch.value);
   if (!term) return detailRows.value;
 
   return detailRows.value.filter((item) => {
-    const name = normalizeSearchText(item?.products?.name || "");
-    const unit = normalizeSearchText(item?.unit_name || item?.products?.unit || "unidad");
+    const name = normalizeText(item?.products?.name || "");
+    const unit = normalizeText(item?.unit_name || item?.products?.unit || "unidad");
     return name.includes(term) || unit.includes(term);
   });
 });
@@ -415,7 +645,7 @@ const saveDetailsChanges = async () => {
 
 const total = computed(() =>
   items.value.reduce(
-    (sum, item) => sum + Number(item.qty || 0) * Number(item.cost_unit || 0),
+    (sum, item) => sum + getLineTotal(item),
     0,
   ),
 );
@@ -424,22 +654,26 @@ const submitPurchase = async () => {
   message.value = "";
   loading.value = true;
   try {
-    const cleaned = items.value
+    const prepared = items.value
       .filter((item) => item.product_id && Number(item.qty) > 0)
-      .map((item) => ({
-        product_id: item.product_id,
-        qty: Number(item.qty),
-        unit_name: normalizeUnitName(item.unit_name),
-        cost_unit: Number(item.cost_unit || 0),
-      }));
+      .map((item) => {
+        const factor = getFactor(item.product_id, item.unit_name);
+        return {
+          product_id: item.product_id,
+          qty: Number(item.qty),
+          unit_name: normalizeUnitName(item.unit_name),
+          factor_to_base: factor,
+          cost_unit: getLineCostPerSelectedUnit(item),
+        };
+      });
 
-    if (!cleaned.length) {
+    if (!prepared.length) {
       message.value = "Agrega al menos un producto con cantidad válida.";
       return;
     }
 
-    const missingFactor = cleaned.find(
-      (item) => getFactor(item.product_id, item.unit_name) <= 0,
+    const missingFactor = prepared.find(
+      (item) => item.factor_to_base <= 0,
     );
     if (missingFactor) {
       const product = getProduct(missingFactor.product_id);
@@ -452,7 +686,7 @@ const submitPurchase = async () => {
       body: {
         supplier_id: supplierId.value,
         invoice_no: invoiceNo.value || null,
-        items: cleaned,
+        items: prepared.map(({ factor_to_base, ...item }) => item),
       },
     });
 
@@ -460,6 +694,7 @@ const submitPurchase = async () => {
     invoiceNo.value = "";
     supplierId.value = null;
     items.value = [makeLine()];
+    activeProductSearchIndex.value = null;
     showRegisterModal.value = false;
     await loadData();
   } catch (err: any) {
@@ -471,11 +706,13 @@ const submitPurchase = async () => {
 
 const openRegisterModal = () => {
   message.value = "";
+  activeProductSearchIndex.value = null;
   showRegisterModal.value = true;
 };
 
 const closeRegisterModal = () => {
   if (loading.value) return;
+  activeProductSearchIndex.value = null;
   showRegisterModal.value = false;
 };
 
@@ -496,7 +733,21 @@ const closeDetails = () => {
   detailSearch.value = "";
 };
 
-onMounted(loadData);
+onMounted(() => {
+  loadData();
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("resize", handleProductSearchViewportChange);
+    window.addEventListener("scroll", handleProductSearchViewportChange, true);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", handleProductSearchViewportChange);
+    window.removeEventListener("scroll", handleProductSearchViewportChange, true);
+  }
+});
 </script>
 
 <template>
@@ -697,28 +948,50 @@ onMounted(loadData);
                 <th class="w-1/3">Producto</th>
                 <th class="w-32">Cantidad</th>
                 <th class="w-36">Unidad</th>
-                <th class="w-32">Costo Un.</th>
+                <th class="w-32">Costo x und.</th>
                 <th class="w-32 text-right">Total</th>
                 <th class="w-20 text-center">x</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(item, index) in items" :key="index">
-                <td>
-                  <select
-                    v-model="item.product_id"
-                    class="ui-select w-full"
-                    @change="onSelectProduct(item)"
-                  >
-                    <option value="">Buscar producto...</option>
-                    <option
-                      v-for="product in products"
-                      :key="product.id"
-                      :value="product.id"
+                <td class="relative">
+                  <div class="relative">
+                    <input
+                      :ref="(element) => setProductSearchInputRef(element, index)"
+                      v-model="item.product_search"
+                      type="text"
+                      class="ui-input w-full pr-9"
+                      autocomplete="off"
+                      placeholder="Buscar producto o marca..."
+                      @focus="openProductSearch(item, index, $event)"
+                      @input="onProductSearchInput(index)"
+                      @blur="closeProductSearch(item, index)"
+                    />
+                    <button
+                      v-if="item.product_id || item.product_search"
+                      type="button"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                      title="Limpiar producto"
+                      @mousedown.prevent
+                      @click="clearProductSelection(item)"
                     >
-                      {{ product.name }}
-                    </option>
-                  </select>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </svg>
+                    </button>
+                  </div>
                 </td>
                 <td>
                   <input
@@ -727,6 +1000,7 @@ onMounted(loadData);
                     type="number"
                     step="0.01"
                     min="0"
+                    @input="onLineQtyInput(item)"
                   />
                 </td>
                 <td>
@@ -752,21 +1026,28 @@ onMounted(loadData);
                       >S/</span
                     >
                     <input
-                      v-model.number="item.cost_unit"
-                      class="ui-input w-full pl-8 pr-3 py-1 text-right font-mono"
-                      type="number"
-                      step="0.0001"
-                      min="0"
+                      :value="formatLineUnitCost(item)"
+                      class="ui-input w-full pl-8 pr-3 py-1 text-right font-mono text-slate-500"
+                      type="text"
+                      readonly
+                      tabindex="-1"
                     />
                   </div>
                 </td>
-                <td class="text-right font-mono font-semibold text-indigo-600">
-                  S/
-                  {{
-                    (
-                      Number(item.qty || 0) * Number(item.cost_unit || 0)
-                    ).toFixed(2)
-                  }}
+                <td>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1.5 text-slate-500 text-xs"
+                      >S/</span
+                    >
+                    <input
+                      v-model.number="item.line_total"
+                      class="ui-input w-full pl-8 pr-3 py-1 text-right font-mono font-semibold text-indigo-600"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      @input="onLineTotalInput(item)"
+                    />
+                  </div>
                 </td>
                 <td class="text-center">
                   <button
@@ -857,6 +1138,39 @@ onMounted(loadData);
           </button>
         </div>
         </section>
+
+        <div
+          v-if="activeProductSearchIndex !== null && activeProductSearchItem"
+          class="fixed z-[1100] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl"
+          :style="activeProductSearchStyle"
+        >
+          <button
+            v-for="product in activeProductSuggestions"
+            :key="product.id"
+            type="button"
+            class="flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-indigo-50"
+            @mousedown.prevent="selectProductSuggestion(activeProductSearchItem, product)"
+          >
+            <div class="min-w-0">
+              <p class="truncate font-medium text-slate-700">
+                {{ product.name }}
+              </p>
+              <p
+                v-if="formatProductSearchMeta(product)"
+                class="truncate text-xs text-slate-400"
+              >
+                {{ formatProductSearchMeta(product) }}
+              </p>
+            </div>
+          </button>
+
+          <div
+            v-if="!activeProductSuggestions.length"
+            class="px-3 py-4 text-sm text-slate-400"
+          >
+            No se encontraron productos para esa búsqueda.
+          </div>
+        </div>
       </div>
     </Teleport>
 

@@ -18,6 +18,5 @@ export type SaveCustomerInput = {
 
 export type CustomersRepository = {
   getPage(): Promise<CustomersPageResult>
-  save(input: SaveCustomerInput): Promise<{ ok: true }>
+  save(input: SaveCustomerInput): Promise<{ ok: true; customer: Customer | null }>
 }
-

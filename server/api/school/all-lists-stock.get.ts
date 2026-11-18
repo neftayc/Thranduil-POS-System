@@ -1,5 +1,6 @@
 import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdminClient } from '../../utils/supabase'
+import { resolveSchoolBrandPricing } from '../../utils/schoolPricing'
 
 const MISSING_ITEMS_TOLERANCE_PCT = 0.2
 
@@ -29,7 +30,7 @@ export default defineEventHandler(async (event) => {
       items:school_list_items(
         id, item_description, qty,
         brands:school_list_item_brands(
-          is_default,
+          id, is_default, pricing_rule_id, pricing_unit_name, pricing_label, pricing_price_uom, pricing_factor_to_base,
           product:products(id, name, sale_price, stock_on_hand)
         )
       )
@@ -52,23 +53,22 @@ export default defineEventHandler(async (event) => {
       const defaultBrand = item.brands?.find((b: any) => b.is_default) || item.brands?.[0]
       const product = defaultBrand?.product
 
-      // Price ranges calculation using all available brands for the item
       const qty_needed = item.qty || 1
       const item_prices = item.brands
-          ?.filter((b: any) => b.product && b.product.sale_price)
-          .map((b: any) => b.product.sale_price) || []
+          ?.filter((b: any) => b.product)
+          .map((b: any) => resolveSchoolBrandPricing({ ...b, product: b.product }).subtotal_from_base(qty_needed)) || []
 
       if (item_prices.length > 0) {
-        price_min += Math.min(...item_prices) * qty_needed
-        price_max += Math.max(...item_prices) * qty_needed
+        price_min += Math.min(...item_prices)
+        price_max += Math.max(...item_prices)
       }
 
       if (product) {
         items_with_product++
-        const price = product.sale_price || 0
+        const price = resolveSchoolBrandPricing({ ...defaultBrand, product }).subtotal_from_base(qty_needed)
         const stock = product.stock_on_hand || 0
 
-        total_price += price * qty_needed
+        total_price += price
 
         if (stock >= qty_needed) {
           items_with_stock++

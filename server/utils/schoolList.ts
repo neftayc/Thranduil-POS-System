@@ -1,4 +1,5 @@
 import type { MatchedLine, ProductOption } from './aiLogic'
+import { resolveSchoolBrandPricing } from './schoolPricing'
 
 // ─────────────────────────────────────────────
 // Types
@@ -34,6 +35,11 @@ export type SchoolListItem = {
     id: string
     brand: string
     is_default: boolean
+    pricing_rule_id?: string | null
+    pricing_unit_name?: string | null
+    pricing_label?: string | null
+    pricing_price_uom?: number | null
+    pricing_factor_to_base?: number | null
     product: {
       id: string
       sku: string
@@ -135,6 +141,11 @@ export const getSchoolListItems = async (
         id,
         brand,
         is_default,
+        pricing_rule_id,
+        pricing_unit_name,
+        pricing_label,
+        pricing_price_uom,
+        pricing_factor_to_base,
         products (
           id, sku, name, unit, sale_price, stock_on_hand
         )
@@ -191,7 +202,10 @@ export const buildCartFromSchoolList = (
     if (!selectedBrand) {
       selectedBrand = [...item.brands]
         .filter(b => b.product)
-        .sort((a, b) => Number(a.product.sale_price) - Number(b.product.sale_price))[0]
+        .sort(
+          (a, b) =>
+            resolveSchoolBrandPricing(a).price_base - resolveSchoolBrandPricing(b).price_base
+        )[0]
     }
 
     if (!selectedBrand || !selectedBrand.product) {
@@ -207,14 +221,16 @@ export const buildCartFromSchoolList = (
     }
 
     const p = selectedBrand.product
+    const pricing = resolveSchoolBrandPricing(selectedBrand)
+    const qtyUom = pricing.qty_uom_from_base(item.qty)
     const stockOk = Number(p.stock_on_hand) >= item.qty
 
     const bestMatch: ProductOption = {
       product_id: p.id,
       sku: p.sku,
       name: p.name,
-      unit: p.unit,
-      sale_price: Number(p.sale_price),
+      unit: pricing.unit_name,
+      sale_price: Number(pricing.price_uom),
       stock_on_hand: Number(p.stock_on_hand),
       score: 1
     }
@@ -222,19 +238,22 @@ export const buildCartFromSchoolList = (
     // Collect alternatives (other brands for this same item)
     const alternatives: ProductOption[] = item.brands
       .filter(b => b.id !== selectedBrand!.id && b.product)
-      .map(b => ({
-        product_id: b.product.id,
-        sku: b.product.sku,
-        name: b.product.name,
-        unit: b.product.unit,
-        sale_price: Number(b.product.sale_price),
-        stock_on_hand: Number(b.product.stock_on_hand),
-        score: 0.9
-      }))
+      .map(b => {
+        const optionPricing = resolveSchoolBrandPricing(b)
+        return {
+          product_id: b.product.id,
+          sku: b.product.sku,
+          name: b.product.name,
+          unit: optionPricing.unit_name,
+          sale_price: Number(optionPricing.price_uom),
+          stock_on_hand: Number(b.product.stock_on_hand),
+          score: 0.9
+        }
+      })
 
     return {
       requested_item: item.item_description,
-      requested_qty: item.qty,
+      requested_qty: qtyUom,
       raw: item.item_description,
       best_match: bestMatch,
       alternatives,

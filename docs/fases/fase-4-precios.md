@@ -73,11 +73,7 @@ Crear el contexto **`pricing`** y llevar al dominio TypeScript, como **función 
 - Total de la venta = **suma de las líneas sin redondear**, redondeada al final.
 - **No hay IGV:** existen `products.taxable` y `products.tax_code` (`baseline.sql:2235-2236`), pero ningún código los usa.
 
-**Listas escolares** (`server/utils/schoolPricing.ts`):
-- usan un precio **guardado** en `school_list_item_brands.pricing_price_uom` (elegido de las reglas de presentación en `presentation-prices.get.ts`) o, si falta, `sale_price`;
-- **ignoran** grupo de cliente, mayorista, promociones y vigencia: un precio guardado no caduca aunque su regla cambie o venza;
-- `factor_to_base = max(factor, 1)`;
-- lo usan `all-lists-stock.get.ts:59,68`, `stock-analysis.get.ts` y `schoolList.ts:207,224,242`.
+**Listas escolares en `main`.** `server/api/school/all-lists-stock.get.ts` y `stock-analysis.get.ts` usan `sale_price` para valorar listas y comparar marcas. Los resultados pueden diferir del precio del POS por grupo de cliente, cantidad o promoción. El baseline contiene campos de presentación y precio en `school_list_item_brands`. Verificar su uso y los datos existentes antes de retirarlos.
 
 **Edición de reglas** (`supabasePricingRepository.ts`): sin validaciones más allá de que existan los ids. Se puede guardar una presentación con una unidad no configurada, un porcentaje > 100 o reglas idénticas que se pisan.
 
@@ -127,12 +123,13 @@ resolveCustomerGroup(customer?, activeGroups, defaultGroup): string   // R2
 3. **Por línea** (redondeo por línea, D38):
    - `lineTotal = round2(qty_uom × finalPriceUom)`;
    - si la categoría es `taxed` y el precio incluye impuesto: `taxable = round2(lineTotal / (1 + rate))` y `tax = lineTotal − taxable`;
+   - si es `taxed` y el precio excluye impuesto: el importe calculado es la base, `tax = round2(base × rate)` y `lineTotal = base + tax`;
    - si la categoría es `exempt` o `unaffected`: `taxable = lineTotal` y `tax = 0`.
 4. **Documento:**
    - `total = Σ lineTotal`;
    - `taxTotal = Σ tax`;
    - `taxableTotal = Σ taxable`, agrupado por categoría.
-5. **Cambio de comportamiento intencional.** Hoy el total es `round2(Σ líneas sin redondear)`; con D38 pasa a `Σ round2(línea)`. Puede diferir en ±0,01 en ventas de varias líneas. Se acepta, se documenta en la Fase 6 y queda fuera de la paridad.
+5. El motor histórico redondea la suma al final; el nuevo suma líneas redondeadas. Cinco líneas de 1,004 dan respectivamente 5,02 y 5,00. Los tests comparan cada resultado exacto contra su regla (D56).
 6. **SUNAT** exige reglas finas de redondeo (valor unitario con hasta 10 decimales). Se **validan con el proveedor de facturación** antes del módulo `einvoice-pe`; esta fase deja `computeLineTax` aislada para poder ajustarla sin tocar `resolvePrice`.
 
 ### 3.4 Invariantes de las reglas (validaciones al crear y editar)
@@ -171,11 +168,11 @@ Se usan para invalidar cachés del POS y del agente y, en el futuro, para avisos
 | Caso de uso | Reemplaza | Notas |
 |---|---|---|
 | `resolvePrice(productId, unit, qty, customerId?, at?)` | `resolve_sale_item_pricing` (para el código TS) | Carga datos y llama a la función pura |
-| `resolvePrices(lines[], customerId?)` | N llamadas en serie desde `pages/sales.vue:1034-1047` (auditoría P6) | **Una** consulta de reglas para todos los productos |
+| `resolvePrices(lines[], customerId?)` | N llamadas en serie desde `pages/sales.vue` (`refreshCartPricing`) (auditoría P6) | **Una** consulta de reglas para todos los productos |
 | `setBasePrice(productId, amount)` | Pasos 8–9 de `upsert_product_catalog` (puerto temporal de la Fase 3) | Historial + copia derivada |
 | `createRule` / `updateRule` / `deleteRule` (por tipo) | `supabasePricingRepository.ts` y `server/modules/pricing/app/*` | Con las validaciones V1–V6 |
 | `getRules(productId)` / `getCatalogs()` | Lecturas actuales | Consultas |
-| `listPriceOptions(productId, customerId?)` | `server/api/school/presentation-prices.get.ts` | Una opción por unidad, base o presentación, con su precio resuelto |
+| `listPriceOptions(productId, customerId?)` | Nuevo contrato de consulta para los consumidores que requieran elegir presentación | Una opción por unidad con su precio resuelto |
 | `applyManualAdjustment` / `computeLineTax` | Parte de `create_sale` | Expuestas en `pricing/index.ts`; las consume la Fase 6 |
 
 ---
@@ -252,6 +249,7 @@ Aplicar la regla de `fases/README.md`. Además:
 - **Impuestos** (nuevos, sin equivalente actual):
   - T-a: 3 × 1,35 = 4,05 gravado al 18 % → base 3,43; IGV 0,62.
   - T-b: exonerado → base 4,05; IGV 0.
+  - T-d: precio sin impuesto de 10,00 al 18 % → base 10,00, impuesto 1,80, total 11,80. Comprobar también el ejemplo de cinco líneas de §3.3.
   - T-c: venta de 3 líneas → totales iguales a la suma de líneas.
 - **Terminado cuando:** P1–P23 pasan contra la función SQL (llamada directa a `resolve_sale_item_pricing`).
 
@@ -278,7 +276,7 @@ Aplicar la regla de `fases/README.md`. Además:
 - **Pasos:**
   1. Ejecutar P1–P23 y una muestra aleatoria de productos y reglas del seed contra **ambas** implementaciones.
   2. Comparar los campos de R10.
-  3. Excluir los impuestos y la diferencia de totales de §3.3.5.
+  3. Afirmar por separado el resultado exacto de impuestos y redondeo de §3.3 tanto para el cálculo vigente como para el nuevo.
 - **Terminado cuando:** la prueba es obligatoria en CI. **Se elimina en la Fase 6**, junto con la función SQL.
 
 ### F4-T8 — Rutas HTTP
@@ -299,15 +297,13 @@ Aplicar la regla de `fases/README.md`. Además:
 - **Archivos:**
   - `server/modules/sales/infra/supabaseSalesRepository.ts:94`
   - `server/modules/agent/infra/supabaseAgentCatalog.ts:161`
-  - `server/api/school/{all-lists-stock.get.ts, stock-analysis.get.ts, presentation-prices.get.ts}`
-  - `server/utils/schoolList.ts`
-  - `server/utils/schoolPricing.ts`
-  - `pages/sales.vue:1034-1047`
+  - `server/api/school/{all-lists-stock.get.ts,stock-analysis.get.ts}`
+  - `pages/sales.vue` (`refreshCartPricing`)
 - **Pasos:**
   1. POS y agente → `pricing.resolvePrice` / `resolvePrices`, con interruptor.
   2. El agente sigue verificando el precio oficial (principio «la IA interpreta, el código verifica»).
   3. Listas escolares → `listPriceOptions` / `resolvePrices`.
-  4. Borrar `schoolPricing.ts`.
+  4. Verificar que la valoración de la lista y el POS aplican el mismo precio para igual negocio, cliente, cantidad, unidad y momento.
   5. El POS reprecia el carrito con **una** llamada a `resolve-batch`.
 - **Terminado cuando:**
   - `pnpm test:agent` está en verde;
@@ -376,5 +372,6 @@ Playwright:
 
 | Fecha | Cambio |
 |---|---|
+| 2026-11-18 | Se documentan ambos modos de precio y casos exactos de redondeo acumulado. |
 | 2026-11-18 | Consolidación: D51 (fuente única del precio, `tax_category`, `default_customer_group`) y D56 (diferencia de ±0,01 por redondeo por línea, tolerada en los tests). El precio manual queda sujeto a `sales.manual_discount`, concedible por usuario (D57). |
 | 2026-11-18 | Documento inicial, escrito antes de implementar. |

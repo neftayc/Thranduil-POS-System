@@ -106,7 +106,7 @@ Estas reglas son la base de los tests de caracterización (T1). Cada test cita s
 | Entidad (código) | Campos clave | Notas |
 |---|---|---|
 | `SaleDocument` | `id`, `tenantId`, `locationId`, `docType`, `series`, `number`, `status` (`issued`, `voided`), `issuedAt`, `customerId?`, `soldBy`, `createdBy`, `approvedBy?`, `cashSessionId?`, `source` (`pos`, `order`, `agent`, `quote`, `work_order`…), `sourceId?`, `clientRequestId`, `currency`, `lines[]`, `payments[]`, `subtotal`, `taxTotal`, `total` | Inmutable una vez emitido: se cambia solo con anulación o devolución |
-| `SaleLine` | `itemKind` (`good`, `service`, `kit`), `productId`, `unitName`, `qtyUom`, `factorToBase`, `qtyBase`, `autoUnitPrice`, `finalUnitPrice`, `pricingSource`, `pricingDetail`, `manualDiscountPct`, `manualDiscountAmount`, `manualReason?`, `taxRate`, `taxAmount`, `lineTotal`, `costAllocations[]` | `costAllocations` solo para `good` (y los componentes de un `kit`) |
+| `SaleLine` | `itemKind` (`stock_item`, `service`, `kit`), `productId`, `unitName`, `qtyUom`, `factorToBase`, `qtyBase`, `autoUnitPrice`, `finalUnitPrice`, `pricingSource`, `pricingDetail`, `manualDiscountPct`, `manualDiscountAmount`, `manualReason?`, `taxRate`, `taxAmount`, `lineTotal`, `costAllocations[]` | `costAllocations` solo para `stock_item` (y los componentes de un `kit`) |
 | `Payment` | `method` (código del catálogo), `amount`, `received?`, `change?` | Varias formas de pago por venta; el POS inicial usa una |
 | `DocumentSeries` | `tenantId`, `docType`, `series`, `nextNumber`, `locationId?` | D42: número sin huecos, con bloqueo de fila |
 | `CashSession` | `id`, `locationId`, `register` (nombre de la caja), `openedBy`, `openedAt`, `openingAmount`, `status` (`open`, `closed`), `closedBy?`, `closedAt?`, `countedAmount?`, `expectedAmount?`, `difference?`, `movements[]` | D8 |
@@ -128,7 +128,7 @@ Cuando llegue el módulo de facturación electrónica se agregan `boleta`, `fact
 | SV1 | `lineTotal = round2(qtyUom × finalUnitPrice)`; `taxAmount` se calcula **por línea** y se redondea a 2 decimales (D38); `total = Σ lineTotal`. **Cambio intencional** respecto a S19: el total siempre es la suma exacta de las líneas guardadas |
 | SV2 | Precio o descuento manual ⇒ permiso `sales.manual_discount` + motivo (S8). Aplica también a los **pedidos** (corrige O1) |
 | SV3 | Orden de aplicación de descuentos: igual que S9 (porcentaje, luego monto; el precio explícito reemplaza todo); `finalUnitPrice >= 0` |
-| SV4 | Las líneas `good` consumen stock con `consumeFifo` (D39). Las `service` no tocan inventario. Las `kit` consumen sus componentes |
+| SV4 | Las líneas `stock_item` consumen stock con `consumeFifo` (D39). Las `service` no tocan inventario. Las `kit` consumen sus componentes |
 | SV5 | `(tenantId, docType, series, number)` es único y consecutivo, sin huecos (D42) |
 | SV6 | `Σ payments.amount = total`; solo en efectivo `received >= amount` y `change = received − amount` |
 | SV7 | `soldBy` es un miembro activo del negocio; si es distinto de `createdBy`, exige `sales.on_behalf` (S4) |
@@ -136,7 +136,7 @@ Cuando llegue el módulo de facturación electrónica se agregan `boleta`, `fact
 | SV9 | Un pago en efectivo exige una caja abierta de quien registra en esa ubicación, y crea un `CashMovement` `sale_cash` (ver DP6-1 para el agente) |
 | SV10 | Un documento emitido no se edita. Las correcciones se hacen con anulación o devolución |
 | SV11 | Devolución: `qty` devuelta por línea ≤ vendida − ya devuelta. Los bienes vuelven al stock con el **costo de las asignaciones originales** (D40), tomando primero las asignaciones más recientes de esa línea. Cada asignación devuelta crea un lote `return` con su costo |
-| SV12 | Anulación: revierte la venta completa (stock como en SV11, efectivo con `refund_cash`) y pasa el estado a `voided`. Permiso `sales.void`; plazo según DP6-2 |
+| SV12 | La anulación completa exige `sales.void` y caja original abierta. Tras una devolución parcial, aplicar la regla que el dueño valide en DP6-9 antes de implementar F6-T9. En todos los casos, cantidades y reembolsos acumulados tienen como tope la venta original. |
 | SV13 | Una caja abierta por usuario y ubicación. Al cerrarla: `expectedAmount = apertura + Σ efectivo entrante − Σ efectivo saliente`, y `difference = contado − esperado` |
 | SV14 | Idempotencia: `(tenantId, clientRequestId)` es único. Repetir la petición devuelve la venta existente, sin registrar otra |
 | SV15 | Un pedido cobrado consume FIFO como cualquier venta (corrige O6), guarda `soldBy` (corrige O7) y consume sus reservas |
@@ -172,13 +172,13 @@ Cuando llegue el módulo de facturación electrónica se agregan `boleta`, `fact
 ## 4. Diseño transaccional
 
 `registerSale` corre en **un** `UnitOfWork`, en este orden:
-1. Idempotencia: si existe `clientRequestId`, devuelve esa venta.
+1. Verificar sesión, negocio, permiso y acceso al documento. Identificar el cobro lógico con `(tenantId, clientRequestId)` y asociarlo a su origen y contenido. Repetirlo devuelve el resultado ya confirmado; reutilizar la clave para otra operación devuelve conflicto. La restricción única y el manejo de carreras cubren peticiones simultáneas.
 2. Validar permisos, vendedor y caja abierta (SV7–SV9).
-3. Calcular precios con `resolvePrice` (Fase 4) y aplicar los ajustes manuales (SV2, SV3).
+3. En venta directa, `resolvePrice` calcula el precio y los ajustes autorizados. En cobro de pedido, bloquear el pedido abierto y usar su instantánea persistida de líneas, cantidades, factores, descuentos e impuestos. El backend carga el precio pactado; un precio recibido del navegador no lo sustituye.
 4. Bloquear saldos ordenados por producto (Fase 5, §4) y consumir reservas propias si hay.
-5. `consumeFifo` por cada línea `good`, más `recordStockMovement`.
+5. Consumir FIFO y registrar movimientos por cada `stock_item` y componente físico de un kit. Conservar el desglose vendido y sus asignaciones para devoluciones posteriores.
 6. `allocateDocumentNumber`: `SELECT … FOR UPDATE` en `document_series`. Se toma **al final**, para mantener el bloqueo de la serie el menor tiempo posible.
-7. Guardar el documento, las líneas, las asignaciones, los pagos y el movimiento de caja.
+7. Guardar documento, líneas, asignaciones, pagos y movimiento de caja. Si procede de un pedido, verificar el consumo de sus reservas del paso 4, marcarlo pagado y enlazar una única venta dentro de la misma transacción, incluso con dos claves de petición diferentes.
 8. Escribir `SaleRegistered` en el outbox.
 
 Si cualquier paso falla, no queda nada (ni número consumido, ni stock, ni caja).
@@ -203,7 +203,7 @@ Si cualquier paso falla, no queda nada (ni número consumido, ni stock, ni caja)
   4. Varios lotes y lote de respaldo en S14.
   5. Redondeo de S17 y S19, con un caso que demuestre la diferencia de céntimos.
   6. Métodos de pago por código, por etiqueta y desconocido.
-  7. Las reglas que se cambian a propósito (S19, S2, O1, O6, O7, O8) se marcan como «se invierte en T5 o T7».
+  7. Registrar los cambios intencionales S19, S2, O1, O7 y O8 junto a la prueba que adopta la regla nueva. F5-T3 ya corrigió O6. Ambos motores deben conservar ese consumo FIFO.
 - **Terminado cuando:** pasan contra las RPC actuales y cada test cita su regla.
 
 ### F6-T2 — Esquema de ventas, caja y series
@@ -243,12 +243,8 @@ Si cualquier paso falla, no queda nada (ni número consumido, ni stock, ni caja)
   1. Implementar §4.
   2. Interruptor `ENGINE_REGISTER_SALE=db|domain`.
   3. T1 corre contra los dos motores. Las diferencias permitidas son **solo** los cambios intencionales (S2→SV16, S19→SV1, S20) y deben estar listadas en el test.
-  4. El POS envía `clientRequestId` (UUID por intento de cobro).
-- **Terminado cuando:**
-  - la paridad está en verde;
-  - en staging, 1 semana sin diferencias;
-  - en producción, 2 semanas con `domain` sin incidentes;
-  - INV1 e INV2 de la Fase 5 se mantienen (el job diario no da alertas).
+  4. El POS genera `clientRequestId` al iniciar el cobro y lo conserva hasta obtener un resultado definitivo, incluso tras perder la respuesta o recargar la pantalla. El alcance incluye usuario, negocio y ubicación del borrador.
+- **Terminado cuando:** la paridad de venta directa está en verde en staging con una caja de prueba abierta y se mantienen INV1 e INV2. La activación en la tienda requiere entregar F6-T6 y F6-T7 y completar una semana de pruebas en staging. Observar dos semanas estables en producción antes de retirar el motor anterior en F6-T12.
 
 ### F6-T6 — Caja
 - **Archivos:** `contexts/sales/application/{openCashSession,closeCashSession,recordCashMovement,getCashSummary}.ts`, rutas en `api/cash/*`, interfaz mínima en el POS (abrir con monto inicial, cerrar con monto contado, ver la diferencia).
@@ -262,11 +258,11 @@ Si cualquier paso falla, no queda nada (ni número consumido, ni stock, ni caja)
 ### F6-T7 — Pedidos: crear, cobrar, cancelar
 - **Archivos:** `contexts/sales/application/{createOrder,payOrder,cancelOrder}.ts`, `api/sales/hold.post.ts`, `api/sales/held/[id]/pay.post.ts`, `api/sales/held/[id]/cancel.post.ts` (reemplaza `delete.post.ts`).
 - **Pasos:**
-  1. `createOrder`: precios con `resolvePrice`; el precio manual exige permiso (corrige O1); reserva el stock de cada línea `good` (`reserveStock`, Fase 5) con vencimiento configurable (DP6-5).
-  2. `payOrder`: delega en `registerSale` con `source = 'order'`, los precios congelados del pedido y el consumo de sus reservas (corrige O6 y O7).
+  1. `createOrder`: precios con `resolvePrice`; el precio manual exige permiso (corrige O1); reserva el stock de cada línea `stock_item` (`reserveStock`, Fase 5) con vencimiento configurable (DP6-5). Guardar la instantánea comercial completa, incluido el desglose de componentes reservados para kits.
+  2. `payOrder`: en la misma transacción delega en `registerSale` con `source = 'order'`, los precios congelados del pedido y el consumo de sus reservas (conserva la corrección FIFO de F5 y corrige O7).
   3. `cancelOrder`: cambia el estado a `cancelled` con motivo y libera las reservas (corrige O8).
   4. El código del pedido pasa a ser una serie `order/P001` (D42), o se mantiene el formato actual (DP6-6).
-- **Terminado cuando:** se invierten los tests O1, O6, O7 y O8; un pedido reservado impide vender ese stock a otro cliente.
+- **Terminado cuando:** se preserva la corrección de O6 entregada en F5, se verifican O1/O7/O8 y el stock reservado queda protegido. Un pedido pactado a S/ 10 se cobra a S/ 10 aunque el precio vigente sea S/ 12; dos cobros concurrentes del mismo pedido producen una sola venta.
 
 ### F6-T8 — Eliminar el modo `localStorage` de ventas en espera
 - **Objetivo:** que las ventas en espera solo vivan en la BD (corrige O9).
@@ -283,7 +279,7 @@ Si cualquier paso falla, no queda nada (ni número consumido, ni stock, ni caja)
   1. SV11 y SV12.
   2. La devolución usa la serie `return_note`; el reingreso al stock crea lotes `return` con el costo original (D40); el reembolso en efectivo crea un `refund_cash` en la caja abierta de quien devuelve.
   3. Eventos `SaleVoided` y `ReturnRegistered`.
-- **Terminado cuando:** vender → devolver una parte → anular el resto deja el stock, el FIFO, la caja y la rentabilidad exactamente como antes de la venta (test de integración).
+- **Terminado cuando:** probar anulación íntegra de una venta con caja abierta y, en otra venta, devolución parcial seguida de la resolución aprobada en DP6-9. Verificar stock, asignaciones FIFO, reembolso y margen sin doble reversión.
 
 ### F6-T10 — El agente pasa a `registerSale`
 - **Objetivo:** D18, §12. El agente deja de llamar a la RPC.
@@ -319,21 +315,14 @@ Si cualquier paso falla, no queda nada (ni número consumido, ni stock, ni caja)
      - `customer_group_for_sale` (si la Fase 4 no lo retiró ya).
   2. Eliminar `products.stock_on_hand` y `products.avg_cost` (D20), y ajustar las vistas que aún las lean.
   3. Eliminar `server/modules/sales/**`.
-  4. **Verificar que no queda lógica de negocio en PL/pgSQL.** Listar las funciones de `public` y comprobar que solo quedan las permitidas por la arquitectura: búsqueda (`search_*`, `refresh_product_search_index`, `product_search_pending`, triggers de índice), `current_tenant()` y consultas de lectura de reportes.
+  4. Inventariar las funciones SQL por finalidad. Conservar las de integridad, Auth, membresías, hook, aislamiento, búsqueda, eventos y lectura que mantienen dependencias vivas; retirar las RPC comerciales sustituidas.
 - **Terminado cuando:** la lista de funciones coincide con la permitida y está guardada en `docs/fases/anexos/fase-6-funciones-restantes.md`.
 
 ### F6-T13 — Puerta del segundo negocio
-- **Objetivo:** verificar (no ejecutar) que se cumplen las condiciones para dar de alta otro negocio (regla de oro de `arquitectura.md` §14).
-- **Lista de verificación:**
-  - [ ] No hay lógica de negocio en PL/pgSQL (T12), incluido lo de las Fases 3 y 4 (`upsert_product_catalog`, `replace_product_unit_conversions`, `resolve_sale_item_pricing`, etc.).
-  - [ ] Los tests de aislamiento entre negocios pasan en CI, con al menos un negocio de prueba con datos en staging.
-  - [ ] Rate limiting activo en login, `/vincular`, agente y consumo de IA por negocio (D26).
-  - [ ] Correo transaccional (Resend) configurado como SMTP de Supabase Auth, con invitación probada (D27).
-  - [ ] **Supabase Pro + PITR** activos y una restauración ensayada (D28, D44).
-  - [ ] **Vercel Pro** activo (uso comercial, D44).
-  - [ ] Sentry con alertas activas y job de invariantes de inventario sin alertas desde hace 7 días.
-  - [ ] Ensayo completo de alta de un negocio en staging (plantilla de giro, módulos, usuarios, primera venta).
-- **Terminado cuando:** todas las casillas están marcadas y anotadas con fecha en el «Registro de cambios».
+- **Ensayo obligatorio en staging.** Con A y B sintéticos, un usuario con ambas membresías elige B y abre caja. Crear un pedido en B a S/ 10, cambiar el precio de catálogo a S/ 12 y cobrar el pedido en efectivo. Simular la pérdida de respuesta después del commit y repetir el cobro con el mismo identificador. Cerrar la caja.
+- **Evidencia.** Una venta de S/ 10, un pago, un movimiento de caja, descuento de stock y consumo FIFO por la cantidad vendida una sola vez, reserva consumida y un único número de documento. La caja cuadra y A conserva sus datos. Ejecutar también con el rol sin permiso, membresía suspendida y dos terminales.
+- **Operación (D26–D28 y D44).** Antes del alta, el equipo de aplicación configura y prueba los límites de Upstash para login, vinculación, agente y consumo de IA. El responsable de infraestructura valida el correo de invitación y recuperación mediante Resend, el plan comercial de alojamiento y una restauración con PITR en un entorno aislado. Registrar la evidencia en la misma lista de F2.
+- **Cierre.** Registrar versión y resultado y actualizar la lista única de [F2 §1.2](fase-2-multi-negocio.md#12-puerta-para-el-segundo-negocio). Los requisitos de fases posteriores quedan pendientes para el alta comercial.
 
 ### F6-T14 — Cierre de fase
 - **Pasos:** completar el «Registro de cambios»; actualizar `arquitectura.md` con las decisiones de §10; pasar el estado a **Terminada**; validar la Fase 7.
@@ -358,18 +347,16 @@ for i in $(seq 20); do pnpm vitest run tests/integration/sales || break; done
 pnpm vitest run tests/agent
 ```
 
-- En staging, con Playwright: abrir caja → vender en efectivo → venta con descuento manual (encargado) → pedido → cobrar pedido → devolución parcial → anular → cerrar caja con diferencia 0.
-- La consulta de invariantes de la Fase 5 (§5.1) devuelve 0 filas después del recorrido.
+- Playwright cubre F6-T13, descuento autorizado, devolución parcial y anulación de otra venta con su caja abierta.
+- El control por negocio, producto y ubicación de F5 §5.3 devuelve cero diferencias.
 
 ---
 
 ## 7. Cómo volver atrás
 
-- **`registerSale`, `payOrder` y `createOrder`:** el interruptor `ENGINE_*=db` vuelve a las RPC mientras no se ejecute T12.
-  - Las ventas emitidas por el dominio **siguen siendo válidas** para las RPC: las columnas nuevas tienen valores por defecto.
-  - Las ventas registradas por la RPC durante la vuelta atrás quedan sin número. Un script de T2 las numera al reactivar el dominio.
-- **Caja:** `cash_sessions_required = false` la desactiva por negocio sin tocar el código.
-- **Agente:** mientras exista la RPC, el ejecutor anterior queda disponible detrás de un interruptor (`AGENT_SALE_EXECUTOR=rpc|domain`).
+- Antes de habilitar la vuelta a un motor anterior, ensayar una respuesta perdida tras el commit y el reintento tras cambiar de motor. Debe devolver el mismo documento y mantener pagos, numeración, caja, reservas y FIFO. Aplicar la misma prueba al ejecutor del agente.
+- Cuando un motor antiguo carezca de alguna de estas garantías, retirar esa opción de configuración antes de activar las operaciones nuevas. Ante un incidente, pausar el flujo afectado, conciliar por clave de cobro y corregir hacia adelante. Bajar la exigencia de caja no reconstruye los movimientos.
+
 - **Datos:** respaldo previo (D44) antes de T2 y T12.
 
 ---
@@ -384,7 +371,7 @@ pnpm vitest run tests/agent
 | Ventas en espera atrapadas en `localStorage` de algún equipo | Versión de transición que las sube (T8) antes de quitar el modo |
 | El agente pierde ventas o las duplica en el cambio | Idempotencia por id de operación + test de reintento + interruptor del ejecutor |
 | Eliminar `products.stock_on_hand` rompe pantallas o reportes que aún lo leen | Buscar todos los usos en T12; la Fase 5 ya movió las lecturas al saldo |
-| Se abre un segundo negocio antes de tiempo | T13 como puerta formal, con casillas verificables |
+| Se abre un segundo negocio antes de tiempo | F6-T13 acredita el cobro en staging y F2 §1.2 concentra todas las condiciones del alta |
 
 ---
 
@@ -408,6 +395,7 @@ pnpm vitest run tests/agent
 | DP6-5 | ¿Vencen las reservas de un pedido? | Sí, configurable por negocio (por defecto 48 h, igual que `posAgentReviewTtlHours`) |
 | DP6-6 | ¿El código del pedido pasa a una serie correlativa? | Sí (`P001-000123`), por consistencia con D42 |
 | DP6-7 | ¿El ejecutor del agente se mueve ya a `layers/modules/agent` o en la Fase 8? | En la Fase 8; aquí solo se cambia a qué llama |
+| DP6-9 | ¿Qué hacer si ya hubo una devolución parcial? | Propuesta pendiente de validación del dueño: continuar devolviendo solo el saldo pendiente y reservar la anulación íntegra para ventas sin devoluciones previas. |
 | DP6-8 | ¿Venta con varias formas de pago desde el inicio? | El modelo y la API sí; la interfaz del POS, en la Fase 9 |
 
 ---
@@ -416,5 +404,6 @@ pnpm vitest run tests/agent
 
 | Fecha | Cambio | Motivo |
 |---|---|---|
+| 2026-11-18 | Se definen el precio pactado, la idempotencia entre reintentos, la reversión segura y el ensayo de dos negocios. | Revisión de arquitectura v1.4 |
 | 2026-11-18 | Consolidación: DP6-1 a DP6-4 resueltas (D61, D60, D62, D55). F6-T1 se adelanta al inicio de la Fase 5. El precio en pedidos ya exige permiso desde F0-T9; desde la Fase 2 el permiso se puede conceder por usuario (D57). DP6-5 a DP6-8 siguen abiertas para la validación de inicio. | Decisiones del usuario |
 | 2026-11-18 | Documento inicial | Plan de fases |

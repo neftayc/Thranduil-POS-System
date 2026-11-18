@@ -1,6 +1,6 @@
 # Arquitectura objetivo — Plataforma de ventas, compras e inventario
 
-> Versión 1.3 — 2026-11-18 (1.3: consolidación del plan de fases, D46–D63; 1.1: stack completo, D22–D33; 1.2: decisiones técnicas y de negocio D34–D45, matriz de permisos, estructura Nuxt 4, pendientes antes de empezar). Reemplaza la arquitectura actual descrita en `docs/auditoria-2026-11-18.md`.
+> Versión 1.4 · 2026-11-18. Diseño objetivo y contratos de desarrollo. La [auditoría](auditoria-2026-11-18.md) describe el punto de partida y el [índice de fases](fases/README.md) indica la primera entrega.
 > Documento vivo: toda decisión nueva se agrega en la sección 2 (registro de decisiones).
 
 ---
@@ -57,7 +57,7 @@ La papelería actual pasa a ser el **primer negocio** y su lógica propia el **p
 | D31 | **Esquemas zod compartidos** entre cliente y servidor | Aprobada |
 | D32 | **Renovate** para actualizar dependencias | Aprobada |
 | D33 | **No se usan:** Vuex, TanStack Query, GraphQL, Redis como caché, Docker/Kubernetes en producción, servicio externo de feature flags | Aprobada |
-| D34 | Migrar a **Nuxt 4 + Tailwind 4 + Node 22** al inicio de la Fase 1, **antes** de reorganizar carpetas (lo exige Nuxt UI 4) | Aprobada |
+| D34 | Nuxt 4, Tailwind 4 y Node 26 LTS como objetivo. F1 caracteriza la versión actual y verifica dependencias, build, CI y preview antes de fijar `26.x` en todos los entornos. | A validar en F1 |
 | D35 | **Código en inglés** (funciones, clases, tablas, columnas); interfaz y documentos en español. Glosario en la sección 18 | Aprobada |
 | D36 | El código nuevo se escribe **desde el primer día en su ubicación final** (`layers/…`); no se mueve después | Aprobada |
 | D37 | **Esquema:** las migraciones solo con Supabase CLI; el esquema de Drizzle se genera desde la BD (`drizzle-kit pull`). **Nunca** migraciones de Drizzle | Aprobada |
@@ -67,7 +67,7 @@ La papelería actual pasa a ser el **primer negocio** y su lógica propia el **p
 | D41 | **Ajuste positivo de conteo:** crea un lote FIFO con el **último costo de compra** del producto; si nunca se compró, el costo promedio | Aprobada |
 | D42 | **Correlativos:** tabla `document_series(tenant_id, doc_type, series, next_number)`; el número se toma con bloqueo de fila **dentro de la transacción** de la venta. Sin huecos, seguro ante ventas simultáneas | Aprobada |
 | D43 | **Staging:** segundo proyecto Supabase + entorno de Vercel, con **datos sintéticos** (`supabase/seed.sql`). Los datos de producción no se copian a staging | Aprobada |
-| D44 | **Planes:** hoy Vercel Hobby y Supabase Free. Hasta subir de plan, `pnpm db:backup` es **obligatorio antes de cada migración** en producción. Antes del segundo negocio: **Vercel Pro** (uso comercial), **Supabase Pro** y **PITR** | Aprobada |
+| D44 | Respaldo antes de cada migración de producción. Verificar que el plan de Vercel cubre la operación comercial desde la primera tienda. Supabase Pro, PITR y restauración ensayada antes del segundo negocio. | Aprobada |
 | D45 | **Matriz de permisos** de la sección 10.1 | Aprobada |
 | D46 | **Transición de acceso a datos (Fases 2 a 7):** conviven dos caminos. (a) PostgREST con el JWT del usuario, que lleva el claim `tenant_id` puesto por un **Custom Access Token Hook** de Supabase Auth; (b) Drizzle con `app_backend` y `set_config`. `current_tenant()` lee ambos. El interruptor `db` de los casos de uso sigue usando el cliente de usuario (así las RPC antiguas siguen viendo `auth.uid()`). En la Fase 2 se revoca **solo `anon`**; `authenticated` se revoca al cerrar la Fase 7 | Aprobada |
 | D47 | **Negocio por defecto:** id fijo `00000000-0000-0000-0000-000000000001` desde la Fase 1 (`DEFAULT_TENANT_ID`). La Fase 2 crea la papelería con ese id y usa `tenant_for_insert()` con respaldo de negocio único hasta la puerta del 2.º negocio | Aprobada |
@@ -79,7 +79,7 @@ La papelería actual pasa a ser el **primer negocio** y su lógica propia el **p
 | D53 | **Reportes:** rango de fechas libre + `tenant_settings.reporting_start_date`. Desaparecen los periodos fijos de la papelería (`recovery_2025_to_2026_03_08`, …) | Aprobada |
 | D54 | **Agente:** credenciales por negocio en la tabla `agent_credentials`; la moneda viene de `tenant_settings` (hoy `'PEN'` fijo en `api/agent/context.get.ts`) | Aprobada |
 | D55 | Se agrega el permiso **`sales.approve`** (dueño, encargado), que hoy ya aplica `create_sale` para `approved_by` | Aprobada |
-| D56 | **Redondeo:** pasar a IGV por línea (D38) puede diferir en ±0,01 del total histórico. Es un cambio intencional y los tests de caracterización lo toleran de forma explícita | Aprobada |
+| D56 | El total nuevo suma los importes redondeados por línea. La diferencia frente al método histórico puede acumularse. Cada ejemplo de caracterización comprueba los dos importes exactos. | Aprobada |
 | D57 | **Permisos concedidos por usuario:** además de los permisos de su rol, el dueño puede conceder permisos puntuales a un usuario (p. ej. `sales.manual_discount` a un cajero de confianza). Tabla `membership_permissions` en la Fase 2; se evalúa en `defineApiHandler` y en el dominio | Aprobada |
 | D58 | **Corrección de compras:** solo de líneas cuyo lote FIFO no fue consumido; para lo demás, un ajuste o una devolución al proveedor | Aprobada |
 | D59 | **Conteo de inventario:** se aplica la **diferencia** detectada al contar (contado − sistema al contar) sobre el stock del momento, no el valor absoluto | Aprobada |
@@ -87,6 +87,10 @@ La papelería actual pasa a ser el **primer negocio** y su lógica propia el **p
 | D61 | Las ventas en efectivo **del agente** exigen caja abierta del vendedor | Aprobada |
 | D62 | Un **método de pago desconocido** se rechaza con error (hoy se convierte en `efectivo` sin avisar) | Aprobada |
 | D63 | **Cotizaciones a clientes:** fuera de esta refactorización; serán el primer módulo transversal nuevo después de la Fase 9 | Aprobada |
+| D64 | Supabase autentica a la persona. Nitro verifica la sesión por petición y resuelve membresía, permisos y módulos del negocio activo según §7.2. El cierre habitual afecta al terminal actual. | Adoptada para el desarrollo |
+| D65 | Cada contexto tiene un responsable de escritura (§5.1). El caso de uso que inicia la operación comparte la misma transacción con los contextos participantes. | Adoptada para el desarrollo |
+| D66 | Un pedido conserva el precio pactado. Cobrarlo toma la instantánea guardada por el servidor. La clave de idempotencia identifica el cobro lógico a través de sus reintentos y canales. | Adoptada para el desarrollo |
+| D67 | La aplicación raíz compone los módulos. El núcleo define sus contratos. Los adaptadores compartidos de búsqueda e IA se inyectan en los módulos que los necesitan. | Adoptada para el desarrollo |
 
 ### 2.1 Stack tecnológico
 
@@ -114,7 +118,7 @@ La papelería actual pasa a ser el **primer negocio** y su lógica propia el **p
 | Base de datos | Supabase Postgres (pgvector, pg_trgm, unaccent, pgcrypto) | Datos, RLS, búsqueda, lectura | Existe |
 | Acceso a datos | Drizzle + `postgres.js` vía Supavisor (modo transacción) | Transacciones del dominio | Nuevo |
 | Autenticación | Supabase Auth + cookies httpOnly | Login y sesiones | Existe |
-| Tareas | `pg_cron` (luego Inngest) | Outbox, vencimientos, reintentos | Nuevo |
+| Tareas | `pg_cron` (Inngest se evalúa según D23) | Outbox, vencimientos, reintentos | Nuevo |
 | IA | OpenAI (SDK `openai`) | Agente, embeddings | Existe |
 | Validación | zod | Entrada de API, salidas estructuradas de IA | Existe, se extiende |
 | Rate limiting | Upstash Redis | Protección y control de gasto | Antes del 2.º negocio |
@@ -188,8 +192,10 @@ La papelería actual pasa a ser el **primer negocio** y su lógica propia el **p
 | **purchasing** | Hexagonal | RegistrarCompra, CorregirCompra, cotizaciones de proveedor |
 | **sales** | Hexagonal | RegistrarVenta, CrearPedido, CobrarPedido, AnularVenta, RegistrarDevolucion, AbrirCaja, CerrarCaja |
 | **customers**, **suppliers** | CRUD | — |
-| **settings** (unidades, categorías, métodos de pago, grupos de cliente) | CRUD | — |
+| **settings** (configuración por negocio) | CRUD | Moneda, zona horaria y preferencias. Las pantallas de configuración llaman al contexto responsable de cada maestro. |
 | **reports** | Solo lectura (SQL) | Ver sección 9 |
+
+**Responsables de escritura.** Catálogo mantiene productos, categorías, unidades, conversiones y composición de kits (`stock_item`, `service`, `kit`). Precios mantiene tarifas y reglas. Inventario registra movimientos, lotes, reservas y saldos por ubicación. Compras conserva la compra y sus correcciones. Ventas conserva los precios pactados, pagos, devoluciones y movimientos de caja. Reportes lee los registros emitidos. Una compra o venta abre una transacción y pasa sus repositorios transaccionales a inventario y caja. Un fallo en cualquiera de los pasos revierte la operación completa.
 
 ### 5.2 Generalizaciones del modelo (huecos detectados en el código actual)
 
@@ -253,21 +259,24 @@ Los nombres del código van en inglés (D35). En este documento los casos de uso
 
 ```text
 tenants          (id, name, business_type, plan, status, created_at)
-memberships      (tenant_id, user_id, role)            role: owner | manager | cashier
+platform_admins  (user_id)                            alta explícita y auditada
+session_tenants   (session_id, user_id, tenant_id)     selección por terminal
+membership_permissions (tenant_id, user_id, permission)
+memberships      (tenant_id, user_id, role, active)            role: owner | manager | cashier
 tenant_settings  (tenant_id, currency, timezone, default_tax_rate, price_includes_tax, …)
 tenant_modules   (tenant_id, module_id, enabled, config jsonb)
 locations        (id, tenant_id, name, kind)           kind: store | warehouse
 ```
 
 - Todas las tablas de negocio llevan **`tenant_id NOT NULL`**. Las claves únicas incluyen `tenant_id` (p. ej. `UNIQUE (tenant_id, sku)`).
-- RLS en todas: `USING (tenant_id = current_setting('app.tenant_id')::uuid)`.
+- Las políticas filtran por `current_tenant()` y validan la membresía activa. Durante D46 las peticiones PostgREST también deben corresponder a la selección vigente de la sesión.
 
 ### 7.2 Resolución del negocio en cada petición
 
-1. El guard valida la sesión (cookie httpOnly).
-2. Obtiene el negocio activo: cookie `active_tenant`, validada contra `memberships`. Un usuario con varios negocios elige en un selector.
-3. Carga el rol y los módulos activos en `event.context`.
-4. `UnitOfWork` fija `app.tenant_id` y `app.user_id` en la transacción.
+1. El POS envía correo y contraseña al backend. Supabase Auth emite la sesión y Nitro guarda los tokens en cookies `HttpOnly`, con `Secure` en HTTPS. En cada petición protegida, un único verificador autentica el token y conserva la identidad verificada solo en `event.context`.
+2. Una persona sin membresías activas puede gestionar su cuenta, pero recibe 403 en operaciones comerciales. Con una sola se selecciona automáticamente. Con varias, elige un negocio. La selección pertenece a la sesión de ese terminal y se guarda en el servidor mediante el `session_id` verificado. El rol de plataforma se asigna explícitamente por separado.
+3. Durante D46, el hook emite el negocio seleccionado en el JWT. Al cambiarlo, el backend valida la membresía y renueva el token antes de permitir operaciones. Guard, RLS y Drizzle deben coincidir en negocio y usuario. Un token anterior, una membresía suspendida o un carrito de otro contexto no pueden registrar una venta. El rol y las concesiones se consultan vigentes. Las escrituras del POS incluyen el negocio y la ubicación esperados al crear el borrador. El servidor los compara con el contexto autorizado antes de aplicar el cobro.
+4. Cerrar sesión revoca la renovación en el terminal actual y limpia sus cookies y estado de interfaz. Un fallo temporal de Auth se comunica como indisponibilidad. Las invitaciones, recuperación y suspensión se prueban con usuarios nuevos y existentes en F2.
 
 ### 7.3 Administración de la plataforma
 
@@ -293,6 +302,7 @@ Hay un rol de plataforma (`platform_admin`) separado de los roles de negocio. So
 ### 8.3 Eventos con outbox transaccional
 
 - El caso de uso escribe el evento en la tabla `outbox_events` **dentro de la misma transacción**.
+- La entrega se identifica por evento y suscriptor. Cada destino conserva sus intentos y resultado. Se reintentan los pendientes con el mismo identificador y se alerta sobre entregas atascadas.
 - Al confirmar, un despachador entrega el evento a los suscriptores de los módulos activos del negocio.
 - Los manejadores son **idempotentes**, porque un evento puede llegar dos veces.
 - Si un manejador debe ser **consistente con la operación** (por ejemplo, un validador), no se usa un evento: se usa un **punto de extensión síncrono** dentro de la transacción.
@@ -319,6 +329,7 @@ export default defineModule({
 ### 8.5 Nuxt Layers y activación
 
 - Cada módulo es una **Nuxt Layer** con sus propias `pages/`, `components/`, `server/api/` y `module.ts`.
+- La aplicación raíz importa los manifiestos en `server/plugins/modules.ts` e inyecta los adaptadores compartidos. El núcleo expone los contratos de registro, búsqueda e IA (D67).
 - **Todas las capas se compilan juntas.** La activación es por negocio, en tiempo de ejecución, con `tenant_modules`:
   - el guard responde 404 en las rutas de módulos inactivos;
   - el menú solo muestra lo activo.
@@ -342,7 +353,7 @@ export default defineModule({
 
 ## 10. Seguridad
 
-1. **Seguro por defecto.** `server/middleware/guard.ts` rechaza toda petición a `/api/*` sin sesión. La lista blanca es explícita y corta: `auth/sign-in`, `agent/identification/*`, `agent/*` (token propio) y webhooks con firma.
+1. El guard protege `/api/*` por defecto. Cada excepción declara su ruta, método y autenticación. Las rutas de revisión y administración de sesiones del agente exigen sesión del POS y permiso. Las del conector verifican su credencial propia. Los callbacks de Auth y el despachador interno tienen validación específica.
 2. **`defineApiHandler({ role | permission, body, query }, fn)`** en todas las rutas:
    - exige rol o permiso;
    - valida la entrada con zod;
@@ -425,6 +436,7 @@ Estructura de **Nuxt 4** (D34): en cada capa, el código del cliente vive en `ap
 
 ```text
 nuxt.config.ts           aplicación final: extends de todas las capas
+server/plugins/modules.ts  composición de manifiestos y adaptadores
 layers/
   core/
     nuxt.config.ts
@@ -439,7 +451,7 @@ layers/
         http/            guard, defineApiHandler
       api/               adaptadores HTTP del núcleo
   modules/
-    quotes/  credit/  kits/  agent/  einvoice-pe/      (cada uno: nuxt.config.ts, module.ts, app/, server/)
+    kits/  agent/         (quotes después de F9; credit y einvoice-pe a futuro)
   verticals/
     papeleria/  (ferreteria/  taller/  — a futuro)
 shared/                  esquemas zod compartidos cliente/servidor (carpeta `shared/` de Nuxt 4)
@@ -462,19 +474,19 @@ El detalle de cada fase está en [`docs/fases/`](fases/README.md). **Ninguna fas
 
 Se usa el **patrón Strangler**: un caso de uso a la vez, con la versión anterior como red de seguridad. Cada fase termina en algo desplegable y verificable.
 
-**Regla de oro:** **no se da de alta un segundo negocio hasta terminar la Fase 6.** Mientras tanto, la papelería es el único negocio (`tenant_id` con valor por defecto) y las RPC antiguas siguen funcionando sin cambios hasta que se reemplazan.
+**Alta del segundo negocio.** F6 acredita el flujo de cobro en staging. La apertura comercial exige completar la lista única de [F2 §1.2](fases/fase-2-multi-negocio.md#12-puerta-para-el-segundo-negocio), incluidos los canales accesibles y los módulos habilitados. La papelería sigue operando sola hasta entonces.
 
 | Fase | Contenido | Terminada cuando |
 |---|---|---|
 | **0. Seguridad urgente** | `pnpm db:backup` previo; auth en `/api/school/*`; borrar `webhook/send-message` y el flujo WhatsApp; cerrar el registro público; bloquear el cambio de `role`; `requireOwner` en reportes, precios y mantenimiento; RLS en `stg_*` y cachés | Pruebas sin sesión → 401; un cajero no puede volverse dueño ni leer reportes |
-| **1. Cimientos** | **Primero:** Nuxt 4 + Tailwind 4 + Node 22 (D34), sin cambiar funcionalidad. **Luego:** estructura `layers/` vacía (D36); staging + `seed.sql` (D43); librería decimal y tipos `Money`/`Quantity` (D38); `AGENTS.md`/`CLAUDE.md`; ESLint + `vue-tsc` + `dependency-cruiser` en CI; Vitest (migrar `node --test`) + Playwright; Sentry; Renovate; guard + `defineApiHandler`; Drizzle + `app_backend` + `UnitOfWork`; outbox + despacho con `pg_cron`; Pinia (stores de sesión); Nuxt UI + VueUse instalados; `utils/format.ts`; borrar código muerto | Una ruta nueva sin declarar nada nace protegida; CI rompe ante una violación de capas; un error de producción llega a Sentry |
+| **1. Cimientos** | **Primero:** caracterizar los flujos en la versión vigente y validar Nuxt 4 + Tailwind 4 + Node 26 (D34), sin cambiar funcionalidad. **Luego:** estructura `layers/` vacía (D36); staging + `seed.sql` (D43); librería decimal y tipos `Money`/`Quantity` (D38); `AGENTS.md`/`CLAUDE.md`; ESLint + `vue-tsc` + `dependency-cruiser` en CI; Vitest (migrar `node --test`) + Playwright; Sentry; Renovate; guard + `defineApiHandler`; Drizzle + `app_backend` + `UnitOfWork`; outbox + despacho con `pg_cron`; Pinia (stores de sesión); Nuxt UI + VueUse instalados; `utils/format.ts`; borrar código muerto | Una ruta nueva sin declarar nada nace protegida; CI rompe ante una violación de capas; un error de producción llega a Sentry |
 | **2. Multi-negocio (ventana de mantenimiento)** | `tenants`, `memberships`, `tenant_settings`, `tenant_modules`, `locations`; `tenant_id` en todas las tablas (papelería = negocio 1); RLS reescrita; claim `tenant_id` en el JWT; revocar `anon` (D46; `authenticated` al cerrar la Fase 7); `membership_permissions` (D57); test de aislamiento | Todo funciona igual para la papelería; el test de aislamiento pasa con un negocio de prueba |
 | **3. Catálogo** | Contexto `catalog` hexagonal; `item_kind`; `attributes`; unidades y conversiones | Tests de caracterización de `upsert_product_catalog` y conversiones en verde contra la versión nueva |
 | **4. Precios e impuestos** | Contexto `pricing`; impuestos; unificar el precio de listas escolares | `ResolverPrecio` reproduce `resolve_sale_item_pricing` en todos los casos de caracterización |
 | **5. Compras e inventario** | `purchasing` + `inventory`: FIFO por ubicación, stock de una sola fuente, reservas, conteos atómicos, transferencias | Tests de caracterización + concurrencia en verde; stock y FIFO cuadran |
-| **6. Ventas y caja** | `sales`: documento de venta, caja, anulación, devolución; el agente pasa a usar `RegistrarVenta`; se eliminan las RPC reemplazadas. **Requisitos del 2.º negocio:** rate limiting (Upstash), correo (Resend como SMTP de Auth), PITR activo | Venta y pedido reproducen `create_sale`/`pay_sales_order`; no queda lógica de negocio en PL/pgSQL; los tres requisitos activos |
+| **6. Ventas y caja** | Documento de venta, caja, anulación, devolución y registro por el agente. Retirar las RPC sustituidas tras verificar su paridad. | F6-T13 acredita el cobro idempotente y la conciliación en staging. Registrar el resultado en F2 §1.2. |
 | **7. Reportes** | Consultas de lectura en SQL, multi-negocio, sin tope de 1000 filas; vista liviana del catálogo; índices; gráficos con ECharts/Unovis | El dashboard es correcto con más de 1000 ventas; los reportes responden en menos de 1 s |
-| **8. Módulos** | Convertir a Layers: núcleo, `kits`, `agent` (estado en BD, `legacy` eliminado), `quotes`, vertical `papeleria` | La papelería funciona con sus módulos activos; otro negocio de prueba sin ellos no los ve |
+| **8. Módulos** | Convertir a Layers: núcleo, `kits`, `agent` (estado en BD, `legacy` eliminado), vertical `papeleria` | La papelería funciona con sus módulos activos; otro negocio de prueba sin ellos no los ve |
 | **9. Frontend** | Partir `sales.vue`, `utiles.vue`, `executive-profitability.vue`, `products.vue`, `combos.vue` usando componentes de Nuxt UI; carrito y caja en Pinia; búsqueda del POS con debounce; `xlsx` con carga diferida | Ninguna página pasa de unas 500 líneas; no quedan SVG de iconos a mano |
 
 La Fase 9 puede avanzar en paralelo desde la Fase 1, pantalla por pantalla, conforme se toque cada una.
@@ -484,23 +496,23 @@ La Fase 9 puede avanzar en paralelo desde la Fase 1, pantalla por pantalla, conf
 1. Escribir **tests de caracterización** contra la RPC actual (Supabase local).
 2. Implementar el dominio con **tests unitarios**.
 3. Implementar el caso de uso y el adaptador; hacer que pasen los tests de caracterización.
-4. Activar con un interruptor por caso de uso (`ENGINE_<CASO>=db|domain`); se vuelve atrás al instante.
+4. Activar con un interruptor por caso de uso. Antes de volver al motor anterior, comprobar que reconoce las operaciones ya confirmadas y conserva sus efectos en caja, inventario y numeración. Cuando las garantías divergen, recuperar hacia adelante.
 5. Tras un periodo estable, **eliminar** la RPC y el interruptor.
 
 ---
 
-### Pendientes antes de escribir código
+### Pendientes y entrega a la que afectan
 
 | # | Pendiente | Bloquea |
 |---|---|---|
-| 1 | Ordenar el trabajo sin commitear de `claude/db-entornos` (16 archivos modificados, 13 nuevos, incluidos los `Executive*.vue`) | Fase 0 |
-| 2 | Mergear o archivar las 7 ramas sin merge (`supervisor-integracion`, `selector-autocorreccion`, `registrador-sin-literal`, `pos-revision-ventas`, `agente1-decisivo`, `cantidad-numeros-descriptivos`, `respaldo/…`) y limpiar los worktrees | Fase 0 (agente: Fase 8) |
-| 3 | `pnpm db:backup` de producción | Fase 0 |
+| 1 | Verificar `git status` y el consumidor del reporte ejecutivo sobre la rama de trabajo. En `main` (`5b4f612`), `/api/reports/executive-profitability` está en uso. | Cambios que toquen el reporte |
+| 2 | Comparar los archivos de la tarea con ramas pendientes. En `5b4f612` el reporte alternativo está en `claude/reportes-precios-escolares`. | Solo las tareas con conflicto |
+| 3 | Registrar y comprobar `pnpm db:backup` antes de aplicar migraciones a la base real. | Publicación de migraciones |
 | 4 | ~~Validar la matriz de permisos~~ — validada el 2026-11-18 | — |
-| 5 | Desactivar el webhook de WhatsApp en Meta antes de borrar el flujo (D17) | Fase 0 |
+| 5 | Desactivar el webhook de WhatsApp en Meta (D17). | Publicación de F0-T2 |
 | 6 | Definir quién da la validación final del benchmark del selector `llm` (D19) | Fase 8 |
 | 7 | Crear el proyecto Supabase de staging y su entorno en Vercel (D43) | Fase 2 |
-| 8 | Subir a Vercel Pro + Supabase Pro + PITR (D44) | Segundo negocio |
+| 8 | Verificar el plan comercial de Vercel para la primera tienda y la restauración con PITR para el segundo negocio (D44). | Operación comercial / alta del segundo negocio |
 
 ## 15. Trabajo con agentes de IA
 
@@ -524,12 +536,11 @@ Con un equipo pequeño y agentes de IA escribiendo buena parte del código, la a
 |---|---|
 | Los 41 archivos `server/modules/*/app/*` que solo reenvían y los `ports.ts` CRUD | Ceremonia |
 | **Fase 0:** `whatsappFormatter.ts`, `whatsappMedia.ts`, `transcribeAudio.ts`, `schoolList.ts`, `api/webhook/*`, `api/utiles/modify-cart`, `api/utiles/embed-catalog`, y de `aiLogic.ts` solo `modifyCartCore` y `createSalesOrderFromWhatsApp`. **Fase 1:** `whatsapp_sessions` | WhatsApp (D17) |
-| **Fase 8:** el resto de `aiLogic.ts`, `match_products`, `image_cache`, `match_cache`, `products.embedding` y su índice `ivfflat`, `scripts/embed-catalog.mjs` | IA duplicada; la lectura de listas por foto se reimplementa en el vertical papelería sobre el agente (D49) |
+| **Fase 8:** el resto de `aiLogic.ts`, `match_products`, `image_cache`, `match_cache`, `products.embedding` y su índice `ivfflat`, `scripts/embed-catalog.mjs` | IA duplicada; la lectura de listas por foto se reimplementa en el vertical papelería mediante los puertos compartidos de búsqueda e IA (D49, D67) |
 | Modo `legacy` del agente y sus archivos | D19 |
 | `stg_*_import`, `import_batches`, `result.json`, `data/*.csv`, `scripts/repair-uom-fifo.mjs` | Restos de importaciones pasadas |
-| `api/reports/executive-profitability` y su módulo; componentes `Executive*.vue` sin uso (confirmar antes: tienen cambios sin commitear) | Sin uso |
 | Funciones PL/pgSQL de negocio (`create_sale`, `create_purchase`, `resolve_sale_item_pricing`, `pay_sales_order`, guards…) | Reemplazadas por el dominio (fases 3–6) |
-| `handle_new_user`, `user_role`, `is_owner`, `profiles.role` | Reemplazados por `memberships` |
+| `profiles.role` | La membresía asume el rol. Los helpers de identidad que siguen usando Auth o RLS se adaptan en F2. |
 
 ---
 
@@ -538,7 +549,7 @@ Con un equipo pequeño y agentes de IA escribiendo buena parte del código, la a
 | Riesgo | Mitigación |
 |---|---|
 | La reescritura del dominio cambia un resultado (precio, costo, stock) | Tests de caracterización antes de cada reemplazo + interruptor para volver atrás |
-| Fuga de datos entre negocios | RLS + `app_backend` sin bypass + test de aislamiento en CI + segundo negocio solo tras la Fase 6 |
+| Fuga de datos entre negocios | RLS + `app_backend` sin bypass + test de aislamiento en CI + alta del segundo negocio según F2 §1.2 |
 | Inconsistencia de stock por concurrencia | `FOR UPDATE` en el dominio de inventario + test de concurrencia |
 | Conexiones agotadas en serverless | Pooler Supavisor en modo transacción |
 | Deriva de la arquitectura por agentes de IA | `AGENTS.md`/`CLAUDE.md`, plantillas y `dependency-cruiser` en CI |

@@ -9,27 +9,28 @@
 
 **Objetivo.** Que ninguna página pase de unas **500 líneas**. Cada página orquesta; la interfaz va en componentes por funcionalidad; los datos del servidor se piden con composables, y solo el estado global de sesión y de flujo vive en Pinia. Todo con componentes de Nuxt UI, sin iconos SVG escritos a mano.
 
-**Entra:** todas las páginas de `pages/` y los componentes grandes de `components/`, por orden de tamaño (al 2026-11-18):
+**Entra:** páginas y componentes de `main` (`5b4f612`). El orden de trabajo depende de la estabilidad de su backend.
 
 | Página o componente | Líneas | Destino |
 |---|---:|---|
-| `pages/sales.vue` | 3461 | Núcleo |
-| `pages/utiles.vue` | 2999 | Vertical papelería |
-| `pages/executive-profitability.vue` | 2978 | Núcleo (reportes) |
-| `pages/products.vue` | 1788 | Núcleo |
+| `pages/sales.vue` | 2655 | Núcleo |
+| `pages/utiles.vue` | 1948 | Vertical papelería |
+| `pages/executive-profitability.vue` | 527 | Núcleo (reportes) |
+| `pages/products.vue` | 1641 | Núcleo |
 | `pages/combos.vue` | 1621 | Módulo `kits` |
 | `pages/school-lists.vue` | 1398 | Vertical papelería |
-| `pages/purchases.vue` | 1374 | Núcleo |
+| `pages/purchases.vue` | 1060 | Núcleo |
 | `components/stock-ai/QuotesView.vue` | 1299 | Núcleo (compras) |
-| `pages/pricing.vue` | 1029 | Núcleo |
+| `pages/pricing.vue` | 833 | Núcleo |
 | `pages/inventory.vue` | 989 | Núcleo |
-| `app.vue` (estructura y menú) | 858 | Núcleo |
+| `app.vue` (estructura y menú) | 867 | Núcleo |
 | `pages/product-profitability.vue` | 799 | Núcleo (reportes) |
 | `pages/stock-ai.vue` | 743 | Núcleo + vertical papelería |
 | `pages/maintenance.vue` | 682 | Núcleo |
 | `components/stock-ai/SalesSuggestedView.vue` | 585 | Núcleo (compras) |
 | `pages/financial-summary.vue`, `index.vue`, `customers.vue`, `users.vue`, `suppliers.vue`, `login.vue`, `vincular.vue` | 103–440 | Núcleo / `agent` |
-| `pages/stock-suggested.vue`, `pages/supplier-quotes.vue` | 3 c/u | Redirecciones: borrar si ya no se usan |
+| `pages/ventas-por-confirmar.vue` | 337 | Módulo `agent`, revisión y aprobación de ventas |
+| `pages/stock-suggested.vue`, `pages/supplier-quotes.vue` | 3 c/u | Validar consumidores antes de retirar las redirecciones |
 
 **No entra:**
 - Cambios de backend. Si una página necesita un endpoint nuevo (por ejemplo, el repreciado del carrito en lote), se pide a la fase dueña del contexto.
@@ -68,18 +69,18 @@ Esta fase **no espera** a las anteriores. Avanza **página por página desde la 
 
   | Store | Contenido | Se crea en |
   |---|---|---|
-  | `useSessionStore` | usuario, negocio activo, rol, permisos, `can(permission)` | F9-T1 |
-  | `useModulesStore` | módulos activos y menú | Fase 8 (F8-T2) |
+  | `useSessionStore` | usuario, negocio activo, rol, permisos, `can(permission)` | F1-T16, integración en F9-T1 |
+  | `useModulesStore` | módulos activos y menú | Base en F1-T16, manifiestos en F8-T2 |
   | `useCartStore` | carrito del POS, cliente, método de pago, borrador persistido | F9-T2 |
   | `useCashStore` | sesión de caja abierta, arqueo en curso | F9-T2 (con el backend de la Fase 6) |
 
 - **Carga y errores:** un composable `useAsyncAction()` (estado `loading`, `error`, notificación con el toast de Nuxt UI). Reemplaza los bloques repetidos `try / loading / message`.
-- **Formato:** `utils/format.ts` (dinero, números, fechas según `tenant_settings`). Hoy hay `formatMoney`, `moneyFormatter` o `toNumber` propios en 14 archivos (`financial-summary`, `executive-profitability`, `inventory`, `combos`, `purchases`, `product-profitability`, `index`, `utiles`, `stock-ai`, `sales`, `SalesSuggestedView`, `QuotesView`, `ExecutiveBucketRail`, `ExecutiveCompositionBar`).
+- **Formato:** centralizar dinero, cantidades y fechas en `utils/format.ts` con los ajustes del negocio. Inventariar las funciones existentes al empezar cada pantalla.
 - **Componentes de Nuxt UI** para tabla, formulario, modal, menú, pestañas, toast y selector. **Iconos con Iconify** (hoy hay 41 `<svg>` escritos a mano y emojis como iconos).
 - **Formularios** validados con el **mismo esquema zod** que la API (D31).
 - **Permisos:** mostrar u ocultar con `useSessionStore().can(...)` según la matriz de §10.1. Nunca como única protección.
 - **Búsquedas** con `useDebounce` (VueUse) y textos normalizados una sola vez al cargar.
-- **`localStorage` solo para preferencias** (por ejemplo, la disposición del POS) y el borrador del carrito, siempre mediante `useStorage` con manejo de errores. Nunca como base de datos alternativa.
+- **Estado por terminal.** Guardar preferencias y, si procede, el borrador del POS bajo la clave de usuario, negocio y ubicación. Mantener tokens en cookies `HttpOnly`. Al salir o cambiar de contexto, cancelar peticiones anteriores, invalidar cachés y limpiar carrito, caja, permisos y módulos en memoria. Si otra pestaña comparte la sesión, sincronizar el cambio antes de permitir cobrar. Descartar respuestas tardías del contexto anterior.
 - **Antes de partir una página, un test Playwright** que fije su comportamiento actual (test de caracterización de punta a punta).
 
 ### 4.2 Tareas
@@ -90,17 +91,17 @@ Esta fase **no espera** a las anteriores. Avanza **página por página desde la 
 
 #### F9-T1 — Estructura común, sesión y formato
 - **Objetivo:** la base que usan todas las demás tareas.
-- **Archivos:** `app.vue` (858 líneas) → `layouts/default.vue` + `components/layout/AppSidebar.vue`, `AppHeader.vue`, `UserMenu.vue`; `stores/session.ts`; `composables/useAsyncAction.ts`; `utils/format.ts`.
+- **Archivos:** `app.vue` (867 líneas) → `layouts/default.vue` + `components/layout/AppSidebar.vue`, `AppHeader.vue`, `UserMenu.vue`; `stores/session.ts`; `composables/useAsyncAction.ts`; `utils/format.ts`.
 - **Pasos:**
   1. Sacar el menú y la cabecera de `app.vue` a componentes con Nuxt UI. Mientras no exista `useModulesStore` (Fase 8), el menú sigue siendo una lista fija, pero filtrada por permisos.
-  2. `useSessionStore`: hoy `/api/auth/me` se pide en `middleware/auth.global.ts`, `middleware/owner.ts`, `app.vue:264` y `sales.vue:1593`. Pasa a pedirse **una vez** por sesión; los middlewares leen el store.
+  2. `useSessionStore` comparte una carga de `/api/auth/me` por inicialización. Revalidar al renovar, cambiar de negocio o recuperar una pestaña con contexto antiguo. Con 401 definitivo volver al login, con 403 mostrar acceso restringido o el selector y con 503 conservar el contexto y permitir reintento. El backend verifica cada operación.
   3. `owner.ts` se reemplaza por un middleware de **permiso** (`definePageMeta({ permission: 'reports.costs' })`).
   4. Adoptar `utils/format.ts` en los 14 archivos con formato propio.
   5. Tema claro y oscuro: `composables/useTheme.ts` se reemplaza por el modo de color de Nuxt UI si cubre lo mismo.
-- **Terminado cuando:** `/api/auth/me` se llama una vez por carga; no quedan funciones de formato de dinero fuera de `utils/format.ts`.
+- **Terminado cuando:** la carga inicial se comparte entre componentes y el test con dos negocios demuestra que una respuesta tardía, un borrador anterior y un cambio en otra pestaña no mezclan usuarios, negocios ni ubicaciones.
 
-#### F9-T2 — `pages/sales.vue` (3461 líneas) · después de la Fase 6
-- **Hoy:** 4 pestañas en un archivo (`pos` :2345, `history` :2786, `checkout` :2927, `reports` :3141; tipo `SalesTab` :49), atajos de teclado (`handlePosHotkeys`, :2332), búsqueda con `handleSearchKeydown` (:2486, :2687), impresión con `PosTicketPanel` (ya extraído).
+#### F9-T2 — `pages/sales.vue` (2655 líneas) · después de la Fase 6
+- **Hoy:** `SalesTab` reúne POS, historial, cobro y reportes. Caracterizar atajos (`handlePosHotkeys`), búsqueda (`handleSearchKeydown`), comprobante e impresión antes de extraerlos.
 - **División propuesta:**
 
   | Pieza | Contenido |
@@ -116,36 +117,34 @@ Esta fase **no espera** a las anteriores. Avanza **página por página desde la 
   | `HistoryView.vue` | Historial paginado (`useSalesHistory`) |
   | `ReportsView.vue` | Resumen del periodo (endpoint de F7-T5) |
   | `CashSessionBar.vue` | Caja abierta, cierre (`useCashStore`) |
-  | `PosTicketPanel.vue` | Ya existe |
+  | `PosTicketPanel.vue` | Extraer del flujo de impresión y conservar el comprobante actual |
 
-- **Estado:** `useCartStore` (carrito, cliente, precios resueltos, borrador con `useStorage`, que reemplaza `DRAFT_STORAGE_KEY` y el `watch` profundo de :2287-2292) y `useCashStore`.
+- **Estado:** `useCartStore` y `useCashStore` respetan el ámbito del terminal. Conservar la clave del cobro pendiente de F6 a través de recargas y reintentos hasta conocer su resultado.
 - **Eliminar:**
-  - el **modo local de ventas en espera**: `HOLD_STORAGE_KEY` (:264), `isOrdersBackendMissing` (:268-280), escrituras y lecturas (:1081, :1122-1190). Con la migración base las tablas existen siempre;
-  - el aviso por WhatsApp (`/api/webhook/notify-order-ready`, :2119), si la Fase 0 no lo quitó ya (D17);
-  - los totales calculados sobre las últimas 50 ventas (:100-150): los reemplaza `ReportsView`.
+  - el modo local de pedidos en espera, previa conciliación de los pedidos existentes según F6-T8;
+  - los restos de notificación por WhatsApp que sobrevivan a F0-T2;
+  - los totales calculados sobre las últimas 50 ventas, cuando esté disponible F7-T5;
 - **Rendimiento:**
-  - búsqueda con `useDebounce` (~120 ms) y textos normalizados al cargar el catálogo (hoy se normalizan 4 campos por producto en cada tecla, :1762 y :1814);
-  - repreciado del carrito al cambiar de cliente **en lote**: hoy `refreshCartPricing` (:1034) hace un HTTP por ítem en serie. Requiere un endpoint en lote de `resolvePrice` (pedirlo a la Fase 4 o 6).
-- **Integración:** `addItems(lines)` en `useCartStore` para recibir listas desde la papelería (reemplaza el puente por `localStorage` de `utiles.vue:1195-1220`).
+  - búsqueda con debounce y textos normalizados al cargar el catálogo;
+  - repreciado del carrito por lote al cambiar de cliente con `resolve-batch`, entregado por F4-T9;
+- **Integración:** `addItems(lines)` recibe las líneas escolares en el carrito del negocio y ubicación activos.
 - **Terminado cuando:**
   - los tests Playwright de caracterización (venta simple, venta con unidades y descuento, venta en espera y cobro, cambio de cliente con repreciado, atajos de teclado, impresión) pasan antes y después;
   - ningún archivo pasa de 500 líneas;
   - cambiar de cliente con 15 ítems reprecia en una sola llamada.
 
-#### F9-T3 — `pages/utiles.vue` (2999 líneas) · junto con F8-T11
-- **Hoy:** análisis de stock por lista, stock de todas las listas, lectura de lista por foto, búsqueda manual, impresión de cotización como HTML armado con texto (:954) y paso al carrito por `localStorage` (:1195-1220).
-- **División:** `pages/utiles.vue` (orquesta) + en `layers/verticals/papeleria/app/components/utiles/`: `ListSelector.vue`, `ListStockAnalysis.vue`, `AllListsStock.vue`, `PhotoListReader.vue`, `ListMatchReview.vue`, `SchoolQuotePrint.vue`; composables `useSchoolStockAnalysis`, `usePhotoListReader`.
-- **Cambios:** la cotización se imprime con un componente (o con el módulo `quotes`, según F8-T11); el paso al carrito usa `useCartStore().addItems`.
+#### F9-T3 — `pages/utiles.vue` (1948 líneas) · junto con F8-T11
+- **Hoy:** análisis de stock por lista, consulta de todas las listas, lectura por foto, búsqueda y paso al carrito mediante `localStorage`.
+- **División:** `pages/utiles.vue`, `ListSelector.vue`, `ListStockAnalysis.vue`, `AllListsStock.vue`, `PhotoListReader.vue` y `ListMatchReview.vue` en la capa papelería.
+- **Cambios:** el paso al carrito usa `useCartStore().addItems`. Preservar la preparación actual de listas. Las cotizaciones a clientes quedan para después de F9 (D63).
 - **Terminado cuando:** Playwright cubre analizar una lista, leer una foto de referencia y enviar la lista al POS.
 
-#### F9-T4 — `pages/executive-profitability.vue` (2978 líneas) · después de F7-T8
-- **Hoy:** unas 1.760 líneas de script con 60 `computed`, plantilla desde :1763 en secciones (`top`, `decision`, `kpis`, cinco bloques `grid2`, `scenarios`, `card`) y unas 600 líneas de CSS propio desde :2365. Gráficos dibujados a mano en SVG.
-- **División:** un componente por sección (`ExecHeader`, `ExecDecision`, `ExecKpis`, `ExecSalesChart`, `ExecWaterfall`, `ExecInventoryComposition`, `ExecScenarios`…) en `components/reports/executive/`; gráficos con la librería elegida en F7-T0; estilos con Tailwind y Nuxt UI en lugar del CSS propio.
-- **Lógica:** lo que la Fase 7 entrega ya calculado se borra del frontend; lo que es presentación (colores, textos, tonos) queda en un composable `useExecutivePresentation`.
-- **Componentes `Executive*.vue`** (`ExecutiveBucketRail`, `ExecutiveCompositionBar`, `ExecutiveGroupedBarChart`, `ExecutiveTrendChart`): hoy sin uso y con cambios sin commitear. Se reutilizan o se borran según lo que decida el usuario (pendiente #1).
+#### F9-T4 — `pages/executive-profitability.vue` (527 líneas) · después de F7-T8
+- **Hoy:** la página consume `/api/reports/executive-profitability` y muestra totales, composición y series semanales, mensuales y anuales. `ExecutiveCompositionBar` y `ExecutiveTrendChart` están activos en `main`.
+- **División:** reutilizar los dos componentes, extraer la tabla de series repetida y caracterizar el cambio de periodo. Coordinar cambios del contrato y de los gráficos con F7-T8.
 - **Terminado cuando:** la página muestra los mismos datos que antes; ningún archivo > 500 líneas; sin SVG de gráficos a mano.
 
-#### F9-T5 — `pages/products.vue` (1788 líneas) · después de la Fase 3
+#### F9-T5 — `pages/products.vue` (1641 líneas) · después de la Fase 3
 - **División:** `ProductTable.vue` (tabla de Nuxt UI, paginada), `ProductForm.vue` (con `item_kind` y atributos según los esquemas de los módulos activos, §8.2), `ConversionsEditor.vue`, `ExcelImportDialog.vue`; composable `useProducts`.
 - **Cambios:**
   - `xlsx` con **carga diferida**: hoy se importa siempre (`products.vue:2`) y solo se usa al importar (:808) → `const XLSX = await import('xlsx')` dentro de `ExcelImportDialog`;
@@ -161,7 +160,7 @@ Esta fase **no espera** a las anteriores. Avanza **página por página desde la 
 - **División:** `SchoolHierarchyPicker.vue` (institución → grado → sección), `ListHeaderForm.vue`, `ListItemsEditor.vue`, `BrandVariantsEditor.vue`; composable `useSchoolLists`.
 - **Terminado cuando:** crear y editar una lista con variantes de marca funciona igual; Playwright en verde.
 
-#### F9-T8 — `pages/purchases.vue` (1374 líneas) · después de la Fase 5
+#### F9-T8 — `pages/purchases.vue` (1060 líneas) · después de la Fase 5
 - **División:** `PurchaseList.vue`, `PurchaseForm.vue` (hoy un modal en :897), `PurchaseLineRow.vue`, `PurchaseCorrectionDialog.vue` (corrección de ítems, `correctPurchase`); composable `usePurchases`.
 - **Permisos:** `purchases.register`.
 - **Terminado cuando:** registrar y corregir una compra funciona; Playwright en verde.
@@ -174,7 +173,7 @@ Esta fase **no espera** a las anteriores. Avanza **página por página desde la 
 - **Borrar** `pages/stock-suggested.vue` y `pages/supplier-quotes.vue` (redirecciones de 3 líneas) si ya no hay enlaces a ellas.
 - **Terminado cuando:** ninguna pieza > 500 líneas; el menú lleva a cada parte según el módulo activo.
 
-#### F9-T10 — `pages/pricing.vue` (1029 líneas) · después de la Fase 4
+#### F9-T10 — `pages/pricing.vue` (833 líneas) · después de la Fase 4
 - **Hoy:** el bloque `try / loading / message` se repite 17 veces.
 - **División:** un componente por tipo de regla: `WholesaleTiersEditor.vue`, `PromotionsEditor.vue`, `PresentationPricesEditor.vue`, `CustomerGroupPricesEditor.vue`; formularios con los esquemas zod compartidos; `useAsyncAction`.
 - **Permisos:** `pricing.edit` (solo dueño).
@@ -192,7 +191,7 @@ Esta fase **no espera** a las anteriores. Avanza **página por página desde la 
 
 #### F9-T13 — Páginas menores
 - `maintenance.vue` (682): un componente por catálogo (unidades, categorías, métodos de pago, grupos de cliente).
-- `customers.vue`, `suppliers.vue`, `users.vue` (incluye «Sesiones de Claude» del módulo `agent`), `login.vue`, `vincular.vue`: adoptar Nuxt UI, `format.ts` y `useSessionStore`.
+- `customers.vue`, `suppliers.vue`, `users.vue`, `login.vue`, `vincular.vue` y `ventas-por-confirmar.vue`: adoptar los componentes comunes. Las dos últimas pantallas del agente conservan sus reglas propias de vinculación y revisión.
 - **Terminado cuando:** todas usan los componentes base y ninguna supera 500 líneas.
 
 #### F9-T14 — Cierre
@@ -213,7 +212,7 @@ Esta fase **no espera** a las anteriores. Avanza **página por página desde la 
 | Tamaño | ESLint `max-lines` 500 en `.vue` |
 | Estado | Tests de Vitest de los stores (`useCartStore`: agregar, cambiar cliente, persistir y restaurar borrador; `useSessionStore`: `can()` según la matriz de §10.1) |
 | Rendimiento | Búsqueda del POS con 5.000 productos sin bloqueo perceptible; `xlsx` fuera del chunk inicial (`nuxi analyze`) |
-| Permisos | Playwright con un usuario cajero: no ve lo que la matriz no le permite |
+| Sesión y permisos | Playwright con un cajero y con un usuario de dos negocios. Verificar selector, caja y carrito después del cambio, rechazo de respuestas tardías y salida en un terminal mientras el otro conserva su sesión. |
 | Visual | Revisión en el navegador de cada página, en claro y oscuro, en escritorio y tablet |
 
 ## 6. Cómo volver atrás
@@ -237,5 +236,6 @@ Esta fase **no espera** a las anteriores. Avanza **página por página desde la 
 
 | Fecha | Cambio |
 |---|---|
+| 2026-11-18 | Se contrastaron pantallas y reporte ejecutivo con main y se definió la invalidación de estado por usuario, negocio y ubicación. |
 | 2026-11-18 | Consolidación: la vista de pedidos de `sales.vue` ya no tiene la notificación por WhatsApp (F0-T2). Los botones de acciones de escritura se ocultan por permiso desde F0-T9 y, en esta fase, se derivan de `useSessionStore` (incluidas las concesiones por usuario de D57). |
 | 2026-11-18 | Documento inicial (antes de implementar). |

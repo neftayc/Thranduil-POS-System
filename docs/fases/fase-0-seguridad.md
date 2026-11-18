@@ -7,7 +7,7 @@
 Cerrar las fallas críticas y altas de la auditoría (`docs/auditoria-2026-11-18.md`) que se pueden corregir **sin refactorizar**. Cada cambio es pequeño, local y reversible.
 
 **Entra:**
-- autenticación en `/api/school/*` (S1);
+- verificación de identidad de la sesión del POS (D64) y autenticación en `/api/school/*` (S1);
 - eliminación del flujo de WhatsApp y del relé `send-message` (S2, S8, S9, D17);
 - cierre del registro público y bloqueo del cambio de rol (S3);
 - `requireOwner` en las APIs de reportes de solo-dueño (S4);
@@ -17,7 +17,7 @@ Cerrar las fallas críticas y altas de la auditoría (`docs/auditoria-2026-11-18
 - un hallazgo nuevo (**S12**): acciones de escritura sin validación de rol (compras, productos, conteos, proveedores, precio en pedidos).
 
 **No entra:**
-- **S5 (RLS `*_all_auth`):** el backend actual escribe por PostgREST con el cliente de usuario, así que revocar ahora rompería ventas, compras e inventario. Se resuelve en la Fase 2, al revocar PostgREST y pasar al rol `app_backend`. **Riesgo residual:** un usuario autenticado que obtenga la anon key puede escribir directo por REST. La anon key no se envía al navegador hoy.
+- **S5 (RLS `*_all_auth`):** el backend actual escribe por PostgREST con el cliente de usuario, así que revocar ahora rompería ventas, compras e inventario. F2 introduce aislamiento por negocio; D46 conserva el acceso de `authenticated` durante la transición y lo retira al cierre de F7. **Riesgo residual:** un usuario autenticado que obtenga la anon key puede escribir directo por REST. La anon key no se envía al navegador hoy.
 - Cambiar el cliente admin (service-role) de `/api/school/*` por el de usuario. Se hace al mover esas rutas al módulo `papeleria` (Fase 8).
 - El guard global y `defineApiHandler`: son de la Fase 1. Aquí cada ruta se protege a mano, como hoy.
 
@@ -25,15 +25,15 @@ Cerrar las fallas críticas y altas de la auditoría (`docs/auditoria-2026-11-18
 
 | # | Requisito | Quién |
 |---|---|---|
-| P1 | Trabajo sin commitear de `claude/db-entornos` ordenado (pendiente 1 de `arquitectura.md` §14) | Equipo |
-| P2 | Ramas sin merge resueltas o, al menos, ninguna toca los archivos de esta fase | Equipo |
-| P3 | `pnpm db:backup` de producción, hecho y guardado (D44) | Equipo |
+| P1 | Verificar la rama de trabajo y contrastar rutas, consumidores y cambios locales contra `main`. Registrar la revisión al iniciar F0-T0. | Equipo |
+| P2 | Revisar solapamientos solo en los archivos de la tarea. `claude/reportes-precios-escolares` contiene un reporte alternativo. | Equipo |
+| P3 | Respaldar y verificar la base de producción antes de publicar una migración (D44). | Equipo |
 | P4 | **Webhook de WhatsApp desactivado en Meta** (panel de la app → WhatsApp → Configuración → Webhook) antes de desplegar F0-T2 | Dueño de la cuenta de Meta |
 | P5 | Supabase local funcionando (`pnpm db:start`, `pnpm db:reset`) para verificar las migraciones | Equipo |
 
 ## 4. Tareas en orden
 
-Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes entre sí; el orden sugiere primero lo más grave.
+Un PR por tarea. Empezar por F0-T0 y F0-T1a. F0-T1, F0-T3 y F0-T8 consumen el verificador de F0-T1a. P3 y P4 son condiciones de publicación de las tareas correspondientes.
 
 ### F0-T0 · Guía mínima para agentes de IA: `AGENTS.md` (Codex) y `CLAUDE.md` (Claude)
 
@@ -41,34 +41,18 @@ Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes en
 - **Archivos (en la raíz del repositorio):**
   - `AGENTS.md`: fuente única del contenido. Codex lo lee automáticamente.
   - `CLAUDE.md`: una sola línea, `@AGENTS.md`. Claude Code importa el contenido de `AGENTS.md`, así no hay dos copias que mantener.
-- **Contenido de `AGENTS.md`:**
-  ```markdown
-  # Guía para agentes
-
-  Este repositorio se está refactorizando a una plataforma multi-negocio.
-  Antes de cualquier cambio, lee:
-  1. docs/arquitectura.md — decisiones (D1…), stack, permisos (§10.1), estructura.
-  2. docs/fases/README.md — fase en curso y regla de validación de inicio.
-  3. El documento de la fase en curso (docs/fases/fase-N-*.md).
-
-  ## Reglas
-  - Trabaja solo en la tarea asignada (F<fase>-T<n>); un PR por tarea.
-  - Si el código real no coincide con el documento de la fase, detente y repórtalo:
-    no improvises. Los cambios al plan se registran en «Registro de cambios».
-  - No contradigas una decisión D… sin registrar antes una decisión nueva en
-    docs/arquitectura.md (con aprobación del equipo).
-  - Código en inglés; interfaz y documentos en español (D35).
-  - Antes de una migración en producción: `pnpm db:backup` (D44).
-  - Nunca: secretos en el código, desactivar RLS, usar service-role en rutas nuevas,
-    commitear `.env*`.
-
-  ## Comandos
-  - `pnpm db:start`, `pnpm db:reset`: base local.
-  - `pnpm build`, `pnpm test:agent`: build y tests (Vitest desde la Fase 1).
-  ```
+- **Guía preparada en la rama:** [AGENTS.md](../../AGENTS.md) y [CLAUDE.md](../../CLAUDE.md). Comprobar que las referencias siguen siendo válidas al integrar esta entrega documental.
 - **Terminado cuando:**
   - los dos archivos están en `main`;
   - Codex y Claude Code, al iniciar en el repositorio, mencionan la fase en curso cuando se les pregunta qué deben leer.
+
+### F0-T1a · Sesión verificada del POS (D64)
+
+- **Archivos.** `server/utils/auth.ts`, `server/api/auth/{sign-in.post,me.get,sign-out.post}.ts`, `server/modules/auth/{app,infra}` y los middlewares de navegación.
+- **Punto de partida en `main`.** `signIn.ts` devuelve `cashier` si falla la consulta de rol. `requireAccessToken` puede aceptar la cookie sin verificación y `getUserIdFromAccessToken` usa su `sub` decodificado. El adaptador de salida intenta un cierre `global` y omite los errores. Estos tres comportamientos forman parte de esta tarea.
+- **Entrada y uso.** Conservar `signInWithPassword` y las cookies `HttpOnly`. Verificar la identidad en Supabase (por ejemplo con `auth.getUser(token)`) antes de usar el usuario o ejecutar efectos. Reutilizar el resultado en la misma petición, también en `/me`, `getUserRole` y `getUserIdFromAccessToken`. Mantener la firma pública de `requireAccessToken` para sus consumidores. Eliminar el `cashier` por defecto en el login. Si falla la consulta de rol, impedir la operación y distinguir indisponibilidad de ausencia de permiso.
+- **Renovación y salida.** Renovar cuando corresponda, distinguir credencial inválida (401) de fallo transitorio del proveedor (503, conservar la posibilidad de reintentar). El botón Salir revoca la renovación de la sesión local y limpia las cookies. Conservar `SameSite=Lax`, `Secure` en HTTPS y protección de origen en las escrituras del navegador. Probar renovación concurrente desde dos pestañas sin borrar una sesión válida. Si vence el token de acceso durante la salida, intentar revocar la sesión correcta usando la renovación disponible. Limpiar las cookies locales también cuando el proveedor no confirme la revocación y comunicar ese resultado. [Alcances de cierre de Supabase Auth](https://supabase.com/docs/guides/auth/signout). Los middlewares redirigen al login por sesión inválida y muestran un error recuperable por indisponibilidad.
+- **Aceptación local.** Probar login válido e inválido, identidad ausente o inválida, renovación válida y definitivamente rechazada, fallo temporal y cierre en un terminal mientras otro sigue operativo. Verificar que el cliente administrativo y el proveedor de IA solo reciben la llamada después de autenticar. En F0 los permisos se obtienen del perfil vigente. F2 incorpora la membresía.
 
 ### F0-T1 · Autenticación en `/api/school/*` (S1)
 
@@ -84,10 +68,9 @@ Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes en
   - **Solo lectura:**
     - `server/api/school/all-lists-stock.get.ts`
     - `server/api/school/stock-analysis.get.ts`
-    - `server/api/school/presentation-prices.get.ts`
-- **Llamadas desde el frontend:** las de edición vienen de `pages/school-lists.vue`; las de análisis, de `pages/utiles.vue` (`:137`, `:151`, `:486`, `:571`, `:746-838`).
+- **Llamadas desde el frontend:** comprobar las escrituras en `pages/school-lists.vue` y las consultas de listas y stock en `pages/utiles.vue`.
 - **Pasos:**
-  1. Al inicio de cada handler, `await requireAccessToken(event)` (de `server/utils/auth.ts`).
+  1. Verificar con el helper de F0-T1a antes de crear el cliente administrativo y antes de cualquier salida temprana.
   2. En los métodos POST, PATCH y DELETE, además:
      ```ts
      const role = await getUserRole(event)
@@ -96,13 +79,13 @@ Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes en
      Así queda alineado con la matriz §10.1 (`products.edit`: dueño y encargado).
   3. **No** cambiar el cliente admin en esta fase.
 - **Terminado cuando:**
-  - sin cookie, todas las rutas responden 401;
+  - todas las rutas rechazan la sesión ausente o inválida con 401 antes de acceder a datos;
   - un cajero recibe 403 en POST, PATCH y DELETE y 200 en GET;
   - `school-lists.vue` y `utiles.vue` funcionan igual con un dueño.
 
 ### F0-T2 · Eliminar el flujo de WhatsApp y el relé de mensajes (S2, S8, S9, D17)
 
-- **Objetivo:** `send-message` envía cualquier texto a cualquier número desde la cuenta de WhatsApp Business sin autenticación. El webhook acepta mensajes sin firma y crea pedidos. Ningún archivo del frontend llama a estas rutas (verificado con `grep`).
+- **Objetivo:** `send-message` envía cualquier texto a cualquier número desde la cuenta de WhatsApp Business sin autenticación. El webhook acepta mensajes sin firma y crea pedidos. El POS usa la notificación de pedido listo; se retira en esta misma tarea.
 - **Archivos a borrar:**
   - **Rutas:**
     - `server/api/webhook/send-message.post.ts`
@@ -120,7 +103,7 @@ Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes en
   - `server/utils/aiLogic.ts`: borrar `modifyCartCore` (`:361`) y `createSalesOrderFromWhatsApp` (`:534`), que quedan sin uso. **Conservar** `analyzeImageCore` y `matchProductsCore`, que usa `pages/utiles.vue`.
   - `package.json`: quitar `form-data` y `@types/form-data` (solo los usaba `transcribeAudio.ts:2`).
   - `.env.example`: quitar `WHATSAPP_*`.
-  - `pages/sales.vue`: quitar la función de notificar al cliente `handleNotifyFileChange` (`:2105`, llama a `/api/webhook/notify-order-ready` en `:2119`), su `activeNotifyOrderId`, el `<input type="file">` y el botón que la abren en la vista de pedidos. **Corrección:** el objetivo de esta tarea decía que ningún archivo del frontend llamaba a estas rutas; esta sí.
+  - `pages/sales.vue`: quitar la función de notificar al cliente `handleNotifyFileChange` (llama a `/api/webhook/notify-order-ready`), su `activeNotifyOrderId`, el `<input type="file">` y el botón que la abren en la vista de pedidos.
 - **Pasos manuales:**
   - P4 (webhook desactivado en Meta) **antes** de desplegar.
   - Borrar las variables `WHATSAPP_*` en Vercel.
@@ -141,13 +124,13 @@ Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes en
 
 ### F0-T4 · Cerrar el registro público (S3, parte 1)
 
-- **Objetivo:** hoy cualquiera puede registrarse y queda como `cashier` (`handle_new_user`, `baseline.sql:841`). Los usuarios ya se crean desde `/api/admin/create-user`, que usa `auth.admin.createUser` (`server/modules/admin/infra/supabaseAdminRepository.ts:46`) y **no** se ve afectado por desactivar el registro.
+- **Objetivo:** cerrar el registro público. En el baseline, `handle_new_user` asigna `owner` si `profiles` está vacía y `cashier` a las altas siguientes. El dueño existente puede crear usuarios por `/api/admin/create-user`.
 - **Archivos:**
   - **Borrar:** `server/api/auth/sign-up.post.ts` y `server/modules/auth/app/signUp.ts`.
   - `server/modules/auth/infra/supabaseAuthRepository.ts:34`: quitar el método `signUp`, su firma en `server/modules/auth/ports.ts:26` y el tipo `SignUpResult` (`:18`).
   - `pages/login.vue`: quitar `isSignUp` (`:7`), la rama de registro (`:15-25`), el campo de nombre (`:79-82`) y el botón «Crear cuenta» (`:98-100`).
   - `supabase/config.toml`: `enable_signup = false` en `[auth]` (`:165`) y en `[auth.email]` (`:200`).
-- **Paso manual en producción:** Supabase → Authentication → Sign In / Providers → desactivar «Allow new users to sign up».
+- **Primer acceso y publicación.** Preservar al dueño existente. Para una instalación vacía con el registro cerrado, el operador autorizado crea expresamente la primera identidad mediante administración de Auth y verifica su perfil de dueño antes de habilitar el POS. Probar por separado el alta posterior desde `/users`. En producción, desactivar «Allow new users to sign up» en Supabase Auth al publicar el cierre de la ruta.
 - **Terminado cuando:**
   - `POST /api/auth/sign-up` responde 404;
   - en producción, `POST {SUPABASE_URL}/auth/v1/signup` con la anon key responde «Signups not allowed»;
@@ -185,12 +168,11 @@ Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes en
   |---|---|---|
   | `server/api/reports/financial-summary.get.ts:19` | `financial-summary.vue` (owner) | `requireOwner` |
   | `server/api/reports/product-profitability.get.ts:19` | `product-profitability.vue` (owner) | `requireOwner` |
-  | `server/api/reports/executive-investment.get.ts:24` | `executive-profitability.vue` (owner) | `requireOwner` |
-  | `server/api/reports/executive-profitability.get.ts` | ninguna (reemplazada) | **borrar** (su módulo se borra en F1-T18) |
+  | `server/api/reports/executive-profitability.get.ts` | `pages/executive-profitability.vue` en `main` | Conservar la ruta y exigir `requireOwner` |
   | `server/api/reports/sales-restock.get.ts:112` | `components/stock-ai/SalesSuggestedView.vue:351` | dueño o encargado (`purchases.register`) |
   | `server/api/reports/school-restock.get.ts:118` | `pages/stock-ai.vue:372` | dueño o encargado |
 
-- **Pasos:** sustituir `requireAccessToken(event)` por `requireOwner(event)`, que devuelve `accessToken`. En los dos de reposición, `getUserRole` + 403 si no es `owner` ni `manager`.
+- **Pasos:** en los reportes restringidos al dueño, usar el `accessToken` del objeto que devuelve `requireOwner(event)`. En los dos de reposición, verificar dueño o encargado antes de consultar datos.
 - **Cambio visible:** un cajero ya no puede ver «Compra Escolar» (`/stock-ai`). Hay que ocultar el ítem del menú para cajeros en `app.vue:47`, o aceptar el 403 hasta la Fase 1, cuando el menú se arma con permisos.
 - **Terminado cuando:**
   - con la cookie de un cajero, las 5 rutas responden 403;
@@ -250,13 +232,13 @@ Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes en
 
 - **Ya correctas (verificado):** `admin/*`, `maintenance/*`, `pricing/*` (dueño); `agent/sessions/revoke` (dueño o encargado); `sales/create-sale` (la RPC `create_sale` valida rol para descuento, venta a nombre de otro y aprobación); `customers/save` e `inventory/start` (todos los roles, según la matriz); `combos/plans.put` (planificador propio del usuario); `products/verify-brand` (solo lectura).
 - **Pasos:**
-  1. **Rutas:** un helper temporal `requireRole(event, ['owner','manager'])` en `server/utils/auth.ts`, usado en las rutas de la tabla. Lo reemplaza `defineApiHandler({ permission })` en la Fase 1.
+  1. Usar `requireRole` en compras, edición y ajustes restringidos. En `sales/hold`, cualquier vendedor puede crear el pedido al precio automático. Autorizar el ajuste manual según el precio calculado en el servidor y verificar el motivo.
   2. **BD** (migración `pnpm db:new permisos_en_funciones` + rollback), por defensa en profundidad, ya que hoy se puede llamar a las RPC directo con la anon key:
-     - `create_purchase`, `upsert_product_catalog`, `replace_product_unit_conversions`: al inicio, `if public.user_role() not in ('owner','manager') then raise exception 'Tu rol no permite …'; end if;`.
+     - En `create_purchase`, `upsert_product_catalog` y `replace_product_unit_conversions`, exigir explícitamente un rol vigente `owner` o `manager`. Rechazar también el resultado SQL `NULL` y verificarlo con una prueba.
      - `create_sales_order`: aplicar a `price_unit` la misma regla que `create_sale`. Si el precio enviado difiere del que resuelve `resolve_sale_item_pricing`, se exige rol `owner`/`manager` y un motivo. Si no, se usa el precio resuelto.
   3. **UI:** ocultar o deshabilitar para el cajero los botones de compra, de edición de producto y de aplicar conteo (`pages/purchases.vue`, `pages/products.vue`, `pages/inventory.vue`, `pages/supplier-quotes.vue`), para que no vea un 403.
 - **Terminado cuando:**
-  - con la cookie de un cajero, las rutas de la tabla responden 403;
+  - un cajero recibe 403 en las escrituras restringidas y puede guardar un pedido al precio automático;
   - con la de un encargado, responden 200;
   - en local, llamar a `create_purchase` como cajero por `rpc` falla;
   - un cajero que envía un `price_unit` distinto al resuelto en `sales/hold` recibe error, y uno que envía el precio resuelto puede crear el pedido;
@@ -271,7 +253,7 @@ Cada tarea = un PR. **F0-T0 va primero.** Las tareas 1 a 9 son independientes en
      - `agent/identification/lookup` y `agent/identification/approve` (devuelven 415/400 sin cuerpo JSON válido);
      - `agent/context`, `agent/instructions` y `agent/identification` (devuelven 401 o 503 por el token del conector).
   2. Matriz de roles: crear en local un cajero y un encargado con `/api/admin/create-user` y repetir las pruebas de T1, T5, T6 y T9 con `curl -c/-b` (cookie jar tras `POST /api/auth/sign-in`).
-  3. `pnpm db:backup` y luego `pnpm db:release`, que publica primero las migraciones y después `main` → Vercel.
+  3. Con respaldo verificado, `pnpm db:release` aplica migraciones y actualiza `main`. Publicar el commit aprobado con `pnpm dlx vercel --prod` y confirmar el despliegue que atiende el dominio.
   4. Repetir el paso 1 contra producción.
 - **Terminado cuando:** las pruebas anteriores se cumplen en producción y queda anotado el resultado en «Registro de cambios».
 
@@ -313,12 +295,13 @@ curl -s -o /dev/null -w "%{http_code}\n" -b /tmp/caj.txt "http://localhost:3000/
 | Un encargado o cajero editaba listas escolares | Tras T1 solo dueño y encargado pueden escribir; confirmar con el negocio |
 | Algún cliente seguía escribiendo por WhatsApp | P4 + aviso a clientes; el canal vuelve como parte del agente (D17) |
 | Un usuario sin cuenta no puede registrarse | Es el comportamiento deseado (D14); el dueño crea los usuarios |
-| S5 sigue abierto hasta la Fase 2 | La anon key no sale del servidor; no publicarla en ningún cliente ni repositorio |
+| Escrituras directas mientras convive PostgREST | Revisar permisos efectivos por tabla y RPC en F2 y verificar su retirada al cierre de F7 (D46). |
 
 ## 8. Registro de cambios
 
 | Fecha | Cambio |
 |---|---|
+| 2026-11-18 | Se añade F0-T1a, se conserva el reporte ejecutivo activo y se explicita la publicación manual de Vercel. |
 | 2026-11-18 | Se agrega **F0-T0**: guía mínima para agentes, con `AGENTS.md` (Codex) como fuente y `CLAUDE.md` que lo importa con `@AGENTS.md`. Pedido del usuario. |
 | 2026-11-18 | Consolidación: se agrega **F0-T9 (S12)** tras revisar todas las rutas de escritura contra la matriz §10.1 (decisión del usuario: corregir compras sin rol y cualquier acción con el mismo problema; el precio en pedidos solo para usuarios con permiso). F0-T2 ahora también quita la llamada a `notify-order-ready` desde `pages/sales.vue:2119`. La verificación pasa a F0-T10. |
 | 2026-11-18 | Documento inicial. Hallazgos al verificar: S4 era menor de lo indicado en la auditoría (`pricing/*` y `maintenance*` ya usan `requireOwner`); se agrega **S11** (bypass `x-webhook-token` en `utiles/*`). |

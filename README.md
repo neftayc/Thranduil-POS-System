@@ -14,12 +14,16 @@ The stationery physical store needed a modern, agile interface to manage daily s
 
 A Single Page Application (SPA) optimized for tablet and desktop use, focusing on speed of transaction and real-time state synchronization.
 
+## Desarrollo del refactor
+
+La [arquitectura propuesta](docs/arquitectura.md) define el stack objetivo y los contratos de sesión, permisos, inventario, ventas y caja. El [plan de fases](docs/fases/README.md) indica la primera tarea de desarrollo y sus criterios de aceptación.
+
 ## 🏗️ Tech Stack & Key Decisions
 
 ### Frontend (Client-Heavy Logic)
 
 - **Framework:** **Vue 3** (Using Composition API for reusable logic hooks).
-- **State Management:** **Pinia** (Critical for managing the active "Cart" state, discounts, and total calculations in real-time).
+- **State management:** the current POS manages cart state in Vue. The refactor introduces Pinia for the session, cart and cash register in stages.
 - **UI Kit:** Tailwind CSS for rapid, custom UI development.
 
 ### Backend & Data (Serverless)
@@ -161,8 +165,7 @@ pnpm dlx vercel --prod
 
 ## Primer usuario
 
-- El primer usuario que se registre sera `owner` automaticamente.
-- Los siguientes usuarios se crean como `cashier`.
+El esquema actual asigna `owner` al primer perfil y `cashier` a los siguientes. F0 cierra el registro público y documenta el alta inicial controlada. En F2 el rol comercial pasa a la membresía de cada negocio. El primer dueño de una tienda y el administrador de plataforma se aprovisionan por separado. [Arranque y primer acceso](docs/fases/fase-0-seguridad.md).
 
 ## Gestion de usuarios
 

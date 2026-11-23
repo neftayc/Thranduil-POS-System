@@ -71,7 +71,7 @@ Esto es lo que los tests de caracterización (T1) deben fijar antes de reemplaza
 
 **Otras escrituras de stock fuera del inventario:**
 - `upsert_product_catalog` (`baseline.sql:1832`) puede fijar `stock_on_hand` y `avg_cost` **directo** en `inventory_balances` y en `products`, sin movimiento ni lote. Se resuelve en coordinación con la Fase 3 (T13).
-- `create_sale` crea un lote `auto-balance` cuando faltan lotes FIFO, y `pay_sales_order` **no consume FIFO**. Ambos se corrigen en la Fase 6.
+- El diagnóstico inicial identifica el lote `auto-balance` en `create_sale` y la omisión de FIFO en `pay_sales_order`. F5-T3 corrige el cobro heredado antes de conciliar. F6 lo sustituye por el caso de uso de venta.
 
 ---
 
@@ -93,7 +93,7 @@ Esto es lo que los tests de caracterización (T1) deben fijar antes de reemplaza
 | Entidad (código) | Contexto | Campos clave | Notas |
 |---|---|---|---|
 | `Purchase` | purchasing | `id`, `tenantId`, `locationId`, `supplierId`, `invoiceNo`, `purchaseDate`, `status` (`registered`), `clientRequestId`, `lines[]`, `total` | `total` = suma de las líneas redondeadas a 2 decimales |
-| `PurchaseLine` | purchasing | `productId`, `unitName`, `qtyUom`, `factorToBase`, `qtyBase`, `unitCostUom`, `unitCostBase`, `lineTotal` | Solo `item_kind = good`. Los servicios no entran a compras de inventario |
+| `PurchaseLine` | purchasing | `productId`, `unitName`, `qtyUom`, `factorToBase`, `qtyBase`, `unitCostUom`, `unitCostBase`, `lineTotal` | Solo `item_kind = stock_item`. Los servicios no entran a compras de inventario |
 | `CostLayer` | inventory | `id`, `productId`, `locationId`, `source` (`purchase`, `adjustment`, `return`, `transfer`, `reconciliation`, `auto_balance` heredado), `sourceRef`, `layerDate`, `fifoOrder`, `qtyIn`, `qtyRemaining`, `unitCost` | Inmutable salvo `qtyRemaining` |
 | `StockMovement` | inventory | `id`, `productId`, `locationId`, `type`, `qty` (con signo), `unitCost`, `refType`, `refId`, `createdBy`, `createdAt` | **Libro contable**: solo se agrega, nunca se edita ni se borra |
 | `StockBalance` | inventory | `productId`, `locationId`, `onHand`, `avgCost`, `reserved`, `minStock` | **Derivado**: lo escriben solo los casos de uso de inventario. `available = onHand − reserved` |
@@ -123,7 +123,7 @@ Tipos de movimiento (amplían el `CHECK` actual `purchase | sale | adjust`):
 | INV8 | Cantidades con `Quantity` (3 decimales) y costos unitarios con `Money` (4 decimales); totales a 2 decimales (D38). Nunca `number` de JS |
 | INV9 | Los ítems `service` no tienen stock: el inventario los rechaza. Los ítems `kit` se resuelven en sus componentes (lo define la Fase 3) |
 | INV10 | El costo promedio se recalcula solo en las entradas, con la fórmula P5. Las salidas no lo cambian (igual que hoy) |
-| INV11 | Una compra solo se corrige mientras sus lotes no fueron consumidos (ver decisión pendiente DP5-1) |
+| INV11 | Una compra solo se corrige mientras sus lotes no fueron consumidos (D58) |
 
 ### 3.3 Eventos (outbox, §8.3)
 
@@ -210,7 +210,7 @@ El resultado se clasifica en un informe (`docs/fases/anexos/fase-5-conciliacion.
 |---|---|---|
 | `stock_products ≠ stock_balances` | Escritura parcial (I5) o `upsert_product_catalog` | La verdad es `inventory_balances`: es lo que valida la venta hoy |
 | `stock_layers < stock_balances` | Ajuste positivo sin lote (I4), compra corregida (PC3), stock fijado desde el catálogo | Lote `reconciliation` por la diferencia, al costo de D41 |
-| `stock_layers > stock_balances` | Ajuste negativo sin consumir FIFO (I4), `pay_sales_order` sin FIFO | Consumir lotes FIFO por la diferencia, con movimiento `reconciliation` |
+| `stock_layers > stock_balances` | Salida sin consumo FIFO | Agotar la diferencia en los lotes. Registrar movimiento de conciliación únicamente por la diferencia independiente entre movimientos y saldo. |
 | `stock_movements ≠ stock_balances` | Stock fijado sin movimiento | Movimiento `reconciliation` por la diferencia |
 | Productos con stock fraccionado truncado | I2 | Revisar con el dueño; puede requerir un conteo físico |
 
@@ -219,12 +219,16 @@ El resultado se clasifica en un informe (`docs/fases/anexos/fase-5-conciliacion.
 ### 5.2 Migración (T4)
 
 1. Respaldo (`pnpm db:backup`).
-2. Tabla `stock_reconciliation_log` con: producto, ubicación, valores anteriores (los cuatro), acción tomada y movimiento o lote creado. Permite auditar y revertir.
+2. Tabla `stock_reconciliation_log` con: producto, ubicación, valores anteriores (los cuatro), acción tomada y movimiento o lote creado. Permite auditar y preparar la recuperación.
 3. Por cada producto con diferencias, dentro de una transacción: movimientos `reconciliation` y ajustes de lotes hasta cumplir INV1 e INV2 contra el saldo de `inventory_balances`.
-4. Verificación: la consulta de §5.1 devuelve **0 filas**.
+4. Verificar INV1–INV3 por negocio, producto y ubicación según §5.3. Registrar por separado las diferencias de las columnas históricas de producto.
 5. `products.stock_on_hand` y `products.avg_cost` **dejan de leerse** en esta fase: la vista `product_catalog` y el POS leen el saldo. La columna **se elimina en la Fase 6 (T12)**, porque `create_sale` y `pay_sales_order` la siguen escribiendo hasta entonces.
 
 ---
+
+### 5.3 Conciliación permanente por ubicación
+
+Para cada clave `(tenant_id, product_id, location_id)` presente en saldos, movimientos o lotes, calcular por separado el saldo, la suma de movimientos con signo y la suma restante de lotes. Unir los tres resultados ya agregados por la clave completa para evitar multiplicar filas. Señalar un saldo ausente con actividad, cantidades negativas o diferencias entre las tres magnitudes. Probar un producto repartido entre dos ubicaciones y un descuadre en una sola de ellas. El control sigue funcionando al retirar las columnas históricas de `products`.
 
 ## 6. Tareas en orden
 
@@ -247,7 +251,7 @@ El resultado se clasifica en un informe (`docs/fases/anexos/fase-5-conciliacion.
 - **Archivos:** `supabase/migrations/<ts>_inventory_domain_schema.sql`.
 - **Pasos:**
   1. `location_id` (por defecto, la ubicación principal del negocio) en `inventory_balances`, `stock_cost_layers`, `stock_movements`, `purchases` e `inventory_count_sessions`. Índices `(tenant_id, product_id, location_id)`.
-  2. Clave única de `inventory_balances` → `(tenant_id, product_id, location_id)`. **Ajuste mecánico mínimo** de `create_sale` y `pay_sales_order` (cláusulas `ON CONFLICT` y `WHERE` sobre la ubicación principal). Se cubre con los tests de caracterización de la Fase 6 (F6-T1) ejecutados antes y después.
+  2. Clave de saldo `(tenant_id, product_id, location_id)`. Adaptar juntos los `ON CONFLICT`, filtros y escrituras de `create_purchase`, `create_sale`, `pay_sales_order`, el guardado del catálogo y los upserts del conteo que sigan activos. Inventariar los demás consumidores en la versión desplegada. En el cobro heredado, consumir los lotes FIFO y registrar las asignaciones y costo real en la transacción del pedido. Caracterizar antes con F6-T1 e invertir entonces la expectativa O6. Probar compra, venta directa, pedido y conteo antes y después.
   3. Ampliar el `CHECK` de `movement_type` (§3.1) y los valores de `stock_cost_layers.source`.
   4. Tabla `stock_reservations` (§3.1) con índices `(tenant_id, product_id, location_id) WHERE status = 'active'` y `(expires_at) WHERE status = 'active'`.
   5. Columna `reserved` en el saldo, o vista que la calcule (decidir en la validación según rendimiento).
@@ -261,7 +265,7 @@ El resultado se clasifica en un informe (`docs/fases/anexos/fase-5-conciliacion.
 - **Objetivo:** cumplir INV1–INV3 en todos los productos (§5.2).
 - **Archivos:** `supabase/migrations/<ts>_stock_reconciliation.sql`; tabla `stock_reconciliation_log`.
 - **Pasos:** ensayo completo en local con copia de producción, luego en producción con respaldo previo.
-- **Terminado cuando:** la consulta de §5.1 devuelve 0 filas en producción y el log registra cada corrección.
+- **Terminado cuando:** el control de §5.3 cuadra en producción y el log registra cada corrección.
 
 ### F5-T5 — Dominio de inventario (puro)
 - **Objetivo:** entidades y reglas de §3 sin infraestructura.
@@ -293,8 +297,8 @@ El resultado se clasifica en un informe (`docs/fases/anexos/fase-5-conciliacion.
 - **Objetivo:** corregir compras sin descuadrar nada (reemplaza PC1–PC3).
 - **Archivos:** `contexts/purchasing/application/correctPurchase.ts`, `api/purchases/items.patch.ts`.
 - **Pasos:**
-  1. Regla INV11 (pendiente de confirmar, DP5-1): solo se corrigen líneas cuyo lote **no fue consumido** (`qtyRemaining = qtyIn`).
-  2. La corrección ajusta, en la misma transacción: línea (campos UoM y base), lote, saldo, costo promedio (se recalcula revirtiendo la entrada y aplicando la nueva) y movimiento `purchase_correction` por la diferencia. Publica `PurchaseCorrected`.
+  1. Regla INV11 (D58): solo se corrigen líneas cuyo lote **no fue consumido** (`qtyRemaining = qtyIn`).
+  2. Bajo bloqueo, revertir la entrada original mediante un movimiento compensatorio y dejar su lote con restante cero. Registrar la entrada sustitutiva con otro lote y movimiento asociados al mismo documento de corrección. Conservar línea y costo originales y la referencia entre versiones; adaptar la unicidad histórica por `purchase_item_id` para distinguir la entrada original de sus correcciones. Recalcular saldo y promedio, y publicar `PurchaseCorrected` en la misma transacción. Un reintento reconoce la corrección ya aplicada.
   3. Si el lote ya se consumió, el error explica la alternativa: un ajuste de inventario, o una devolución a proveedor cuando exista.
   4. Invertir los tests de defecto PC2 y PC3 de T1.
 - **Terminado cuando:** corregir una compra mantiene INV1, INV2 e INV10 (test de integración).
@@ -348,7 +352,7 @@ El resultado se clasifica en un informe (`docs/fases/anexos/fase-5-conciliacion.
   1. Tras el periodo estable, quitar el interruptor y eliminar la RPC `create_purchase`.
   2. Eliminar la función huérfana `purchase_items_sync_base_fields`.
   3. Eliminar `server/modules/purchases/**` y `server/modules/inventory/**` (los reemplazan los contextos).
-  4. Job diario de `pg_cron` que ejecuta la consulta de §5.1 y, si devuelve filas, registra el problema (Sentry vía outbox o tabla de alertas).
+  4. Ejecutar a diario §5.3 y alertar por negocio y ubicación. Probar un recorrido de compra → venta directa → cobro de pedido que conserve INV1–INV3 y el costo FIFO de las salidas.
 - **Terminado cuando:** `create_purchase` no existe en la BD y el job de invariantes lleva 7 días sin alertas.
 
 ### F5-T15 — Cierre de fase
@@ -370,16 +374,16 @@ pnpm vitest run tests/characterization/purchases.test.ts tests/characterization/
 for i in $(seq 20); do pnpm vitest run tests/integration/inventory || break; done
 ```
 
-- La consulta de §5.1 devuelve 0 filas (local, staging y producción).
+- El control de §5.3 devuelve cero diferencias en local, staging y producción.
 - Prueba manual en staging (Playwright): registrar compra → vender → contar con diferencia → corregir compra no consumida → transferir. El valor del inventario cuadra en cada paso.
 
 ---
 
 ## 8. Cómo volver atrás
 
-- **Casos de uso:** `ENGINE_REGISTER_PURCHASE=db` vuelve a la RPC al instante, mientras no se haya ejecutado T14.
-- **Esquema:** las migraciones de T3 son aditivas. Las RPC heredadas siguen funcionando con la ubicación por defecto.
-- **Datos:** `stock_reconciliation_log` permite revertir cada corrección; además, el respaldo previo (D44).
+- Antes de volver a `ENGINE_REGISTER_PURCHASE=db`, demostrar en staging que el motor anterior respeta claves de reintento, movimientos y lotes ya emitidos. Si pierde esas garantías, corregir hacia adelante.
+- **Esquema:** T3 cambia la clave de saldos. Coordinar su reversión con todos los lectores, escritores y claves `ON CONFLICT`. Con varias ubicaciones operativas, conservar la clave nueva y corregir hacia adelante.
+- **Datos:** con operaciones posteriores, usar `stock_reconciliation_log` para calcular y verificar compensaciones por negocio, producto y ubicación. Dentro de la ventana previa a reabrir se puede restaurar el respaldo verificado de D44.
 - **Conteos y correcciones:** no tienen motor heredado al que volver. Por eso T8 y T9 se publican solo con sus tests de integración en verde y primero en staging.
 
 ---
@@ -389,7 +393,7 @@ for i in $(seq 20); do pnpm vitest run tests/integration/inventory || break; don
 | Riesgo | Mitigación |
 |---|---|
 | La conciliación revela diferencias grandes de stock o valor | Informe aprobado por el dueño antes de migrar; conteo físico de los productos afectados |
-| Cambiar la clave de `inventory_balances` rompe `create_sale` o `pay_sales_order` | Ajuste mecánico mínimo + tests de caracterización de venta antes y después (F6-T1 se adelanta a esta fase si hace falta) |
+| Un escritor sigue usando el saldo antiguo | Inventario de escrituras en F5-T3 y pruebas de compra, cobro, pedido, catálogo y conteo con la clave compuesta. |
 | Deadlocks con varios productos | Orden fijo de bloqueos + test específico |
 | Cambio de comportamiento del conteo (delta relativo) confunde al usuario | Mostrar en pantalla «sistema al contar», «contado» y «diferencia aplicada»; confirmar DP5-2 |
 | Las cantidades fraccionadas truncadas hoy ya alteraron el stock real | Detectarlas en el informe de conciliación; conteo físico |
@@ -412,5 +416,6 @@ for i in $(seq 20); do pnpm vitest run tests/integration/inventory || break; don
 
 | Fecha | Cambio | Motivo |
 |---|---|---|
+| 2026-11-18 | Se corrige FIFO en el cobro heredado antes de la conciliación y se especifican las correcciones trazables de compras. | Revisión de arquitectura v1.4 |
 | 2026-11-18 | Consolidación: DP5-1 y DP5-2 resueltas (D58, D59). **F6-T1 (tests de caracterización de ventas y pedidos) se ejecuta al inicio de esta fase**, antes de cambiar la clave de `inventory_balances`. `create_purchase` ya exige dueño o encargado desde F0-T9. | Decisiones del usuario y orden entre fases |
 | 2026-11-18 | Documento inicial | Plan de fases |

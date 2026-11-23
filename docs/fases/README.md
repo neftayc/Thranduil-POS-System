@@ -1,6 +1,12 @@
 # Plan de fases: refactorización a plataforma multi-negocio
 
-Este plan detalla las fases de la sección 14 de [`../arquitectura.md`](../arquitectura.md). La arquitectura (decisiones D1–D63) manda: si una fase contradice el documento de arquitectura, se corrige la fase o se registra una decisión nueva allí.
+Este plan detalla las fases de la sección 14 de [`../arquitectura.md`](../arquitectura.md). La arquitectura (decisiones D1–D67) manda: si una fase contradice el documento de arquitectura, se corrige la fase o se registra una decisión nueva allí.
+
+## Inicio del desarrollo
+
+La referencia revisada es `main` en `5b4f612`. La guía de F0-T0 ya está preparada en [AGENTS.md](../../AGENTS.md). Al integrar la documentación, registrar la validación de la rama y las rutas de [F0](fase-0-seguridad.md). El primer cambio de código es **F0-T1a** y el siguiente es **F0-T1**. La primera entrega funcional verifica la sesión del POS antes de leer datos escolares. El cierre del registro público y la protección del rol propio son los siguientes cambios urgentes. Los respaldos y la desactivación del webhook corresponden a las publicaciones indicadas en F0.
+
+**Prueba transversal en staging (F6-T13).** Con dos negocios sintéticos, iniciar sesión, elegir B, abrir caja, cobrar un pedido, perder la respuesta después del commit y reintentar el mismo cobro. Debe existir una sola venta, con un solo cobro y una salida de stock por la cantidad vendida en B. El cierre cuadra y los datos de A conservan sus valores iniciales. Los casos de caja, precio pactado y selección de negocio están en las fases 2, 5 y 6.
 
 ## Fases
 
@@ -25,7 +31,7 @@ Los documentos se escribieron el 2026-11-18, antes de implementar nada. Lo que s
 
 1. **Revisar el cierre de la fase anterior:** qué cambió respecto al plan, qué quedó pendiente, qué se aprendió. Está en la sección «Registro de cambios» de su documento.
 2. **Contrastar con el código real.** Los archivos, funciones y líneas citados pueden haber cambiado; se actualizan las referencias.
-3. **Contrastar con la arquitectura.** ¿Alguna decisión D1–D63 ya no aplica, o hace falta una nueva? Si es así, se registra primero en `arquitectura.md`.
+3. **Contrastar con la arquitectura.** ¿Alguna decisión D1–D67 ya no aplica, o hace falta una nueva? Si es así, se registra primero en `arquitectura.md`.
 4. **Revisar los requisitos previos** de la fase: ¿están todos cumplidos?
 5. **Ajustar el detalle.** Tareas, orden, criterios de terminado y riesgos. Las Fases 3 a 9 se llevan en este paso al nivel archivo por archivo.
 6. **Anotar los cambios** en «Registro de cambios» con su fecha y pasar el estado a **Validada**.
@@ -54,6 +60,7 @@ Una fase puede agregar secciones propias cuando las necesita (concurrencia, migr
 | 6 | DP6-5 | ¿Vencen las reservas de un pedido? | Sí, configurable (48 h por defecto) |
 | 6 | DP6-6 | ¿El código de pedido pasa a serie correlativa? | Sí (`P001-000123`), por D42 |
 | 6 | DP6-7 | ¿El ejecutor del agente se mueve a su capa en la Fase 6? | No, en la Fase 8 |
+| 6 | DP6-9 | ¿Cómo se completa una reversión tras una devolución parcial? | Propuesta para validar con el dueño: devolver el saldo pendiente y reservar la anulación para ventas sin devoluciones anteriores. |
 | 6 | DP6-8 | ¿Venta con varias formas de pago? | Modelo y API sí; interfaz en la Fase 9 |
 
 ## Hallazgos del detalle de fases (2026-11-18)
@@ -72,6 +79,6 @@ Al detallar las fases contra el código aparecieron problemas que la auditoría 
 ## Convenciones
 
 - **Una tarea = un PR** a `main`, con CI en verde y `/code-review` cuando toca `domain/`, RLS o migraciones.
-- **Migraciones en producción:** `pnpm db:backup` antes, siempre (D44). Se publican con el flujo existente (`pnpm db:release`: migraciones primero, luego `main` → Vercel).
+- Antes de una migración de producción, guardar el respaldo (D44). `pnpm db:release` aplica las migraciones y sube los commits a `main`. Con el despliegue Git desactivado, publicar el commit verificado con `pnpm dlx vercel --prod` y comprobar la versión servida. Ver el [procedimiento del repositorio](../../README.md).
 - **Código en inglés, documentos en español** (D35). Los nombres de casos de uso siguen el glosario de `arquitectura.md` §18.1.
 - Las referencias `archivo:línea` corresponden al estado del repositorio al 2026-11-18 y se revalidan al iniciar cada fase.

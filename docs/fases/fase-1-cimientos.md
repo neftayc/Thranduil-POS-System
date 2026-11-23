@@ -35,18 +35,23 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
 | # | Requisito |
 |---|---|
 | P1 | Fase 0 terminada y en producción |
-| P2 | Sin ramas abiertas que toquen `pages/`, `components/`, `nuxt.config.ts` o `package.json`: F1-T1 mueve carpetas y rompería cualquier merge pendiente |
+| P2 | Identificar cambios activos que se solapen con el movimiento de carpetas. |
 | P3 | Cuentas creadas: Sentry (plan gratuito) y segundo proyecto Supabase para staging. Renovate se instala como GitHub App |
-| P4 | `pnpm test:agent` en verde como línea base (243 pruebas al 2026-11-18) |
+| P4 | Ejecutar `pnpm test:agent` en la rama de inicio y registrar resultado y número de pruebas como línea base. |
 
 ## 4. Tareas en orden
 
-### F1-T1 · Node 22 + Nuxt 4, sin cambios funcionales (D34)
+### F1-T0 · Línea base del POS
 
-- **Objetivo:** pasar de Nuxt 3.21.1 a Nuxt 4. Nuxt UI 4 exige `@nuxt/kit ^4.6` y Node `^20.19 || >=22.12`.
+Ejecutar primero en Nuxt 3 los recorridos de login, venta, pedido, compra, conteo y consulta del reporte ejecutivo con datos locales sintéticos y resultados conocidos. Adelantar de F1-T6/T8 el mínimo de fixtures y Playwright necesario. Guardar los mismos escenarios en CI y repetirlos tras el cambio de runtime y framework. El entorno de preview usa datos de prueba.
+
+### F1-T1 · Validación de Node 26 LTS + Nuxt 4, sin cambios funcionales (D34)
+
+- **Objetivo:** validar Nuxt 4, Nuxt UI y el árbol de dependencias con Node 26 LTS. Comparar contra F1-T0. Si surge una incompatibilidad, registrarla y revisar D34 antes de fijar la versión.
+- Comprobar el soporte del proveedor junto con las pruebas de la aplicación. [Calendario de Node.js](https://github.com/nodejs/Release/blob/main/schedule.json) y [versiones admitidas por Vercel](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
 - **Archivos:**
-  - `.nvmrc` (`20` → `22`);
-  - `package.json` (`engines.node` `>=22.12.0`; `nuxt` `^4`);
+  - `.nvmrc` (`20` → `26` tras validar);
+  - `package.json` (`engines.node` `26.x`; `nuxt` `^4`);
   - `pnpm-lock.yaml`;
   - `nuxt.config.ts`;
   - carpetas movidas a `app/`.
@@ -61,7 +66,7 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
      - quitar `devServer.host`, que duplica `nuxt dev --host`.
   5. Probar el codemod oficial (`npx codemod@latest nuxt/4/migration-recipe`) y revisar el diff a mano.
   6. **Cambios de comportamiento de Nuxt 4 que no aplican aquí:** el repositorio no usa `useFetch` ni `useAsyncData` (0 usos; 21 archivos usan `$fetch`), así que los cambios de datos (`shallowRef`, `null` por defecto) no afectan.
-  7. **Vercel** (manual): Project Settings → Node.js Version → 22.x.
+  7. Probar `26.x` en los jobs de CI y en un preview aislado con el mismo lockfile. **Vercel** (manual): Project Settings → Node.js Version → 26.x tras validar CI y preview.
   8. **Tests:** `tests/*.mjs` importan TypeScript de `server/` con `jiti` a través de `nuxt/package.json`. Verificar que siguen funcionando con el `jiti` de Nuxt 4.
 - **Terminado cuando:**
   - `pnpm build` y `pnpm test:agent` pasan;
@@ -176,12 +181,12 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
 
 ### F1-T8 · Playwright: flujos principales
 
-- **Objetivo:** cubrir de punta a punta login, venta en el POS, compra y conteo de inventario.
+- **Objetivo:** ampliar los escenarios de F1-T0 y ejecutarlos con el seed completo también en staging.
 - **Archivos:**
   - `playwright.config.ts`;
   - `tests/e2e/{login,sale,purchase,inventory}.spec.ts`;
   - `ci.yml`: job nuevo `e2e` con `supabase db start` + reset con seed, build, `nuxt preview` y Playwright.
-- **Terminado cuando:** los 4 flujos pasan en CI contra el seed.
+- **Terminado cuando:** los escenarios de la línea base de F1-T0 y los recorridos de esta tarea pasan en CI con datos sintéticos.
 
 ### F1-T9 · Sentry (D22)
 
@@ -227,7 +232,7 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
   - inmutables;
   - suma, resta y multiplicación por `Quantity`;
   - redondeo **por línea** a 2 decimales con `ROUND_HALF_UP`;
-  - el IGV se calcula por línea a partir de un precio con impuesto incluido;
+  - en F4 el cálculo por línea respeta si el precio del negocio incluye o excluye el impuesto;
   - comparación;
   - serialización a cadena para `numeric`;
   - `Quantity` con hasta 3 decimales (metros, kilos).
@@ -246,7 +251,7 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
     - `/api/auth/sign-in` y `/api/auth/sign-out`;
     - `/api/agent/context`, `/api/agent/instructions` y `/api/agent/identification` (usan `requireAgentCredential`, `server/utils/agent.ts:29`);
     - `/api/agent/identification/lookup` y `/api/agent/identification/approve` (públicas por diseño, con límites propios);
-  - carga en `event.context` el usuario, el rol (`getUserRole`) y `tenantId = DEFAULT_TENANT_ID`;
+  - usa el verificador de F0-T1a y conserva una sola identidad verificada por petición; carga en `event.context` el usuario, el rol (`getUserRole`) y `tenantId = DEFAULT_TENANT_ID`;
   - las rutas actuales conservan sus propias verificaciones; el guard es una capa adicional.
 - **`defineApiHandler({ permission, body, query }, fn)`:**
   - exige el permiso;
@@ -271,12 +276,12 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
   - `package.json`: `drizzle-orm`, `postgres`, `drizzle-kit` (dev); script `db:schema` = `drizzle-kit pull`.
   - `drizzle.config.ts`.
   - `layers/core/server/shared/infrastructure/db/schema.ts`, generado y **nunca** editado a mano.
-  - `layers/core/server/shared/infrastructure/db/client.ts`: `postgres(DATABASE_URL, { prepare: false })`.
+  - `layers/core/server/shared/infrastructure/db/client.ts`: crear el cliente de `postgres.js` una vez por instancia, `prepare: false`, TLS en entornos remotos y límite inicial de una conexión por instancia. Medir esperas y conexiones con peticiones concurrentes en staging.
   - `layers/core/server/shared/infrastructure/unitOfWork.ts`.
 - **`UnitOfWork.run(ctx, fn)`:**
   - abre una transacción;
   - ejecuta `set_config('app.tenant_id', …, true)` y `set_config('app.user_id', …, true)`;
-  - ejecuta también `set_config('request.jwt.claims', '{"sub":…,"role":"authenticated"}', true)` para que las funciones existentes que usan `auth.uid()` (p. ej. `create_sale`) funcionen si se llaman por esta vía durante el Strangler;
+  - el modo `db` sigue usando el JWT verificado y PostgREST según D46. En el modo Drizzle, los helpers obtienen el usuario de `app.user_id`;
   - confirma o revierte.
 - **Conexión:**
   - producción y staging: Supavisor en modo transacción (puerto 6543), usuario `app_backend.<project-ref>`;
@@ -284,7 +289,7 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
   - la contraseña se fija **a mano** en cada entorno (`ALTER ROLE app_backend PASSWORD …`) y va solo en `DATABASE_URL` de Vercel.
 - **Terminado cuando:**
   - un test de integración ejecuta una transacción que escribe dos filas y falla a la mitad, y no queda ninguna;
-  - otro test comprueba que `app_backend` no puede saltarse RLS (`SET row_security = off` falla).
+  - con una política restrictiva de prueba, `app_backend` carece de `BYPASSRLS`, no es dueño de la tabla y no puede leer la fila excluida. Comprobar el resultado de la consulta bajo ese rol.
 
 ### F1-T15 · Outbox + despacho con `pg_cron` (D23)
 
@@ -296,9 +301,9 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
 - **Pasos:**
   - Despacho inmediato tras el commit, con `event.waitUntil`.
   - El barrido de `pg_cron` hace de respaldo.
-  - Los suscriptores deben ser idempotentes.
+  - Persistir entregas por `(event_id, subscriber_id)` con unicidad, intentos, último error y acuse. Reclamar entregas de forma atómica con recuperación de trabajos interrumpidos. Probar dos suscriptores, caída después del primer efecto y reintento sin duplicarlo. Alertar por pendientes cuya antigüedad supere el umbral operativo acordado.
   - Si el preview de Vercel tiene protección de despliegue, usar el token de bypass en staging.
-- **Terminado cuando:** un evento de prueba publicado en una transacción se despacha una vez. Si la transacción se revierte, no se despacha.
+- **Terminado cuando:** un evento confirmado llega a cada suscriptor y, ante reintentos, cada uno aplica sus efectos una sola vez. Un fallo de un suscriptor permite reintentar su entrega sin duplicar las demás. Una transacción revertida no publica eventos.
 
 ### F1-T16 · Pinia: sesión y módulos
 
@@ -320,23 +325,18 @@ Las rutas existentes **no** se migran a `defineApiHandler` en esta fase. Se migr
   - `layers/core/server/shared/domain/num.ts` (`toNumber` para el código actual).
 - **Pasos:**
   - Reemplazar las copias locales de formato de dinero en las 17 páginas y componentes que hoy usan `formatMoney`, `moneyFormatter` o `toFixed(2)`. Detectados con `grep` en `pages/` y `components/`; entre ellos `sales.vue`, `inventory.vue`, `utiles.vue` y `products.vue`.
-  - Reemplazar las 12 copias de `toNumber` en el servidor (`suppliers/quotes/*` ×5, `reports/*-restock`, `school/stock-analysis`, `schoolPricing.ts`, `inventory/infra`, `reports/*`).
+  - Reemplazar las 12 copias de `toNumber` en el servidor (`suppliers/quotes/*` ×5, `reports/*-restock`, `school/stock-analysis`, `inventory/infra`, `reports/*`).
 - **Terminado cuando:** `grep` no encuentra definiciones locales de esas funciones, y las capturas de Playwright no muestran cambios de formato salvo las unificaciones esperadas (p. ej. `S/ 1,234.50` en todas las páginas).
 
 ### F1-T18 · Borrar código muerto (arquitectura §16)
 
 - **Archivos y objetos a borrar:**
-  - **Reporte reemplazado:**
-    - `server/api/reports/executive-profitability.get.ts` (si no se borró en F0-T6);
-    - `server/modules/reports/app/getExecutiveProfitability.ts`;
-    - su firma en `server/modules/reports/ports.ts`;
-    - su implementación en `server/modules/reports/infra/supabaseReportsRepository.ts`.
-  - **Componentes:** `components/reports/Executive*.vue` (4) **solo si** se confirma que no son trabajo en curso; tienen cambios sin commitear.
   - **Archivos sueltos:**
     - `result.json`;
     - `data/` (23 archivos versionados, sin uso en scripts ni en el servidor);
     - `scripts/repair-uom-fifo.mjs`.
   - **Base de datos:** migración `borrar_tablas_legadas`, con `DROP TABLE` de `stg_productos_import`, `stg_compras_tania_import`, `stg_compras_ayrampo_import`, `import_batches` y `whatsapp_sessions` (y su trigger `trg_update_whatsapp_last_interaction`). **Antes:** `pnpm db:backup`.
+- Proteger con el recorrido F1-T0 el reporte `/api/reports/executive-profitability`, su caso de uso y sus componentes `ExecutiveCompositionBar` y `ExecutiveTrendChart`.
 - **Se conservan:** `match_products`, `image_cache`, `match_cache`, `analyzeImageCore` y `matchProductsCore`. Los usa `pages/utiles.vue` (lectura de listas por foto) y se reemplazan en la Fase 8.
 - **Terminado cuando:** el build, los tests y Playwright pasan, y `pnpm db:reset` aplica limpio.
 
@@ -375,5 +375,6 @@ Además, en CI deben estar en verde los jobs `migraciones`, `app` y `e2e`.
 
 | Fecha | Cambio |
 |---|---|
+| 2026-11-18 | Se adelanta la línea base, se programa la validación de Node 26 LTS y se precisan las garantías del guard, el pool y las entregas de eventos. |
 | 2026-11-18 | Consolidación: D47 fija `DEFAULT_TENANT_ID`; D48 resuelve la estructura de Layers con `extends` explícito y la eliminación de `nitro.ignore: ['**/modules/**']`; el helper `requireRole` de F0-T9 se reemplaza por `defineApiHandler({ permission })`, que ya debe evaluar las concesiones por usuario cuando existan (D57, Fase 2); `scripts/db.sh` debe poder apuntar a staging (lo necesita la Fase 2). |
 | 2026-11-18 | Documento inicial. **Pendientes para validar al iniciar:**<br>(a) La estructura `layers/modules/*` y `layers/verticals/*` de la arquitectura §13 choca con el autoescaneo de Nuxt 4, que solo registra subcarpetas directas de `layers/`, y con `nitro.ignore: ['**/modules/**']`. Opciones: `extends` explícito por cada módulo, o carpetas planas (`layers/mod-quotes`, `layers/vert-papeleria`). Decisión antes de la Fase 8.<br>(b) La política temporal `app_backend_all` de F1-T14 es amplia a propósito, porque no existe `tenant_id` hasta la Fase 2. |

@@ -2,6 +2,8 @@
 
 Revisión de solo lectura, sin cambios en el código. Cada hallazgo se verificó leyendo el código. No se ejecutó nada contra la base de datos, así que los impactos de rendimiento son estimaciones.
 
+**Revisión de referencias.** Este diagnóstico precede al plan. Para implementar, usar la [arquitectura vigente](arquitectura.md) y el [plan de fases](fases/README.md). Las referencias corregidas a continuación distinguen `main` (`5b4f612`) de la variante `claude/reportes-precios-escolares`.
+
 ## Arquitectura en una línea
 
 La app es Nuxt 3 en modo SPA (`ssr:false`) sobre Vercel. El backend son rutas Nitro (`server/api`) más módulos por dominio con capas `ports/app/infra` en `server/modules`, todo sobre Supabase. Los cálculos críticos (venta, precio) viven en RPC de Postgres y las cookies son httpOnly.
@@ -19,10 +21,10 @@ La base es correcta. Los problemas están en tres sitios:
 
 **S1. Rutas `/api/school/*` sin autenticación y con service-role**
 
-- **Dónde:** `server/api/school/{lists,list-items,item-brands,institutions,grades,sections,all-lists-stock.get,stock-analysis.get,presentation-prices.get}.ts`.
+- **Dónde:** `server/api/school/{lists,list-items,item-brands,institutions,grades,sections,all-lists-stock.get,stock-analysis.get}.ts`.
 - **Qué pasa:** ninguna verifica la sesión, y todas usan `getSupabaseAdminClient()`, que se salta RLS.
 - **Riesgo:** cualquiera en Internet puede crear, editar o **borrar** listas escolares e ítems (DELETE en `list-items.ts:33` e `item-brands.ts:110`), y leer stock y precios.
-- **Arreglo:** `await requireAccessToken(event)` (o `requireOwner` en las escrituras) al inicio. Usar el cliente de usuario en lugar del admin donde RLS lo permita.
+- **Arreglo:** verificar la identidad en Nitro antes de usar el cliente administrativo y resolver el permiso de escritura. La secuencia está en F0-T1a y F0-T1.
 
 **S2. `/api/webhook/send-message` es un relé abierto**
 
@@ -34,14 +36,14 @@ La base es correcta. Los problemas están en tres sitios:
 **S3. Escalada de privilegios a `owner`**
 
 La cadena tiene tres pasos:
-1. `/api/auth/sign-up` es público. `handle_new_user` (`baseline.sql:841`) asigna `cashier` a todo usuario nuevo.
+1. `/api/auth/sign-up` es público. El trigger `handle_new_user` asigna `owner` si aún no existen perfiles y `cashier` a las altas siguientes.
 2. La política `profiles_update_own` (`baseline.sql:4015`) permite al usuario hacer `UPDATE` de su propia fila **sin `WITH CHECK` ni restricción de columna**.
 3. Con el JWT y la anon key, basta un `PATCH /rest/v1/profiles?id=eq.<uid>` con `{"role":"owner"}`.
 
 - **Atenuante:** hoy la anon key no se envía al navegador, así que la defensa depende de que esa clave no se filtre. Supabase la considera pública por diseño.
 - **Arreglo (las dos cosas):**
   - desactivar el registro público (borrar la ruta sign-up y poner `enable_signup=false` en el proyecto); los usuarios ya se crean desde `/api/admin/create-user`;
-  - aplicar `REVOKE UPDATE (role) ON profiles FROM authenticated`, o un trigger que impida cambiar `role` si no es `is_owner()`.
+  - retirar el permiso de modificación a nivel de tabla y la política de edición propia del rol. La migración y la prueba con el dueño están en F0-T5.
 
 ### ALTO
 
@@ -125,7 +127,7 @@ Supabase devuelve como máximo 1000 filas por consulta (`max_rows`).
 
 **P3. Reportes que bajan tablas completas**
 
-- `getExecutiveInvestmentReport.ts:394` baja **todo el historial** de `sale_items` solo para sacar la última venta por producto.
+- La rama alternativa de reportes carga todo el historial de `sale_items` para obtener la última venta por producto. En `main`, el reporte ejecutivo usa `getExecutiveProfitability` y el repositorio de reportes.
 - `fetchAll` pagina en serie.
 - **Arreglo:** `select product_id, max(sale_date) … group by` en una RPC, y mover las agregaciones a SQL.
 
@@ -169,7 +171,7 @@ Supabase devuelve como máximo 1000 filas por consulta (`max_rows`).
 
 - 41 archivos de 4 a 10 líneas solo reenvían al repo (ej. `sales/app/createSale.ts`).
 - Cada port tiene una sola implementación y varios ports son `Record<string, any>`.
-- La regla no se cumple de forma pareja: 34 rutas no usan módulos, y `getExecutiveInvestmentReport.ts` está en `app/` pero consulta Supabase y define colores de UI.
+- La revisión inicial encontró rutas con lógica fuera de los módulos. La observación sobre `getExecutiveInvestmentReport.ts` y los colores de UI corresponde a la variante de reportes.
 - **Recomendación:** quitar `app/` donde solo reenvía y dejar `ports/app` solo en `agent`, que sí tiene lógica y tests.
 
 **C2. Dos sistemas de IA en paralelo**
@@ -183,8 +185,8 @@ Supabase devuelve como máximo 1000 filas por consulta (`max_rows`).
 
 **C3. Código muerto verificado**
 
-- **Endpoints que nada llama:** `webhook/send-message` (salvo el webhook), `utiles/modify-cart`, `utiles/embed-catalog` y `reports/executive-profitability` (reemplazado por `executive-investment`), con su `getExecutiveProfitability.ts` y parte del repo de reportes.
-- **Componentes:** los 4 `components/reports/Executive*.vue` no se usan en ninguna página. Hay cambios sin commitear en ellos: confirmar si es trabajo en curso.
+- WhatsApp y las rutas auxiliares tienen consumidores específicos. F0-T2 inventaría sus usos antes de retirarlas. En `main`, `pages/executive-profitability.vue` sí consume `/api/reports/executive-profitability`.
+- **Componentes activos en `main`:** `ExecutiveTrendChart` y `ExecutiveCompositionBar` renderizan el reporte ejecutivo. F1 protege su recorrido y F7 conserva el endpoint.
 
 **C4. Modo legacy del agente sigue como default**
 
@@ -193,7 +195,7 @@ Supabase devuelve como máximo 1000 filas por consulta (`max_rows`).
 
 **C5. Precios de listas escolares paralelos al POS**
 
-- **Dónde:** `utils/schoolPricing.ts` y `school/presentation-prices.get.ts` reimplementan reglas de precio sin mayoreo, promociones ni grupo de cliente.
+- **Dónde:** en `main`, `server/api/school/stock-analysis.get.ts` y `all-lists-stock.get.ts` valorizan las listas con `sale_price`. Los archivos `schoolPricing.ts` y `presentation-prices.get.ts` correspondían a la variante escolar.
 - **Riesgo:** **la cotización puede no coincidir con lo que se cobra.**
 - **Recomendación:** usar la RPC `resolve_sale_item_pricing`. La elección de marca está repetida en 3 archivos.
 
@@ -207,9 +209,9 @@ Supabase devuelve como máximo 1000 filas por consulta (`max_rows`).
 
 **C7. Páginas gigantes**
 
-- `sales.vue` (3461 líneas) tiene 4 pestañas en un archivo: extraerlas como ya se hizo con `PosTicketPanel`.
+- En `main`, `sales.vue` tiene 2655 líneas y reúne POS, historial, cobro e informes. F9-T2 caracteriza también el comprobante y la impresión.
 - Ventas en espera con modo dual BD/localStorage, detectado por el texto del error (`sales.vue:268`): borrar el modo local.
-- `executive-profitability.vue` tiene 60 `computed`.
+- En `main`, `executive-profitability.vue` tiene 527 líneas y ya utiliza dos componentes de gráficos.
 
 **C8. Validación de entrada**
 

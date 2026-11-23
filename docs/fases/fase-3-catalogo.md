@@ -22,9 +22,11 @@ Crear el contexto **`catalog`** como hexagonal y llevar al dominio TypeScript la
 - **Precio base y reglas de precio:** pasan a `pricing` en la Fase 4. En esta fase el precio base se sigue escribiendo como hoy, a través de un puerto temporal.
 - **Lectura del catálogo** (`/api/products/page`, vista `product_catalog`): es lado de lectura, Fase 7.
 - **Búsqueda** (`/api/products/search`, `search_products_hybrid`, índice de búsqueda): se queda en SQL (§9).
-- **Composición de kits:** la define el módulo `kits` (Fase 8). Aquí solo se reserva el valor `kit` en `item_kind`.
+- El planificador visual de kits corresponde a F8.
 
 ---
+
+La composición del kit pertenece a catálogo desde F3 (D50). F5 usa el desglose para inventario y F6 para vender.
 
 ## 2. Requisitos previos
 
@@ -103,7 +105,7 @@ Todo SKU recibido se guarda `trim` + mayúsculas.
 | Elemento | Tipo | Contenido |
 |---|---|---|
 | `Product` | Agregado | `id`, `tenantId`, `sku: Sku`, `name`, `brand?`, `barcode?`, `description?`, `itemKind: ItemKind`, `baseUnit: UnitCode`, `categoryId?`, `attributes: Record<string, unknown>`, `minStock: Quantity` (provisional, ver §3.5), `active`, `conversions: UnitConversion[]` |
-| `ItemKind` | Valor | `stock_item` (bien inventariable) · `service` (sin stock) · `kit` (reservado; composición en el módulo `kits`) |
+| `ItemKind` | Valor | `stock_item` (bien inventariable) · `service` (sin stock) · `kit` (composición del núcleo) |
 | `Sku` | Valor | Texto `trim` + mayúsculas, no vacío. `Sku.generate(name, random)` reproduce el formato actual |
 | `UnitCode` | Valor | Código canónico del catálogo de unidades del negocio |
 | `UnitCatalog` | Valor (instantánea por negocio) | Lista de `{code, label, active}`. `resolve(text) → UnitCode \| null` con las reglas de §3.0 |
@@ -185,7 +187,7 @@ Los dos se implementan en `infrastructure/legacy/` con un comentario `// TEMPORA
 - **Pasos:**
   1. `ALTER TABLE products ADD COLUMN item_kind text NOT NULL DEFAULT 'stock_item' CHECK (item_kind IN ('stock_item','service','kit'))`.
   2. `ADD COLUMN attributes jsonb NOT NULL DEFAULT '{}'`.
-  3. Sin cambios de datos (todo producto actual es `stock_item`).
+  3. Los productos actuales quedan como `stock_item`. Crear la composición del kit por negocio: producto kit, producto componente, cantidad base positiva y FKs del mismo negocio. Para la primera versión aceptar componentes `stock_item`; probar componentes duplicados, inválidos y de otro negocio.
 - **Terminado cuando:** las migraciones aplican limpias en CI, el esquema Drizzle está actualizado y `pnpm db:backup` se hizo antes de producción.
 
 ### F3-T3 — Datos de prueba del catálogo
@@ -246,7 +248,8 @@ Los dos se implementan en `infrastructure/legacy/` con un comentario `// TEMPORA
 - **Pasos:**
   1. Cada caso de uso corre dentro de `UnitOfWork`.
   2. `saveProduct` ejecuta, en orden: generar el SKU, cargar el catálogo de unidades, `ensureCategory`, guardar, llamar a los puertos temporales y publicar el evento.
-  3. `index.ts` exporta solo `saveProduct`, `replaceConversions`, `getConversions`, `convertUnit`, `resolveUnitCode`, `findSimilarProducts`.
+  3. Guardar la composición de un kit dentro de la transacción de `saveProduct`. Exponer `getKitComponents` para que inventario y ventas obtengan el desglose. Validar venta y devolución con las cantidades efectivamente vendidas aunque cambie la composición.
+  4. `index.ts` exporta `getKitComponents`, además de `saveProduct`, `replaceConversions`, `getConversions`, `convertUnit`, `resolveUnitCode`, `findSimilarProducts`.
 - **Terminado cuando:** hay tests de aplicación con repositorios en memoria para el flujo feliz y los errores.
 
 ### F3-T7 — Infraestructura
@@ -344,5 +347,6 @@ Playwright: crear un producto con categoría nueva, editar su precio, configurar
 
 | Fecha | Cambio |
 |---|---|
+| 2026-11-18 | Se fija el contrato de composición de kits y el vocabulario compartido con ventas e inventario. |
 | 2026-11-18 | Consolidación: el camino de las RPC antiguas con `auth.uid()` queda resuelto por D46 (el interruptor `db` usa el cliente de usuario); precio base en `product_prices` (D51); `min_stock` pasa a inventario por ubicación (D52); el cajero deja de editar productos (D45, adelantado en F0-T9). |
 | 2026-11-18 | Documento inicial, escrito antes de implementar. |

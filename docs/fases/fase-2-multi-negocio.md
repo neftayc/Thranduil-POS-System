@@ -13,7 +13,7 @@ Convertir la base de datos en **multi-negocio**:
 - la papelería queda migrada como **negocio #1**, sin pérdida de datos y sin cambios visibles para sus usuarios.
 
 **Entra:**
-- tablas de plataforma (`tenants`, `memberships`, `tenant_settings`, `tenant_modules`, `locations`, `platform_admins`, `platform_config`);
+- tablas de plataforma (`tenants`, `memberships`, `tenant_settings`, `tenant_modules`, `locations`, `platform_admins`, `platform_config`, `membership_permissions`, `session_tenants`);
 - `tenant_id` en todas las tablas de negocio y restricciones únicas y FK que lo incluyen;
 - RLS reescrita;
 - hook de token de Supabase Auth;
@@ -40,7 +40,7 @@ PostgREST **no puede ejecutar `set_config('app.tenant_id')`** por petición. Tam
 
 | Camino | Quién lo usa | Cómo llega el negocio |
 |---|---|---|
-| **JWT** | supabase-js con token de usuario: repositorios actuales, RPC y el vendedor del agente | Claim `tenant_id`, inyectado por un **Custom Access Token Hook** de Supabase Auth a partir de la membresía por defecto del usuario |
+| **JWT** | supabase-js con token de usuario: repositorios actuales, RPC y el vendedor del agente | Claim `tenant_id`, inyectado por un **Custom Access Token Hook** de Supabase Auth a partir de la selección vigente de esa sesión verificada (D64) |
 | **`set_config`** | Drizzle con el rol `app_backend` (F1, `UnitOfWork`) | `set_config('app.tenant_id', …, true)` en cada transacción |
 
 `public.current_tenant()` lee primero `app.tenant_id` y, si no existe, el claim del JWT. **Con esto no hay que revocar PostgREST en F2.** Solo se revoca `anon`, que tras la Fase 0 no lee tablas: solo usa la API de Auth. La revocación de `authenticated` se hace cuando ya no quede ningún acceso a datos por supabase-js, al cierre de F7.
@@ -61,12 +61,13 @@ PostgREST **no puede ejecutar `set_config('app.tenant_id')`** por petición. Tam
 
 ### 1.2 Puerta para el segundo negocio
 
-Se verifica al final de F6 y queda registrada aquí. No se da de alta un segundo negocio hasta que se cumpla todo esto:
-- [ ] Ninguna ruta usa service-role para datos de negocio. Lo filtran explícitamente por negocio o usan el camino `app_backend`.
-- [ ] No queda ninguna función de negocio `SECURITY DEFINER`. Solo las de búsqueda (§4), que filtran por negocio.
-- [ ] Se eliminó el *fallback* de negocio único (`platform_config.single_tenant_mode = false` y DEFAULT sin respaldo).
-- [ ] Se activó el selector de negocio para usuarios con varias membresías.
-- [ ] D44: Vercel Pro, Supabase Pro y PITR activos.
+Registro único para autorizar el alta en producción. F6-T13 acredita el flujo de venta y las fases posteriores completan las comprobaciones pendientes.
+
+- [ ] Todas las rutas accesibles, búsquedas, reportes y tareas respetan el negocio. Retiradas las RPC de negocio heredadas, el acceso administrativo a datos comerciales y el respaldo de negocio único. F7 acredita la revocación de acceso directo de `authenticated` según D46.
+- [ ] Dos negocios sintéticos superan las pruebas de aislamiento. Cada módulo y canal habilitado tiene credenciales y ámbito comprobados. Los que estén pendientes quedan inaccesibles desde API, tareas y eventos.
+- [ ] Selector, concesiones, suspensión, invitación y recuperación probados con dos negocios y un usuario con roles diferentes en ambos.
+- [ ] Alta en staging con la configuración prevista y recorrido completo de [ventas y caja](fase-6-ventas-caja.md) F6-T13. Sentry activo y siete días de conciliación sin diferencias.
+- [ ] Límites de uso, SMTP, alojamiento comercial, Supabase Pro y restauración PITR ensayada (D26–D28, D44). Registrar fecha, versión, responsable y evidencia antes del alta real.
 
 ## 2. Requisitos previos
 
@@ -128,7 +129,7 @@ memberships (
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role text NOT NULL CHECK (role IN ('owner','manager','cashier')),   -- matriz §10.1
-  is_default boolean NOT NULL DEFAULT false,   -- negocio del claim del JWT
+  is_default boolean NOT NULL DEFAULT false,   -- preferencia para el selector; la selección efectiva pertenece a la sesión
   active boolean NOT NULL DEFAULT true,
   invited_by uuid REFERENCES auth.users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -178,17 +179,20 @@ platform_config (                          -- fila única; se elimina en la puer
 )
 ```
 
-**Funciones** (`STABLE`, `search_path` fijo y `GRANT EXECUTE` solo a `authenticated` y `app_backend`):
+**Permisos y selección.** `membership_permissions(tenant_id, user_id, permission)` tiene PK en las tres columnas y FK a la membresía. Solo el dueño autorizado concede o revoca permisos en su negocio. `session_tenants(session_id PK, user_id, tenant_id)` referencia la membresía. Para elegir negocio el servidor usa el usuario y el identificador de sesión verificados. La consulta inicial enumera solo las membresías de esa persona, aun si todavía no hay negocio seleccionado. Activar RLS y restringir permisos desde la migración que crea estas tablas, antes de exponerlas en la API. El hook recibe lectura explícita de las filas necesarias. Solo el backend verifica y guarda la selección o modifica concesiones.
+
+**Funciones de lectura.** Usar `STABLE` donde corresponda y `search_path` fijo. Conceder ejecución según la función. El hook se reserva a `supabase_auth_admin`. Revocar permisos implícitos de `PUBLIC`.
 
 | Función | Hace |
 |---|---|
 | `current_tenant()` | `coalesce(nullif(current_setting('app.tenant_id', true),'')::uuid, nullif(auth.jwt()->>'tenant_id','')::uuid)`. **Estricta, sin respaldo: es la que usa RLS** |
 | `current_app_user()` | `coalesce(nullif(current_setting('app.user_id', true),'')::uuid, auth.uid())` |
-| `has_tenant_role(roles text[])` | `EXISTS` en `memberships` con `tenant_id = current_tenant()`, `user_id = current_app_user()`, `active` y `role = ANY(roles)`. `SECURITY DEFINER`, solo lectura |
+| `has_tenant_role(roles text[])` | Comprobar membresía y negocio activos y el rol permitido. Por PostgREST, exigir que el claim coincida con la selección vigente de ese usuario y sesión. Encapsular la consulta en una función de solo lectura sin recursión de políticas. |
+| `can_access_tenant()` | Comprueba membresía y negocio activos para el usuario de la transacción. Por PostgREST contrasta también sesión y selección vigente. Encapsular la lectura de las tablas de identidad para evitar recursión. Las tareas internas autorizadas usan su propio ámbito de ejecución. |
 | `tenant_for_insert()` | `coalesce(current_tenant(), <fallback_tenant_id si single_tenant_mode>)`. Si sigue en NULL lanza error. **Solo para DEFAULT de columnas** |
-| `user_role()` | Reescrita: devuelve el rol del usuario **en el negocio actual**. Mantiene la firma; la usan `server/utils/auth.ts:130`, `supabaseAuthRepository.ts:59` y `supabaseSellerAuth.ts:30` |
-| `is_owner()` | Reescrita: `has_tenant_role('{owner}')`. Mantiene la firma; la usan 22 políticas actuales |
-| `custom_access_token_hook(event jsonb)` | Agrega los claims `tenant_id` (membresía `is_default`, o la única que tenga) y `tenant_role`. `GRANT EXECUTE` solo a `supabase_auth_admin`; `supabase_auth_admin` recibe `SELECT` sobre `memberships` |
+| `user_role()` | Preparar la función por negocio con otro nombre en T2. Conservar la firma pública y sustituir su implementación en la ventana, al activar el contexto nuevo. |
+| `is_owner()` | Conservar la versión actual durante T2/T3. En la ventana pasa a consultar la membresía activa del negocio. |
+| `custom_access_token_hook(event jsonb)` | Leer la selección del usuario y `session_id` emitidos por Auth. Con selección válida emitir negocio y rol. Sin selección, emitir identidad para cuenta y selector. El backend selecciona automáticamente si hay una sola membresía activa, guarda la fila y renueva el token antes de abrir el POS. Con varias, espera la elección del usuario. |
 
 **Datos:**
 1. Insertar el negocio #1 (papelería, `business_type='papeleria'`).
@@ -197,7 +201,7 @@ platform_config (                          -- fila única; se elimina en la puer
 4. Crear la ubicación «Tienda» (`is_default`).
 5. Crear `platform_config` (`single_tenant_mode=true`, `fallback_tenant_id` = negocio #1).
 6. Crear `memberships` desde `profiles`: `role` = `profiles.role`, `is_default=true`.
-7. Agregar como `platform_admins` a los dueños actuales.
+7. Dar de alta únicamente los UUID de operadores de plataforma designados explícitamente. Verificar que un dueño ordinario solo administra su tienda.
 
 **Supabase Auth:**
 - Local: habilitar `[auth.hook.custom_access_token]` en `supabase/config.toml`.
@@ -216,11 +220,12 @@ platform_config (                          -- fila única; se elimina en la puer
   - `server/modules/admin/infra/supabaseAdminRepository.ts`;
   - `server/modules/agent/infra/supabaseSellerAuth.ts` (solo verificar).
 - **Pasos:**
-  1. **Token sin claim `tenant_id` = token vencido.** `requireAccessToken` lo refresca (mismo camino que `isJwtExpiringSoon`). Así, tras activar el hook, ninguna sesión se queda sin negocio.
-  2. **El guard pone en `event.context` `tenantId`** (desde el claim) y el rol (`user_role()`). `UnitOfWork` usa ese `tenantId` en `set_config`.
-  3. **El administrador de usuarios lee y escribe `memberships`** del negocio actual en lugar de `profiles.role` (líneas 20, 58 y 78). Crear usuario = crear en Auth + `profiles` (solo nombre) + `memberships`.
-  4. **Quitar el *fallback* a `profiles.role`** de `getUserRole` (`server/utils/auth.ts:136-152`).
-- **Terminado:** con el hook activo en local, la app funciona igual; las sesiones viejas se refrescan solas; crear, listar y cambiar el rol de un usuario opera sobre `memberships`.
+  1. Antes de la ventana conservar el modo de negocio único y la lectura del rol del perfil. Al entrar en mantenimiento reconciliar los cambios de altas y roles ocurridos desde T2.
+  2. Preparar el modo por membresías de D64. Identidad sin membresía → 403 al operar; una membresía → selección automática; varias → elegir por terminal. Al cambiar, persistir la selección, renovar y verificar el JWT antes de habilitar escrituras. Rechazar operaciones de un carrito o token de otro contexto.
+  3. En el modo nuevo, cargar rol y concesiones vigentes; pasar el mismo negocio a PostgREST y Drizzle. Renovar una vez los tokens anteriores al despliegue. Una selección pendiente se dirige al selector.
+  4. Exponer en Nitro la consulta de membresías propias y el cambio de negocio. Ambos requieren identidad verificada y deben funcionar antes de seleccionar negocio. En el cambio, verificar pertenencia y estado en el servidor. Devolver el contexto renovado al frontend.
+  5. Administrar usuarios desde las membresías del negocio. La invitación vincula una cuenta existente o crea una pendiente de aceptación. Un reintento tras un fallo parcial completa la misma invitación. Los enlaces de invitación y recuperación vuelven por un callback permitido y se canjean en el servidor. Probar enlaces usados o vencidos, renovación que falla después de guardar la selección y suspensión con sesiones abiertas. Al reintentar el cambio emitir el contexto vigente.
+- **Terminado:** ensayar en staging el periodo con el hook apagado y el modo por membresías activo después de la ventana. El dueño conserva su acceso en ambos estados.
 
 ---
 
@@ -268,6 +273,8 @@ CREATE INDEX x_tenant_idx ON x (tenant_id);
 | `school_lists_…_year_key (institution_id, grade_id, section_id, year)` | Se mantiene: los padres ya son de un único negocio |
 | `product_search_synonyms (product_id, phrase_norm)`, `uq_product_unit_conversions_product_unit`, `inventory_count_items (session_id, product_id)`, `stock_cost_layers_purchase_item_id_key` | Se mantienen: la clave ya está dentro de un negocio |
 
+Adaptar en la misma publicación `ensure_product_category` y su `ON CONFLICT (code)`, y el `onConflict: 'user_id'` de `server/api/combos/plans.put.ts`, a las nuevas claves. Probar la misma categoría y el mismo usuario guardando combos en A y B.
+
 #### FK compuestas (defensa contra referencias cruzadas)
 
 **Decisión:** toda FK entre tablas de negocio pasa a ser **compuesta `(tenant_id, x)`**. Así la BD rechaza, por ejemplo, una venta del negocio A con un producto del negocio B, aunque una función `SECURITY DEFINER` o un bug lo intente.
@@ -285,7 +292,7 @@ Cada tabla padre recibe `UNIQUE (tenant_id, id)`, o usa su nueva PK compuesta en
 
 #### Funciones de búsqueda (se quedan en SQL a largo plazo)
 
-- `search_products_hybrid` y `product_search_pending` reciben `p_tenant_id uuid DEFAULT NULL` y filtran por `coalesce(p_tenant_id, current_tenant(), <respaldo>)`.
+- La búsqueda limita los resultados al negocio autorizado. Los trabajos de indexación reciben un contexto de negocio validado en el backend; un parámetro de usuario no puede ampliar ese ámbito.
 - `refresh_product_search_index` y los triggers `trg_*_search_index` propagan `tenant_id` de la fila origen.
 - El agente (service-role) pasa `p_tenant_id` explícito en `supabaseAgentCatalog.ts`.
 
@@ -304,9 +311,11 @@ Cada tabla padre recibe `UNIQUE (tenant_id, id)`, o usa su nueva PK compuesta en
 
 ```sql
 CREATE POLICY tenant_guard ON x AS RESTRICTIVE FOR ALL TO authenticated, app_backend
-  USING (tenant_id = public.current_tenant())
-  WITH CHECK (tenant_id = public.current_tenant());
+  USING (tenant_id = public.current_tenant() AND public.can_access_tenant())
+  WITH CHECK (tenant_id = public.current_tenant() AND public.can_access_tenant());
 ```
+
+Aplicar este patrón a los datos comerciales. Las tablas de identidad tienen políticas específicas para resolver la cuenta y el selector antes de elegir un negocio. Reemplazar `app_backend_all` de F1 y definir la política permisiva que habilita cada operación legítima del backend.
 
 **Políticas permisivas existentes.** Se conservan, pero «autenticado» pasa a significar «miembro del negocio»:
 - `*_all_auth` (`auth.uid() IS NOT NULL`) → `has_tenant_role('{owner,manager,cashier}')`.
@@ -321,6 +330,7 @@ CREATE POLICY tenant_guard ON x AS RESTRICTIVE FOR ALL TO authenticated, app_bac
 | `tenants` | Si existe una membresía del usuario | Solo backend / `platform_admins` |
 | `memberships` | Las del negocio actual (`is_owner()`) o las propias | Solo backend con `users.manage` |
 | `tenant_settings`, `tenant_modules`, `locations` | Miembros del negocio | `is_owner()` |
+| `session_tenants`, `membership_permissions` | Contexto y concesiones autorizados | Selección propia o gestión del dueño, respectivamente |
 | `platform_admins`, `platform_config` | Sin acceso para `authenticated` | Sin acceso para `authenticated` |
 
 **`profiles` (global).**
@@ -330,7 +340,7 @@ CREATE POLICY tenant_guard ON x AS RESTRICTIVE FOR ALL TO authenticated, app_bac
 **Vistas.** `product_catalog` ya es `security_invoker` (`baseline.sql:2326`), así que hereda RLS. Toda vista nueva debe serlo.
 
 **Permisos:**
-- `REVOKE ALL ON ALL TABLES, SEQUENCES, FUNCTIONS IN SCHEMA public FROM anon`.
+- Revocar a `anon` los privilegios sobre tablas, secuencias y funciones de `public` con sentencias separadas. Verificar privilegios efectivos, incluidos los de `PUBLIC`.
 - `ALTER DEFAULT PRIVILEGES … REVOKE … FROM anon`.
 - `authenticated` **conserva** sus permisos hasta el cierre de F7 (§1.1).
 
@@ -345,9 +355,9 @@ CREATE POLICY tenant_guard ON x AS RESTRICTIVE FOR ALL TO authenticated, app_bac
 
 - **Pasos:**
   1. Activar el *Custom Access Token Hook* en el panel de Supabase, con la función `public.custom_access_token_hook`.
-  2. Las sesiones existentes se refrescan solas al primer uso (F2-T3, paso 1).
+  2. Bajo mantenimiento, sincronizar las últimas membresías, activar las funciones y el modo T3 y renovar las sesiones anteriores antes de reabrir.
   3. El agente: las sesiones de vendedor (`supabaseSellerAuth`) obtienen el claim en su próximo refresh. Hay que verificar con una vinculación nueva por `/vincular`.
-- **Terminado:** un JWT recién emitido trae `tenant_id` y `tenant_role`. El POS vende y el agente registra en dry-run.
+- **Terminado:** el token renovado tras la selección trae `tenant_id` y `tenant_role`. La sesión pendiente llega al selector. El POS vende y el agente registra en dry-run.
 
 ---
 
@@ -366,7 +376,7 @@ CREATE POLICY tenant_guard ON x AS RESTRICTIVE FOR ALL TO authenticated, app_bac
   1. Un usuario de A no **lee** filas de B (SELECT → 0 filas).
   2. Un usuario de A no **inserta** con `tenant_id` de B (error RLS) ni **actualiza o borra** filas de B (0 filas afectadas).
   3. Una FK cruzada (`sale_items` de A con un `product_id` de B) falla por la FK compuesta, **incluso ejecutada como `postgres`**.
-  4. El usuario con dos membresías solo ve el negocio de su claim o de su `set_config`.
+  4. Con dos terminales y dos membresías, cambiar de A a B en uno y comprobar que el otro sigue en A. Probar ambos caminos con token anterior, membresía suspendida y negocio suspendido. Solo el flujo de cuenta y selector acepta una selección pendiente.
   5. Sin negocio (`app_backend` sin `set_config`, JWT sin claim) se ven **0 filas**.
   6. `anon` no lee ninguna tabla de `public`.
   7. Toda tabla nueva sin `tenant_guard` hace fallar el test. Se detecta consultando el catálogo, así cubre las tablas futuras.
@@ -419,10 +429,10 @@ CREATE POLICY tenant_guard ON x AS RESTRICTIVE FOR ALL TO authenticated, app_bac
 2. **T-1 día.** Avisar a la papelería. Verificar que F2-T2 y F2-T3 están en producción y estables.
 3. **T0.** Cerrar el POS (cajas cerradas, sin pedidos en curso). Poner la app en modo mantenimiento: página estática o variable que el guard respeta.
 4. `pnpm db:backup`. Guardar la ruta del respaldo y los conteos por tabla.
-5. `pnpm db:release` con las migraciones B y C (incluye su propio respaldo y pruebas locales).
+5. Aplicar B y C con `pnpm db:release`. Publicar el commit compatible con `pnpm dlx vercel --prod` y verificar la versión antes de reabrir.
 6. Activar el hook (F2-T6).
 7. Verificaciones de §5 en producción: conteos, columnas, políticas y claim.
-8. Prueba con un usuario real: login, venta de prueba anulada, compra de prueba borrada, consulta de reportes.
+8. Verificar en producción login, negocio, permisos, catálogo y reportes. Las operaciones de venta, compra y reversión se ensayan en staging con datos sintéticos.
 9. Quitar el modo mantenimiento.
 10. **Criterio de abortar:** si cualquier paso del 5 al 8 falla y no se resuelve en 30 minutos, se aplica §6.
 
@@ -431,7 +441,7 @@ CREATE POLICY tenant_guard ON x AS RESTRICTIVE FOR ALL TO authenticated, app_bac
 | Riesgo | Mitigación |
 |---|---|
 | Fuga entre negocios por rutas service-role o funciones `SECURITY DEFINER` | Solo un negocio hasta la puerta §1.2; FK compuestas; lista F2-T9 |
-| Sesiones sin claim tras la ventana | F2-T3: token sin claim = vencido → refresh |
+| Sesión anterior a la ventana | Renovar una vez y distinguir selección pendiente de credencial inválida (D64). |
 | Una función PL/pgSQL inserta sin negocio | `DEFAULT tenant_for_insert()` con respaldo de negocio único; test de inserción de cada RPC en staging |
 | Migración B lenta (backfill + FK compuestas sobre tablas grandes) | Medir en el ensayo; crear las FK con `NOT VALID` + `VALIDATE CONSTRAINT` |
 | La búsqueda vectorial (HNSW) con filtro por negocio devuelve menos resultados | Medir en el ensayo; subir `hnsw.ef_search` o activar el escaneo iterativo de pgvector si hace falta |
@@ -443,5 +453,6 @@ CREATE POLICY tenant_guard ON x AS RESTRICTIVE FOR ALL TO authenticated, app_bac
 
 | Fecha | Cambio |
 |---|---|
+| 2026-11-18 | Se define selección por terminal, transición de roles, asignación de plataforma y criterio único para el segundo negocio. |
 | 2026-11-18 | Consolidación: el negocio #1 usa el id de D47 (`DEFAULT_TENANT_ID` de la Fase 1) y `fallback_tenant_id` apunta a él; la Fase 2 **reemplaza** la política temporal `app_backend_all` creada en la Fase 1; se agrega la tabla `membership_permissions(tenant_id, user_id, permission)` (D57); la transición de acceso a datos queda registrada como D46. `image_cache`/`match_cache` se conservan hasta la Fase 8 (D49): `match_cache` recibe `tenant_id` porque guarda IDs de producto. |
 | 2026-11-18 | Documento inicial (antes de la validación de inicio de fase) |
